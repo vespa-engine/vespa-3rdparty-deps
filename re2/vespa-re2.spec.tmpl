@@ -24,7 +24,7 @@ Name:           vespa-re2
 Version:        %{ver_major}
 Release:        %{ver_release}%{?dist}
 License:        BSD
-URL:            http://github.com/google/re2/
+URL:            https://github.com/google/re2/
 Source0:        https://github.com/google/re2/archive/%{ver_major_long}.tar.gz
 
 %if 0%{?el7}
@@ -33,15 +33,15 @@ BuildRequires: gcc10
 BuildRequires: gcc10-c++
 %define _toolset_compiler_args CC=gcc10-gcc CXX=gcc10-g++
 %else
-%define _devtoolset_enable /opt/rh/devtoolset-9/enable
-BuildRequires: devtoolset-9-gcc
-BuildRequires: devtoolset-9-gcc-c++
+%define _devtoolset_enable /opt/rh/devtoolset-10/enable
+BuildRequires: devtoolset-10-gcc
+BuildRequires: devtoolset-10-gcc-c++
 %endif
 %endif
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-9/enable
-BuildRequires: gcc-toolset-9-gcc
-BuildRequires: gcc-toolset-9-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
+BuildRequires: gcc-toolset-10-gcc
+BuildRequires: gcc-toolset-10-gcc-c++
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc
@@ -49,16 +49,20 @@ BuildRequires: gcc-c++
 %endif
 BuildRequires: make
 
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
 %description
 re2 compiled for vespa
-
+%{_vespa_3rdparty_deps_packaging_notice}
 %package devel
 Summary:        re2 compiled for vespa -- devel
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description devel
 re2 compiled for vespa -- devel
-
+%{_vespa_3rdparty_deps_packaging_notice}
 %prep
 %setup -n re2-%{ver_major_long}
 
