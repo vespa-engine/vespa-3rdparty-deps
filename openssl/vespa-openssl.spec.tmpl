@@ -6,6 +6,12 @@
 # Force special prefix for Vespa
 %define _prefix /opt/vespa-deps
 
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so\\.[0-9]*\\(\\)\\(64bit\\)|pkgconfig\\(.*)$
+
 # Version
 %define ver_major _TMPL_VER_MAJOR
 %define ver_minor _TMPL_VER_MINOR
@@ -21,12 +27,26 @@ URL:            https://www.openssl.org
 Source0:        https://www.openssl.org/source/openssl-%{version}.tar.gz
 
 
+%if 0%{?el7}
 %if 0%{?amzn2}
 BuildRequires: gcc10-c++%{?_isa}
 %define _configure_args CC=gcc10-gcc CXX=gcc10-g++
 %else
-%define _devtoolset_enable /opt/rh/devtoolset-9/enable
-BuildRequires: devtoolset-9-gcc-c++%{?_isa}
+%define _devtoolset_enable /opt/rh/devtoolset-10/enable
+BuildRequires: devtoolset-10-gcc-c++%{?_isa}
+%endif
+%endif
+%if 0%{?el8}
+%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
+BuildRequires: gcc-toolset-10-gcc-c++
+BuildRequires: make
+%endif
+%if 0%{?fedora}
+BuildRequires: gcc-c++
+BuildRequires: make
+BuildRequires: perl-File-Compare
+BuildRequires: perl-File-Copy
+BuildRequires: perl-FindBin
 %endif
 
 %description
@@ -47,7 +67,7 @@ OpenSSL dev package for Vespa.
 source %{_devtoolset_enable} || true
 %endif
 mkdir build && cd build
-CFLAG="-g -O3" \
+CFLAGS="-g -O3" \
 ../config --prefix=%{_prefix} --openssldir=%{_prefix}/conf/ssl --libdir=lib64 -Wl,-rpath=%{_prefix}/lib64 %{?_configure_args}
 make %{?_smp_mflags}
 
