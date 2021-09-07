@@ -6,6 +6,15 @@
 # Force special prefix for Vespa
 %define _prefix /opt/vespa-deps
 
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+# Exclude automated requires for libraries in /opt/vespa-deps/lib64.
+%global __requires_exclude ^lib(protobuf|protoc)\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)$
+
 # Version
 %define ver_major _TMPL_VER_MAJOR
 %define ver_minor _TMPL_VER_MINOR
