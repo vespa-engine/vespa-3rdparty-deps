@@ -13,7 +13,7 @@
 %global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
 
 # Exclude automated requires for libraries in /opt/vespa-deps/lib64.
-%global __requires_exclude ^lib(crypto|ssl)\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)$
+%global __requires_exclude ^(lib(crypto|ssl)\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(lib(crypto|ssl)\\))$
 
 # Version
 %define ver_major _TMPL_VER_MAJOR
