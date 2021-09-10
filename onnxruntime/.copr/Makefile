@@ -22,7 +22,7 @@ srpm:
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
 	rm -rf $(SRCTMPBASE)
 	mkdir -p $(SRCTMPBASE)
-	cd $(SRCTMPBASE) && git clone https://github.com/microsoft/onnxruntime onnxruntime
+	cd $(SRCTMPBASE) && git clone https://github.com/microsoft/onnxruntime.git onnxruntime
 	cd $(SRCTMP_VENDOR) && git checkout v$(VERSION)
 ifdef SUBMODULE_FIX_SCRIPT
 	$(SUBMODULE_FIX_SCRIPT)
