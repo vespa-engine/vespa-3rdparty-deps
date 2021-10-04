@@ -24,11 +24,12 @@ srpm:
 	mkdir -p $(SRCTMPBASE)
 	cd $(SRCTMPBASE) && git clone https://github.com/microsoft/onnxruntime.git onnxruntime
 	cd $(SRCTMP_VENDOR) && git checkout v$(VERSION)
-ifdef SUBMODULE_FIX_SCRIPT
-	$(SUBMODULE_FIX_SCRIPT)
-endif
+ifdef SUBMODULE_CHECKOUT_SCRIPT
+	cd $(SRCTMP_VENDOR) && $(SUBMODULE_CHECKOUT_SCRIPT)
+else
 	cd $(SRCTMP_VENDOR) && git submodule sync --recursive
 	cd $(SRCTMP_VENDOR) && git submodule update --init --recursive
+endif
 	mkdir -p $(SRCTMP)
 	cd $(SRCTMP_VENDOR) && git archive --format=tar HEAD | tar -C $(SRCTMP) -xf -
 	set -e; cd $(SRCTMP_VENDOR) && git submodule status --recursive | cut -d ' ' -f 3 | while read sm_path; do mkdir -p $(SRCTMP)/$$sm_path; ( cd $$sm_path && git archive --format=tar HEAD | tar -C $(SRCTMP)/$$sm_path -xf -); done
