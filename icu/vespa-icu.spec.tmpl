@@ -6,6 +6,15 @@
 # Force special prefix for Vespa
 %define _prefix /opt/vespa-deps
 
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so(\\.[0-9.]*)?\\(\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+# Exclude automated requires for libraries in /opt/vespa-deps/lib64.
+%global __requires_exclude ^(libicu(data|i18n|io|test|tu|uc)\\.so(\\.[0-9.]*)?\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(icu-(i18n|io|uc)\\)( = [0-9.]*)?)$
+
 # Version
 %define ver_major _TMPL_VER_MAJOR
 %define ver_minor _TMPL_VER_MINOR
@@ -21,19 +30,42 @@ URL:            http://site.icu-project.org/
 Source0:        https://github.com/unicode-org/icu/releases/download/release-%{ver_major}-%{ver_minor}/icu4c-%{ver_major}_%{ver_minor}-src.tgz
 
 
+%if 0%{?el7}
 %if 0%{?amzn2}
 BuildRequires: gcc10-c++%{?_isa}
 %define _configure_args CC=gcc10-gcc CXX=gcc10-g++
 %else
-%define _devtoolset_enable /opt/rh/devtoolset-9/enable
-BuildRequires: devtoolset-9-gcc-c++%{?_isa}
+%define _devtoolset_enable /opt/rh/devtoolset-10/enable
+BuildRequires: devtoolset-10-gcc-c++%{?_isa}
+%endif
+%endif
+%if 0%{?el8}
+%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
+BuildRequires: gcc-toolset-10-gcc-c++
+%endif
+%if 0%{?fedora}
+BuildRequires: gcc-c++
 %endif
 BuildRequires: doxygen
 BuildRequires: autoconf
+%if 0%{?el7}
 BuildRequires: python3
+%endif
+%if 0%{?el8}
+BuildRequires: python36
+%endif
+%if 0%{?fedora}
+BuildRequires: python3
+%endif
+BuildRequires: make
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
 
 %description
 ICU package for Vespa.
+%{_vespa_3rdparty_deps_packaging_notice}
 
 %package devel
 Summary:        ICU dev package for Vespa.
@@ -42,6 +74,7 @@ Requires:       pkgconfig
 
 %description devel
 ICU dev package for Vespa.
+%{_vespa_3rdparty_deps_packaging_notice}
 
 %prep
 %setup -q -n icu
@@ -52,7 +85,7 @@ source %{_devtoolset_enable} || true
 %endif
 cd source
 mkdir build && cd build
-CFLAG="-g -O3" \
+CFLAGS="-g -O3" CXXFLAGS="-g -O3" \
 ../configure --prefix=%{_prefix} --libdir=%{_prefix}/lib64 --enable-rpath %{?_configure_args}
 make %{?_smp_mflags}
 
@@ -62,6 +95,10 @@ source %{_devtoolset_enable} || true
 %endif
 cd source/build
 %make_install
+
+%if 0%{?el7}
+strip %{buildroot}/%{_libdir}/libicudata.so.*.*
+%endif
 
 %files
 %{_prefix}/bin/
