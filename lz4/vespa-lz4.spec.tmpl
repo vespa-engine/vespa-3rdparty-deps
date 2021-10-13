@@ -10,7 +10,10 @@
 %global _find_debuginfo_opts -g
 
 # Don't provide shared library or pkgconfig
-%global __provides_exclude ^(lib.*\\.so\\.[0-9]*\\(\\)\\(64bit\\)|pkgconfig\\(.*)$
+%global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\(\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+# Exclude automated requires for libraries in /opt/vespa-deps/lib64.
+%global __requires_exclude ^liblz4\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)$
 
 # Version
 %define ver_major _TMPL_VER_MAJOR
@@ -31,21 +34,26 @@ Source0:        https://github.com/lz4/lz4/archive/v%{version}/lz4-%{version}.ta
 BuildRequires: gcc10%{?_isa}
 %define _toolset_compiler_args CC=gcc10-gcc
 %else
-%define _devtoolset_enable /opt/rh/devtoolset-9/enable
-BuildRequires: devtoolset-9-gcc
+%define _devtoolset_enable /opt/rh/devtoolset-10/enable
+BuildRequires: devtoolset-10-gcc
 %endif
 %endif
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-9/enable
-BuildRequires: gcc-toolset-9-gcc
+%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
+BuildRequires: gcc-toolset-10-gcc
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc
 %endif
 BuildRequires: make
 
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
 %description
 lz4 compiled for vespa
+%{_vespa_3rdparty_deps_packaging_notice}
 
 %package devel
 Summary:        lz4 compiled for vespa -- devel
@@ -53,6 +61,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description devel
 lz4 compiled for vespa -- devel
+%{_vespa_3rdparty_deps_packaging_notice}
 
 %prep
 %setup -n lz4-%{version}
