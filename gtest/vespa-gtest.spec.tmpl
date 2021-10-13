@@ -6,6 +6,15 @@
 # Force special prefix for Vespa
 %define _prefix /opt/vespa-deps
 
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so(\\.[0-9.]*)?\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
+
+# Exclude automated requires for libraries in /opt/vespa-deps/lib64.
+%global __requires_exclude ^(lib(gmock|gtest)(_main)?\\.so(\\.[0-9.]*)?\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\((gmock|gtest)(_main)?\\)( = [0-9.]*)?)$
+
 # Version
 %define ver_major _TMPL_VER_MAJOR
 %define ver_minor _TMPL_VER_MINOR
@@ -20,7 +29,7 @@ License:        BSD
 URL:            https://github.com/google/googletest
 Source0:        https://github.com/google/googletest/archive/release-%{version}.tar.gz
 
-BuildRequires: python2-devel
+BuildRequires: python3-devel
 %if 0%{?el7}
 %if 0%{?amzn2}
 BuildRequires: gcc10-c++%{?_isa}
@@ -37,13 +46,16 @@ BuildRequires: cmake3
 BuildRequires: cmake
 BuildRequires: gcc-toolset-10-gcc-c++
 BuildRequires: gcc-toolset-10-annobin
-BuildRequires: make
 %endif
 %if 0%{?fedora}
 BuildRequires: cmake
 BuildRequires: gcc-c++
-BuildRequires: make
 %endif
+BuildRequires: make
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
 
 %description
 Framework for writing C++ tests on a variety of platforms (GNU/Linux,
@@ -52,6 +64,7 @@ architecture. Supports automatic test discovery, a rich set of
 assertions, user-defined assertions, death tests, fatal and non-fatal
 failures, various options for running the tests, and XML test report
 generation.
+%{_vespa_3rdparty_deps_packaging_notice}
 
 %prep
 %setup -q -n googletest-release-%{version}
@@ -64,7 +77,7 @@ mkdir build && cd build
 %{?_cmake_prog}%{!?_cmake_prog:cmake} \
        -DBUILD_SHARED_LIBS=ON \
        -DCMAKE_CXX_FLAGS="-std=c++14 ${RPM_OPT_FLAGS}" \
-       -DPYTHON_EXECUTABLE=%{__python2} \
+       -DPYTHON_EXECUTABLE=%{__python3} \
        -Dgtest_build_tests=ON \
        -DCMAKE_INSTALL_PREFIX=%{_prefix} \
        -DCMAKE_INSTALL_RPATH=%{_prefix}/lib64 \
@@ -81,8 +94,9 @@ cd build
 %make_install
 
 %files
-%license googletest/LICENSE
-%doc googletest/{CHANGES,CONTRIBUTORS,README.md}
+%license LICENSE
+%doc CONTRIBUTORS
+%doc README.md
 %doc googletest/docs/
 %doc googletest/samples
 %{_includedir}/gtest/
