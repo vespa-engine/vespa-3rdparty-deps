@@ -41,9 +41,7 @@ BuildRequires: python36-pytest
 BuildRequires: python36-scipy
 %endif
 %define _cmake_download_catch -DDOWNLOAD_CATCH=ON
-%define _cmake_pybind11_test -DPYBIND11_TEST=ON
 %endif
-
 %if 0%{?el8}
 %define _devtoolset_enable /opt/rh/gcc-toolset-9/enable
 BuildRequires: gcc-toolset-9-gcc-c++
@@ -53,13 +51,7 @@ BuildRequires: boost-devel
 BuildRequires: python3-pytest
 BuildRequires: python3-scipy
 %define _cmake_download_catch -DDOWNLOAD_CATCH=ON
-%ifarch aarch64
-%define _cmake_pybind11_test -DPYBIND11_TEST=OFF
-%else
-%define _cmake_pybind11_test -DPYBIND11_TEST=ON
 %endif
-%endif
-
 %if 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: make
@@ -111,14 +103,13 @@ echo includedir is %{_includedir}
 mkdir build
 cd build
 
-
 %{?_cmake_prog}%{!?_cmake_prog:cmake} \
   -DCMAKE_PREFIX_PATH=${_prefix} \
   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
   -DCMAKE_INSTALL_RPATH=%{_libdir}  \
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
+  -DPYBIND11_TEST=ON \
   -DCMAKE_CXX_STANDARD=17 \
-  %{_cmake_pybind11_test} \
   %{_cmake_download_catch} \
   %{?_toolset_compiler_cmake_args} \
   ..
