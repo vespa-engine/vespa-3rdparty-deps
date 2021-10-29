@@ -35,6 +35,7 @@ BuildRequires: devtoolset-10-binutils
 BuildRequires: cmake3
 %define _cmake_prog cmake3
 BuildRequires: vespa-boost-devel >= 1.59.0-6%{dist}
+%define _cmake_env CXXFLAGS=-I%{_prefix}/include
 %if 0%{?amzn2}
 BuildRequires: python3-pytest
 %else
@@ -56,7 +57,6 @@ BuildRequires: python3-scipy
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
-BuildRequires: make
 BuildRequires: cmake
 BuildRequires: boost-devel
 BuildRequires: python3-pytest
@@ -66,6 +66,7 @@ BuildRequires: catch-devel
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
 BuildRequires: eigen3-devel
+BuildRequires: make
 
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
@@ -105,7 +106,7 @@ echo includedir is %{_includedir}
 mkdir build
 cd build
 
-%{?_cmake_prog}%{!?_cmake_prog:cmake} \
+env %{?_cmake_env} %{?_cmake_prog}%{!?_cmake_prog:cmake} \
   -DCMAKE_PREFIX_PATH=${_prefix} \
   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
   -DCMAKE_INSTALL_RPATH=%{_libdir}  \
