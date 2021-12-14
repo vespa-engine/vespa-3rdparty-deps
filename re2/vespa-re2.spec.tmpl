@@ -43,6 +43,10 @@ BuildRequires: devtoolset-10-gcc-c++
 BuildRequires: gcc-toolset-10-gcc
 BuildRequires: gcc-toolset-10-gcc-c++
 %endif
+%if 0%{?el9}
+BuildRequires: gcc
+BuildRequires: gcc-c++
+%endif
 %if 0%{?fedora}
 BuildRequires: gcc
 BuildRequires: gcc-c++
