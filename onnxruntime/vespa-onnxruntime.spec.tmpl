@@ -60,6 +60,14 @@ BuildRequires: cmake
 %define _download_cmake_tar 1
 %endif
 %endif
+%if 0%{?el9}
+BuildRequires: gcc-c++
+BuildRequires: make
+BuildRequires: glibc-langpack-en
+BuildRequires: cmake
+%define _cmake_prog cmake
+%define _ctest_prog ctest
+%endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: make
@@ -69,7 +77,9 @@ BuildRequires: glibc-langpack-en
 %define _ctest_prog ctest
 %endif
 BuildRequires: zlib-devel
+%if ! 0%{?el9}
 BuildRequires: redhat-lsb-core
+%endif
 BuildRequires: expat-devel
 BuildRequires: libcurl-devel
 BuildRequires: python3-devel
@@ -78,7 +88,9 @@ BuildRequires: numpy
 %else
 BuildRequires: python3-numpy
 %endif
+%if ! 0%{?el9}
 BuildRequires: libunwind
+%endif
 BuildRequires: python3-setuptools
 BuildRequires: bzip2
 

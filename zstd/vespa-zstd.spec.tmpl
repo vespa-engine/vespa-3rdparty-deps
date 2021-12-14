@@ -42,6 +42,9 @@ BuildRequires: devtoolset-10-gcc
 %define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
 BuildRequires: gcc-toolset-10-gcc
 %endif
+%if 0%{?el9}
+BuildRequires: gcc
+%endif
 %if 0%{?fedora}
 BuildRequires: gcc
 %endif
