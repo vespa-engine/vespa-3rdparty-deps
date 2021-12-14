@@ -55,6 +55,14 @@ BuildRequires: python3-pytest
 BuildRequires: python3-scipy
 %define _cmake_download_catch -DDOWNLOAD_CATCH=ON
 %endif
+%if 0%{?el9}
+BuildRequires: gcc-c++
+BuildRequires: cmake
+BuildRequires: boost-devel
+BuildRequires: python3-pytest
+BuildRequires: python3-scipy
+%define _cmake_download_catch -DDOWNLOAD_CATCH=ON
+%endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: cmake
@@ -111,7 +119,7 @@ env %{?_cmake_env} %{?_cmake_prog}%{!?_cmake_prog:cmake} \
   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
   -DCMAKE_INSTALL_RPATH=%{_libdir}  \
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
-  -DPYBIND11_TEST=ON \
+  -DPYBIND11_TEST=%{?el9:OFF}%{!?el9:ON} \
   -DCMAKE_CXX_STANDARD=17 \
   %{_cmake_download_catch} \
   %{?_toolset_compiler_cmake_args} \
@@ -121,9 +129,11 @@ env %{?_cmake_env} %{?_cmake_prog}%{!?_cmake_prog:cmake} \
 
 %check
 cd build
+%if ! 0%{?el9}
 make %{_smp_mflags} pytest
 make %{_smp_mflags} cpptest
 make %{_smp_mflags} test_cmake_build
+%endif
 
 %install
 %if 0%{?_devtoolset_enable:1}
