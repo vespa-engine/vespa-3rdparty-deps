@@ -1,0 +1,11 @@
+--- tests/test_embed/CMakeLists.txt.FCS	2021-10-27 21:35:10.000000000 +0000
++++ tests/test_embed/CMakeLists.txt	2021-12-15 10:16:24.959326412 +0000
+@@ -7,7 +7,7 @@
+   return()
+ endif()
+ 
+-find_package(Catch 2.13.2)
++find_package(Catch 2.13.7)
+ 
+ if(CATCH_FOUND)
+   message(STATUS "Building interpreter tests using Catch v${CATCH_VERSION}")

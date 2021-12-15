@@ -22,6 +22,7 @@ Release:        %{ver_release}%{?dist}
 License:        BSD
 URL:            https://github.com/pybind/pybind11
 Source0:        https://github.com/pybind/pybind11/archive/refs/tags/v%{version}.tar.gz
+Patch0:         patches.use-newer-catch.diff
 
 %if 0%{?el7}
 %if 0%{?amzn2}
@@ -49,6 +50,14 @@ BuildRequires: python36-scipy
 BuildRequires: gcc-toolset-10-gcc-c++
 BuildRequires: gcc-toolset-10-binutils
 BuildRequires: make
+BuildRequires: cmake
+BuildRequires: boost-devel
+BuildRequires: python3-pytest
+BuildRequires: python3-scipy
+%define _cmake_download_catch -DDOWNLOAD_CATCH=ON
+%endif
+%if 0%{?el9}
+BuildRequires: gcc-c++
 BuildRequires: cmake
 BuildRequires: boost-devel
 BuildRequires: python3-pytest
@@ -93,6 +102,9 @@ python3 -m pip install --user --upgrade pytest
 python3 -m pip install --user scipy
 %endif
 %setup -q -n pybind11-%{version}
+%if 0%{?el9} || 0%{?fedora}
+%patch0 -p0
+%endif
 
 %build
 echo building at $(pwd)
