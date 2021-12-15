@@ -22,6 +22,7 @@ Release:        %{ver_release}%{?dist}
 License:        BSD
 URL:            https://github.com/pybind/pybind11
 Source0:        https://github.com/pybind/pybind11/archive/refs/tags/v%{version}.tar.gz
+Patch0:         patches.use-newer-catch.diff
 
 %if 0%{?el7}
 %if 0%{?amzn2}
@@ -101,6 +102,9 @@ python3 -m pip install --user --upgrade pytest
 python3 -m pip install --user scipy
 %endif
 %setup -q -n pybind11-%{version}
+%if 0%{?el9} || 0%{?fedora}
+%patch0 -p0
+%endif
 
 %build
 echo building at $(pwd)
@@ -119,7 +123,7 @@ env %{?_cmake_env} %{?_cmake_prog}%{!?_cmake_prog:cmake} \
   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
   -DCMAKE_INSTALL_RPATH=%{_libdir}  \
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
-  -DPYBIND11_TEST=%{?el9:OFF}%{!?el9:ON} \
+  -DPYBIND11_TEST=ON \
   -DCMAKE_CXX_STANDARD=17 \
   %{_cmake_download_catch} \
   %{?_toolset_compiler_cmake_args} \
@@ -129,11 +133,9 @@ env %{?_cmake_env} %{?_cmake_prog}%{!?_cmake_prog:cmake} \
 
 %check
 cd build
-%if ! 0%{?el9}
 make %{_smp_mflags} pytest
 make %{_smp_mflags} cpptest
 make %{_smp_mflags} test_cmake_build
-%endif
 
 %install
 %if 0%{?_devtoolset_enable:1}
