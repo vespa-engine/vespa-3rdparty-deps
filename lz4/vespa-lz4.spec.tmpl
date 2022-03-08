@@ -47,6 +47,9 @@ BuildRequires: gcc
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc
+%if %fedora >= 36
+%define _extra_gcc_opt -fPIE
+%endif
 %endif
 BuildRequires: make
 
@@ -68,7 +71,7 @@ lz4 compiled for vespa -- devel
 
 %prep
 %setup -n lz4-%{version}
-sed -i 's,-O3,-O3 -g -fno-omit-frame-pointer,g' $(find . -name Makefile -print)
+sed -i 's,-O3,-O3 -g -fno-omit-frame-pointer%{?_extra_gcc_opt: %_extra_gcc_opt},g' $(find . -name Makefile -print)
 
 %build
 %if 0%{?_devtoolset_enable:1}
