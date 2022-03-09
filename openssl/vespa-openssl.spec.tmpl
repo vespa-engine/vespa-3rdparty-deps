@@ -35,13 +35,13 @@ Source0:        https://www.openssl.org/source/openssl-%{version}.tar.gz
 BuildRequires: gcc10-c++%{?_isa}
 %define _configure_args CC=gcc10-gcc CXX=gcc10-g++
 %else
-%define _devtoolset_enable /opt/rh/devtoolset-10/enable
-BuildRequires: devtoolset-10-gcc-c++%{?_isa}
+%define _devtoolset_enable /opt/rh/devtoolset-11/enable
+BuildRequires: devtoolset-11-gcc-c++%{?_isa}
 %endif
 %endif
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
-BuildRequires: gcc-toolset-10-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-11-gcc-c++
 BuildRequires: make
 BuildRequires: perl
 %endif
