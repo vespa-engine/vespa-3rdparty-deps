@@ -3,9 +3,9 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=1
-MINOR=7
-PATCH=1
-RELEASE=2
+MINOR=11
+PATCH=0
+RELEASE=1
 
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES
@@ -36,7 +36,6 @@ endif
 	tar -C $(SRCTMPBASE) -czf $(SOURCEDIR)/vespa-onnxruntime-$(VERSION).tar.gz vespa-onnxruntime-$(VERSION)
 	rm -rf $(SRCTMPBASE)
 	cat vespa-onnxruntime.spec.tmpl | sed "s/_TMPL_VER_MAJOR/$(MAJOR)/" | sed "s/_TMPL_VER_MINOR/$(MINOR)/" | sed "s/_TMPL_VER_PATCH/$(PATCH)/" | sed "s/_TMPL_VER_RELEASE/$(RELEASE)/" > $(SPECFILE)
-	cp -a *.diff $(SOURCEDIR)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
 	cp -a $(RPMTOPDIR)/SRPMS/* $(outdir)
 clean:

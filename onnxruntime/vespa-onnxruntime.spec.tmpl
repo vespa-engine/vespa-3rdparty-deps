@@ -27,38 +27,31 @@ Release:        %{ver_release}%{?dist}
 License:        MIT License
 URL:            https://microsoft.github.io/onnxruntime
 Source0:        vespa-onnxruntime-%{version}.tar.gz
-Patch0:         patches.thread-include.diff
-Patch1:         patches.normalize-include.diff
 
 %if 0%{?el7}
 %if 0%{?amzn2}
 BuildRequires: gcc10-c++%{?_isa}
 %define _toolset_compiler_cmake_args CMAKE_C_COMPILER=gcc10-gcc CMAKE_CXX_COMPILER=gcc10-g++
 %else
-%define _devtoolset_enable /opt/rh/devtoolset-10/enable
-BuildRequires: devtoolset-10-gcc-c++%{?_isa}
+%define _devtoolset_enable /opt/rh/devtoolset-11/enable
+BuildRequires: devtoolset-11-gcc-c++%{?_isa}
 %endif
-BuildRequires: cmake3
-%define _cmake_prog cmake3
-%define _ctest_prog ctest3
-%endif
-%if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
-BuildRequires: gcc-toolset-10-gcc-c++
-BuildRequires: make
-BuildRequires: glibc-langpack-en
 BuildRequires: wget
-%if 0%{?centos:1}%{?rocky:1}
-BuildRequires: cmake
-%define _cmake_prog cmake
-%define _ctest_prog ctest
-%else
-%define _cmake_version 3.18.2
-%define _cmake_prefix $(pwd)/cmake-%{_cmake_version}-Linux-x86_64
+%define _cmake_version 3.23.0
+%define _cmake_prefix $(pwd)/cmake-%{_cmake_version}-linux-x86_64
 %define _cmake_prog %{_cmake_prefix}/bin/cmake
 %define _ctest_prog %{_cmake_prefix}/bin/ctest
 %define _download_cmake_tar 1
 %endif
+%if 0%{?el8}
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-11-gcc-c++
+BuildRequires: make
+BuildRequires: glibc-langpack-en
+BuildRequires: wget
+BuildRequires: cmake
+%define _cmake_prog cmake
+%define _ctest_prog ctest
 %endif
 %if 0%{?el9}
 BuildRequires: gcc-c++
@@ -111,11 +104,9 @@ See https://github.com/vespa-engine/vespa-3rdparty-deps for details
 about packaging.
 %prep
 %setup -q
-%patch0 -p0
-%patch1 -p1
 
 %if 0%{?_download_cmake_tar}
-# Download precompiled cmake version on RHEL 8.3 for now.
+# Download precompiled cmake version on CentOS 7, RHEL 7 and Amazon Linux 2 for now.
 if test -f %{cmake_prog}
 then
   :
