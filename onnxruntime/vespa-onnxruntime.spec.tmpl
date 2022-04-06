@@ -38,7 +38,7 @@ BuildRequires: devtoolset-11-gcc-c++%{?_isa}
 %endif
 BuildRequires: wget
 %define _cmake_version 3.23.0
-%define _cmake_prefix $(pwd)/cmake-%{_cmake_version}-linux-x86_64
+%define _cmake_prefix $(pwd)/cmake-%{_cmake_version}-linux-%{_arch}
 %define _cmake_prog %{_cmake_prefix}/bin/cmake
 %define _ctest_prog %{_cmake_prefix}/bin/ctest
 %define _download_cmake_tar 1
@@ -111,7 +111,7 @@ if test -f %{cmake_prog}
 then
   :
 else
-  wget -O /tmp/cmake.tar.gz https://github.com/Kitware/CMake/releases/download/v%{_cmake_version}/cmake-%{_cmake_version}-Linux-x86_64.tar.gz
+  wget -O /tmp/cmake.tar.gz https://github.com/Kitware/CMake/releases/download/v%{_cmake_version}/cmake-%{_cmake_version}-Linux-%{_arch}.tar.gz
   tar xf /tmp/cmake.tar.gz
   rm -f /tmp/cmake.tar.gz
 fi
