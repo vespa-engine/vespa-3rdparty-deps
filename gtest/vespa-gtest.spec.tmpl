@@ -84,7 +84,7 @@ source %{_devtoolset_enable} || true
 mkdir build && cd build
 %{?_cmake_prog}%{!?_cmake_prog:cmake} \
        -DBUILD_SHARED_LIBS=ON \
-       -DCMAKE_CXX_FLAGS="-std=c++14 ${RPM_OPT_FLAGS}" \
+       -DCMAKE_CXX_FLAGS="-std=c++2a ${RPM_OPT_FLAGS}" \
        -DPYTHON_EXECUTABLE=%{__python3} \
        -Dgtest_build_tests=ON \
        -DCMAKE_INSTALL_PREFIX=%{_prefix} \
