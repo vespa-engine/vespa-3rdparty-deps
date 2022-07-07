@@ -1,0 +1,55 @@
+# Copyright Yahoo. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# no debuggable binaries here
+%define debug_package %{nil}
+BuildArchitectures: noarch
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+Summary:        Gradle for building other 3rd party deps
+Name:           vespa-gradle
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        Apache
+URL:            https://gradle.org/
+Source0:        https://services.gradle.org/distributions/gradle-%{version}-bin.zip
+Patch0:         script.sh
+
+%if 0%{?el7} || 0%{?el8}
+Requires: java-11-openjdk-devel
+%endif
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q -n gradle-%{version}
+
+%build
+: none
+
+%global _gdir %{_prefix}/lib/gradle-%{version}
+%install
+mkdir -p %{buildroot}%{_gdir}
+cp -R . %{buildroot}%{_gdir}/.
+mkdir -p %{buildroot}%{_prefix}/bin
+cp -p %{_sourcedir}/script.sh %{buildroot}%{_prefix}/bin/gradle
+
+%files
+%{_prefix}/bin/
+%{_prefix}/lib/
+%license LICENSE
+
+%changelog
