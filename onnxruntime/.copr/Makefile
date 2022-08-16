@@ -3,9 +3,9 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=1
-MINOR=11
-PATCH=0
-RELEASE=2
+MINOR=12
+PATCH=1
+RELEASE=1
 
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES
