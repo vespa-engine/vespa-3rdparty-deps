@@ -20,10 +20,15 @@ Release:        %{ver_release}%{?dist}
 License:        Apache
 URL:            https://gradle.org/
 Source0:        https://services.gradle.org/distributions/gradle-%{version}-bin.zip
-Patch0:         script.sh
+Source1:        script.sh
 
-%if 0%{?el7} || 0%{?el8}
+%if 0%{?amzn2022}
+Requires: java-11-amazon-corretto-devel
+Requires: java-11-amazon-corretto
+%else
+%if 0%{?el7} || 0%{?el8} || 0%{?el9} || 0%{?fedora}
 Requires: java-11-openjdk-devel
+%endif
 %endif
 
 %global _vespa_3rdparty_deps_packaging_notice \
@@ -45,7 +50,7 @@ about packaging.
 mkdir -p %{buildroot}%{_gdir}
 cp -R . %{buildroot}%{_gdir}/.
 mkdir -p %{buildroot}%{_prefix}/bin
-cp -p %{_sourcedir}/script.sh %{buildroot}%{_prefix}/bin/gradle
+cp -p %{SOURCE1} %{buildroot}%{_prefix}/bin/gradle
 
 %files
 %{_prefix}/bin/
