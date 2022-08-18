@@ -1,0 +1,12 @@
+diff --git a/cmake/onnxruntime_java.cmake b/cmake/onnxruntime_java.cmake
+index d7b47f699..542f72b6f 100644
+--- a/cmake/onnxruntime_java.cmake
++++ b/cmake/onnxruntime_java.cmake
+@@ -61,6 +61,7 @@ file(GLOB onnxruntime4j_native_src
+ # Build the JNI library
+ onnxruntime_add_shared_library_module(onnxruntime4j_jni ${onnxruntime4j_native_src})
+ set_property(TARGET onnxruntime4j_jni PROPERTY CXX_STANDARD 11)
++set_target_properties(onnxruntime4j_jni PROPERTIES BUILD_RPATH_USE_ORIGIN TRUE)
+ 
+ # depend on java sources. if they change, the JNI should recompile
+ add_dependencies(onnxruntime4j_jni onnxruntime4j)

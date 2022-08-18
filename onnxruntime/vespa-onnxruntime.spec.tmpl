@@ -27,6 +27,7 @@ Release:        %{ver_release}%{?dist}
 License:        MIT License
 URL:            https://microsoft.github.io/onnxruntime
 Source0:        vespa-onnxruntime-%{version}.tar.gz
+Patch0:         patches.use-origin-rpath-for-jni-library.diff
 
 BuildRequires: vespa-gradle
 BuildRequires: which
@@ -106,6 +107,7 @@ See https://github.com/vespa-engine/vespa-3rdparty-deps for details
 about packaging.
 %prep
 %setup -q
+%patch0 -p1
 
 %if 0%{?_download_cmake_tar}
 # Download precompiled cmake version on CentOS 7, RHEL 7 and Amazon Linux 2 for now.
