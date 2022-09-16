@@ -15,6 +15,9 @@
 # Exclude automated requires for libraries in /opt/vespa-deps/lib64.
 %global __requires_exclude ^(lib(crypto|ssl)\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(lib(crypto|ssl)\\))$
 
+# Avoid auto requirement for perl
+%global __requires_exclude_from /c_rehash$|\\.pl$
+
 # Version
 %define ver_major _TMPL_VER_MAJOR
 %define ver_minor _TMPL_VER_MINOR
