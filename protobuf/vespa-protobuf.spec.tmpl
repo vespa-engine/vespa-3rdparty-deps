@@ -30,18 +30,9 @@ URL:            https://github.com/protocolbuffers/protobuf
 Source0:        https://github.com/protocolbuffers/protobuf/releases/download/v%{ver_minor}.%{ver_patch}/protobuf-cpp-%{version}.tar.gz
 Patch0:         patches.protobuf-linker-maps.diff
 
-%if 0%{?el7}
-%if 0%{?amzn2}
-BuildRequires: gcc10-c++%{?_isa}
-%define _configure_args CC=gcc10-gcc CXX=gcc10-g++ CC_FOR_BUILD=gcc10-gcc CXX_FOR_BUILD=gcc10-g++
-%else
-%define _devtoolset_enable /opt/rh/devtoolset-10/enable
-BuildRequires: devtoolset-10-gcc-c++%{?_isa}
-%endif
-%endif
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
-BuildRequires: gcc-toolset-10-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-11-gcc-c++
 BuildRequires: make
 %endif
 %if 0%{?fedora}
@@ -68,9 +59,6 @@ This package contains protobuf compiler for C++ and C++ headers and libraries.
 %{_vespa_3rdparty_deps_packaging_notice}
 %prep
 %setup -q -n protobuf-%{version}
-%if 0%{?el7} && 0%{?amzn2}
-%patch0 -p0
-%endif
 
 %build
 %if 0%{?_devtoolset_enable:1}

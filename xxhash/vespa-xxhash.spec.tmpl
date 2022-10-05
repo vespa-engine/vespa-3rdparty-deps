@@ -29,18 +29,9 @@ License:        GPLv2+ and BSD
 URL:            http://www.xxhash.com/
 Source0:        https://github.com/Cyan4973/xxHash/archive/v%{version}/%{name}-%{version}.tar.gz
 
-%if 0%{?el7}
-%if 0%{?amzn2}
-BuildRequires: gcc10%{?_isa}
-%define _toolset_compiler_args CC=gcc10-gcc
-%else
-%define _devtoolset_enable /opt/rh/devtoolset-10/enable
-BuildRequires: devtoolset-10-gcc
-%endif
-%endif
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
-BuildRequires: gcc-toolset-10-gcc
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-11-gcc
 %endif
 %if 0%{?el9}
 BuildRequires: gcc

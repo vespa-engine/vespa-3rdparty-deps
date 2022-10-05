@@ -30,17 +30,6 @@ URL:            https://github.com/google/googletest
 Source0:        https://github.com/google/googletest/archive/release-%{version}.tar.gz
 
 BuildRequires: python3-devel
-%if 0%{?el7}
-%if 0%{?amzn2}
-BuildRequires: gcc10-c++%{?_isa}
-%define _toolset_compiler_cmake_args -DCMAKE_C_COMPILER=gcc10-gcc -DCMAKE_CXX_COMPILER=gcc10-g++
-%else
-%define _devtoolset_enable /opt/rh/devtoolset-10/enable
-BuildRequires: devtoolset-10-gcc-c++%{?_isa}
-%endif
-BuildRequires: cmake3
-%define _cmake_prog cmake3
-%endif
 %if 0%{?el8}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
 %if 0%{?_centos_stream} || 0%{?rocky} || 0%{?almalinux}
@@ -49,9 +38,9 @@ BuildRequires: gcc-toolset-11-annobin
 BuildRequires: gcc-toolset-11-annobin-plugin-gcc
 %define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
 %else
-%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
-BuildRequires: gcc-toolset-10-gcc-c++
-BuildRequires: gcc-toolset-10-annobin
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-11-gcc-c++
+BuildRequires: gcc-toolset-11-annobin
 %endif
 BuildRequires: cmake
 %endif

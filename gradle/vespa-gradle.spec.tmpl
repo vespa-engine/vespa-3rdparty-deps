@@ -26,7 +26,7 @@ Source1:        script.sh
 Requires: java-11-amazon-corretto-devel
 Requires: java-11-amazon-corretto
 %else
-%if 0%{?el7} || 0%{?el8} || 0%{?el9} || 0%{?fedora}
+%if 0%{?el8} || 0%{?el9} || 0%{?fedora}
 Requires: java-11-openjdk-devel
 %endif
 %endif

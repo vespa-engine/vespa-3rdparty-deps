@@ -30,27 +30,15 @@ URL:            http://site.icu-project.org/
 Source0:        https://github.com/unicode-org/icu/releases/download/release-%{ver_major}-%{ver_minor}/icu4c-%{ver_major}_%{ver_minor}-src.tgz
 
 
-%if 0%{?el7}
-%if 0%{?amzn2}
-BuildRequires: gcc10-c++%{?_isa}
-%define _configure_args CC=gcc10-gcc CXX=gcc10-g++
-%else
-%define _devtoolset_enable /opt/rh/devtoolset-10/enable
-BuildRequires: devtoolset-10-gcc-c++%{?_isa}
-%endif
-%endif
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
-BuildRequires: gcc-toolset-10-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-11-gcc-c++
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
 %endif
 BuildRequires: doxygen
 BuildRequires: autoconf
-%if 0%{?el7}
-BuildRequires: python3
-%endif
 %if 0%{?el8}
 BuildRequires: python36
 %endif
@@ -95,10 +83,6 @@ source %{_devtoolset_enable} || true
 %endif
 cd source/build
 %make_install
-
-%if 0%{?el7}
-strip %{buildroot}/%{_libdir}/libicudata.so.*.*
-%endif
 
 %files
 %{_prefix}/bin/
