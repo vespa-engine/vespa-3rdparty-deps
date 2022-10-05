@@ -29,18 +29,9 @@ License:        BSD and GPLv2
 URL:            https://github.com/facebook/zstd
 Source0:        https://github.com/facebook/zstd/archive/v%{version}.tar.gz#/zstd-%{version}.tar.gz
 
-%if 0%{?el7}
-%if 0%{?amzn2}
-BuildRequires: gcc10%{?_isa}
-%define _toolset_compiler_args CC=gcc10-gcc
-%else
-%define _devtoolset_enable /opt/rh/devtoolset-10/enable
-BuildRequires: devtoolset-10-gcc
-%endif
-%endif
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
-BuildRequires: gcc-toolset-10-gcc
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-11-gcc
 %endif
 %if 0%{?el9}
 BuildRequires: gcc
@@ -75,7 +66,7 @@ zstd compiled for vespa -- devel
 
 %prep
 %setup -n zstd-%{version}
-sed -i 's,-O3,-O3 -g -fno-omit-frame-pointer,g' $(find . -name Makefile -print)
+sed -i 's,-O3,-O3 -g -fno-omit-frame-pointer,g' $(find . -name Makefile -print) lib/libzstd.mk
 
 %build
 %if 0%{?_devtoolset_enable:1}
