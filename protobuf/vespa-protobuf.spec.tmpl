@@ -27,7 +27,7 @@ Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        BSD
 URL:            https://github.com/protocolbuffers/protobuf
-Source0:        https://github.com/protocolbuffers/protobuf/releases/download/v%{version}/protobuf-cpp-%{version}.tar.gz
+Source0:        https://github.com/protocolbuffers/protobuf/releases/download/v%{ver_minor}.%{ver_patch}/protobuf-cpp-%{version}.tar.gz
 Patch0:         patches.protobuf-linker-maps.diff
 
 %if 0%{?el7}
@@ -91,7 +91,7 @@ cd build
 %define _unpackaged_files_terminate_build 0
 
 %files
-%{_libdir}/libprotobuf.so.30*
+%{_libdir}/libprotobuf.so.32*
 %license LICENSE
 
 %files devel
@@ -99,7 +99,7 @@ cd build
 %{_includedir}/google/protobuf/
 %{_libdir}/libprotobuf.so
 %{_libdir}/libprotoc.so
-%{_libdir}/libprotoc.so.30*
+%{_libdir}/libprotoc.so.32*
 %{_bindir}/protoc
 %license LICENSE
 
