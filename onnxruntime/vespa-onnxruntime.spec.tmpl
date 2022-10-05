@@ -31,21 +31,6 @@ Patch0:         patches.use-origin-rpath-for-jni-library.diff
 
 BuildRequires: vespa-gradle
 BuildRequires: which
-%if 0%{?el7}
-%if 0%{?amzn2}
-BuildRequires: gcc10-c++%{?_isa}
-%define _toolset_compiler_cmake_args CMAKE_C_COMPILER=gcc10-gcc CMAKE_CXX_COMPILER=gcc10-g++
-%else
-%define _devtoolset_enable /opt/rh/devtoolset-11/enable
-BuildRequires: devtoolset-11-gcc-c++%{?_isa}
-%endif
-BuildRequires: wget
-%define _cmake_version 3.23.0
-%define _cmake_prefix $(pwd)/cmake-%{_cmake_version}-linux-%{_arch}
-%define _cmake_prog %{_cmake_prefix}/bin/cmake
-%define _ctest_prog %{_cmake_prefix}/bin/ctest
-%define _download_cmake_tar 1
-%endif
 %if 0%{?el8}
 %define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
 BuildRequires: gcc-toolset-11-gcc-c++
@@ -79,11 +64,7 @@ BuildRequires: redhat-lsb-core
 BuildRequires: expat-devel
 BuildRequires: libcurl-devel
 BuildRequires: python3-devel
-%if 0%{?amzn2}
-BuildRequires: numpy
-%else
 BuildRequires: python3-numpy
-%endif
 %if ! 0%{?el9}
 BuildRequires: libunwind
 %endif

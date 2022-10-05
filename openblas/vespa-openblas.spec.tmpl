@@ -28,26 +28,11 @@ License:        BSD
 URL:            https://github.com/xianyi/OpenBLAS/
 Source0:        https://github.com/xianyi/OpenBLAS/archive/v%{version}/openblas-%{version}.tar.gz
 
-%if 0%{?el7}
-%if 0%{?amzn2}
-BuildRequires: gcc10%{?_isa}
-BuildRequires: gcc10-c++%{?_isa}
-BuildRequires: gcc-gfortran
-BuildRequires: perl-devel
-%define _gcc_compiler gcc10-gcc
-%else
-%define _devtoolset_enable /opt/rh/devtoolset-10/enable
-BuildRequires: devtoolset-10-gcc
-BuildRequires: devtoolset-10-gcc-c++
-BuildRequires: devtoolset-10-gcc-gfortran
-BuildRequires: perl-devel
-%endif
-%endif
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
-BuildRequires: gcc-toolset-10-gcc
-BuildRequires: gcc-toolset-10-gcc-c++
-BuildRequires: gcc-toolset-10-gcc-gfortran
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-11-gcc
+BuildRequires: gcc-toolset-11-gcc-c++
+BuildRequires: gcc-toolset-11-gcc-gfortran
 BuildRequires: perl-devel
 %endif
 %if 0%{?fedora}
@@ -84,11 +69,6 @@ source %{_devtoolset_enable} || true
 %endif
 %ifarch aarch64
 %define _openblas_target ARMV8
-%endif
-%if 0%{?amzn2}
-# Add link to let gcc10-gcc link with older gfortran library
-ln -s /usr/lib64/libgfortran.so.4 libgfortran.so
-sed -i -e 's,EXTRALIB += -lgfortran,EXTRALIB += -L$(TOPDIR) -lgfortran,' Makefile.system
 %endif
 %make_build NO_STATIC=1 TARGET=%{?_openblas_target} DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_THREAD=0 USE_OPENMP=0 FC=gfortran CC=%{?_gcc_compiler}%{!?_gcc_compiler:gcc} COMMON_OPT="-O3 -g -fPIC" FCOMMON_OPT="-O3 -g -fPIC -frecursive" LIBPREFIX="libopenblas" INTERFACE64=0
 

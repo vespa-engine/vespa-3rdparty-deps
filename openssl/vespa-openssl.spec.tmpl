@@ -33,15 +33,6 @@ URL:            https://www.openssl.org
 Source0:        https://www.openssl.org/source/openssl-%{version}.tar.gz
 
 
-%if 0%{?el7}
-%if 0%{?amzn2}
-BuildRequires: gcc10-c++%{?_isa}
-%define _configure_args CC=gcc10-gcc CXX=gcc10-g++
-%else
-%define _devtoolset_enable /opt/rh/devtoolset-11/enable
-BuildRequires: devtoolset-11-gcc-c++%{?_isa}
-%endif
-%endif
 %if 0%{?el8}
 %define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
 BuildRequires: gcc-toolset-11-gcc-c++

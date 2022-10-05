@@ -24,31 +24,10 @@ URL:            https://github.com/pybind/pybind11
 Source0:        https://github.com/pybind/pybind11/archive/refs/tags/v%{version}.tar.gz
 Patch0:         patches.use-newer-catch.diff
 
-%if 0%{?el7}
-%if 0%{?amzn2}
-BuildRequires: gcc10-c++%{?_isa}
-%define _toolset_compiler_cmake_args -DCMAKE_C_COMPILER=gcc10-gcc -DCMAKE_CXX_COMPILER=gcc10-g++
-%else
-%define _devtoolset_enable /opt/rh/devtoolset-10/enable
-BuildRequires: devtoolset-10-gcc-c++%{?_isa}
-BuildRequires: devtoolset-10-binutils
-%endif
-BuildRequires: cmake3
-%define _cmake_prog cmake3
-BuildRequires: vespa-boost-devel >= 1.59.0-6%{dist}
-%define _cmake_env CXXFLAGS=-I%{_prefix}/include
-%if 0%{?amzn2}
-BuildRequires: python3-pytest
-%else
-BuildRequires: python36-pytest
-BuildRequires: python36-scipy
-%endif
-%define _cmake_download_catch -DDOWNLOAD_CATCH=ON
-%endif
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-10/enable
-BuildRequires: gcc-toolset-10-gcc-c++
-BuildRequires: gcc-toolset-10-binutils
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-11-gcc-c++
+BuildRequires: gcc-toolset-11-binutils
 BuildRequires: make
 BuildRequires: cmake
 BuildRequires: boost-devel
@@ -93,14 +72,6 @@ pybind11 devel package for Vespa.
 %{_vespa_3rdparty_deps_packaging_notice}
 %prep
 echo preping at $(pwd)
-%if 0%{?el7}
-python3 -m pip install --user --upgrade pip
-python3 -m pip install --user --upgrade setuptools
-python3 -m pip install --user --upgrade pytest
-%endif
-%if 0%{?amzn2}
-python3 -m pip install --user scipy
-%endif
 %setup -q -n pybind11-%{version}
 %if 0%{?el9} || 0%{?fedora}
 %patch0 -p0
