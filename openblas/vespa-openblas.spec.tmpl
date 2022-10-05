@@ -70,11 +70,6 @@ source %{_devtoolset_enable} || true
 %ifarch aarch64
 %define _openblas_target ARMV8
 %endif
-%if 0%{?amzn2}
-# Add link to let gcc11-gcc link with older gfortran library
-ln -s /usr/lib64/libgfortran.so.4 libgfortran.so
-sed -i -e 's,EXTRALIB += -lgfortran,EXTRALIB += -L$(TOPDIR) -lgfortran,' Makefile.system
-%endif
 %make_build NO_STATIC=1 TARGET=%{?_openblas_target} DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_THREAD=0 USE_OPENMP=0 FC=gfortran CC=%{?_gcc_compiler}%{!?_gcc_compiler:gcc} COMMON_OPT="-O3 -g -fPIC" FCOMMON_OPT="-O3 -g -fPIC -frecursive" LIBPREFIX="libopenblas" INTERFACE64=0
 
 %install

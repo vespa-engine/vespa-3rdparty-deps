@@ -64,11 +64,7 @@ BuildRequires: redhat-lsb-core
 BuildRequires: expat-devel
 BuildRequires: libcurl-devel
 BuildRequires: python3-devel
-%if 0%{?amzn2}
-BuildRequires: numpy
-%else
 BuildRequires: python3-numpy
-%endif
 %if ! 0%{?el9}
 BuildRequires: libunwind
 %endif
