@@ -32,16 +32,10 @@ Source0:        https://github.com/google/googletest/archive/release-%{version}.
 BuildRequires: python3-devel
 %if 0%{?el8}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
-%if 0%{?_centos_stream} || 0%{?rocky} || 0%{?almalinux}
 BuildRequires: gcc-toolset-11-gcc-c++
 BuildRequires: gcc-toolset-11-annobin
 BuildRequires: gcc-toolset-11-annobin-plugin-gcc
 %define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
-%else
-%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
-BuildRequires: gcc-toolset-11-gcc-c++
-BuildRequires: gcc-toolset-11-annobin
-%endif
 BuildRequires: cmake
 %endif
 %if 0%{?fedora}
