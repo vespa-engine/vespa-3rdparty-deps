@@ -1,0 +1,45 @@
+# Copyright Yahoo. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+Summary:        Wireguard-go
+Name:           vespa-wireguard-go
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        MIT
+URL:            https://github.com/WireGuard/wireguard-go
+Source:         https://github.com/WireGuard/wireguard-go/archive/refs/tags/%{ver_major}.%{ver_minor}.%{ver_patch}.zip
+BuildRequires:  golang
+BuildRequires:  git
+BuildRequires:  make
+
+%description
+Wireguard-go built for Vespa.
+
+# Avoid failing on empty debug files list
+%global debug_package %{nil}
+
+%prep
+%setup -q -n wireguard-go-%{ver_major}.%{ver_minor}.%{ver_patch}
+
+%build
+make
+
+%install
+%make_install PREFIX=%{_prefix}
+
+%files
+%{_prefix}/bin/
+%doc
+
+%changelog
