@@ -12,10 +12,16 @@ SOURCEDIR=$(RPMTOPDIR)/SOURCES
 SPECDIR=$(RPMTOPDIR)/SPECS
 SPECFILE=$(SPECDIR)/vespa-wireguard-go.spec
 
+SUB1=s/_TMPL_VER_MAJOR/$(MAJOR)/
+SUB2=s/_TMPL_VER_MINOR/$(MINOR)/
+SUB3=s/_TMPL_VER_PATCH/$(PATCH)/
+SUB4=s/_TMPL_VER_RELEASE/$(RELEASE)/
+SEDSUBS=$(SUB1);$(SUB2);$(SUB3);$(SUB4)
+
 srpm:
 	dnf install -y rpmdevtools
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
-	cat vespa-wireguard-go.spec.tmpl | sed "s/_TMPL_VER_MAJOR/$(MAJOR)/" | sed "s/_TMPL_VER_MINOR/$(MINOR)/" | sed "s/_TMPL_VER_PATCH/$(PATCH)/" | sed "s/_TMPL_VER_RELEASE/$(RELEASE)/" > $(SPECFILE)
+	cat vespa-wireguard-go.spec.tmpl | sed "$(SEDSUBS)" > $(SPECFILE)
 	spectool -g -C $(SOURCEDIR) $(SPECFILE)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
 	cp -a $(RPMTOPDIR)/SRPMS/* ${outdir}
