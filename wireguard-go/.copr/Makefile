@@ -4,7 +4,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 # Version
 MAJOR=0
 MINOR=0
-PATCH=20220117
+PATCH=20220316
 RELEASE=1
 
 GO_TAG=go1.19.3
