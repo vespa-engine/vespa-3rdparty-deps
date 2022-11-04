@@ -1,0 +1,53 @@
+# Copyright Yahoo. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+%define go_tag _TMPL_GO_TAG
+
+Summary:        Wireguard-go
+Name:           vespa-wireguard-go
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        MIT
+URL:            https://github.com/WireGuard/wireguard-go
+Source0:        https://github.com/WireGuard/wireguard-go/archive/refs/tags/%{ver_major}.%{ver_minor}.%{ver_patch}.zip
+Source1:        https://github.com/golang/go/archive/refs/tags/%{go_tag}.zip
+BuildRequires:  git
+BuildRequires:  make
+
+%description
+Wireguard-go built for Vespa.
+
+# Avoid failing on empty debug files list
+%global debug_package %{nil}
+
+%prep
+# Extract and make go
+%setup -T -b 1 -q -n go-%{go_tag}
+pushd src &&./make.bash && popd
+# Extract wireguard-go
+%setup -T -b 0 -q -n wireguard-go-%{ver_major}.%{ver_minor}.%{ver_patch}
+
+%build
+%define my_path %{_builddir}/go-%{go_tag}/bin:$PATH
+# Verify go version before making wireguard-go
+[[ `env PATH=%{my_path} go version | awk '{printf $3}'` == "%{go_tag}" ]] || exit 1
+env PATH=%{my_path} make
+
+%install
+%make_install PREFIX=%{_prefix}
+
+%files
+%{_prefix}/bin/
+%doc
+
+%changelog
