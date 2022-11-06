@@ -42,6 +42,7 @@ pushd src &&./make.bash && popd
 %define my_path %{_builddir}/go-%{go_tag}/bin:$PATH
 # Verify go version before making wireguard-go
 [[ `env PATH=%{my_path} go version | awk '{printf $3}'` == "%{go_tag}" ]] || exit 1
+env PATH=%{my_path} go env -w GOPROXY="https://proxy.golang.org,direct"
 env PATH=%{my_path} make
 
 %install
