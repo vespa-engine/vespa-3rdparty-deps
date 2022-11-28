@@ -3,6 +3,9 @@
 # Disable build id note requirement for now
 %undefine _missing_build_ids_terminate_build
 
+# Disable debug packages for go based binaries. Does not work with rpmbuild.
+%global debug_package %{nil}
+
 # Force special prefix for Vespa
 %define _prefix /opt/vespa-deps
 
@@ -28,9 +31,20 @@ BuildRequires:  make
 Telegraf package for Vespa.
 
 %prep
-curl -O https://dl.google.com/go/go1.14.linux-amd64.tar.gz
-echo "08df79b46b0adf498ea9f320a0f23d6ec59e9003660b4c9c1ce8e5e2c6f823ca go1.14.linux-amd64.tar.gz" | sha256sum -c
-tar -xzf go1.14.linux-amd64.tar.gz
+GO_VERSION=1.14
+%ifarch x86_64
+GO_ARCH=amd64
+GO_TGZ_SHA=08df79b46b0adf498ea9f320a0f23d6ec59e9003660b4c9c1ce8e5e2c6f823ca
+%endif
+%ifarch aarch64
+GO_ARCH=arm64
+GO_TGZ_SHA=cd813387f770c07819912f8ff4b9796a4e317dee92548b7226a19e60ac79eb27
+%endif
+
+curl -O https://dl.google.com/go/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz
+echo "${GO_TGZ_SHA} go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" | sha256sum -c
+tar -xzf go${GO_VERSION}.linux-${GO_ARCH}.tar.gz
+
 %setup -q -n telegraf-vespa-input-plugin
 
 %build
