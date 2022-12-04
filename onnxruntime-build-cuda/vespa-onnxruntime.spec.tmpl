@@ -1,0 +1,200 @@
+# Copyright Yahoo. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so(\\.[0-9.]*)?\\([A-Z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+%global __requires_exclude ^libonnxruntime\\.so\\.[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+Summary:        ONNX Runtime package for Vespa
+Name:           vespa-onnxruntime
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        MIT License
+URL:            https://microsoft.github.io/onnxruntime
+Source0:        vespa-onnxruntime-%{version}.tar.gz
+Patch0:         patches.use-origin-rpath-for-jni-library.diff
+
+BuildRequires: vespa-gradle
+BuildRequires: which
+%if 0%{?el8}
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-11-gcc-c++
+BuildRequires: make
+BuildRequires: glibc-langpack-en
+BuildRequires: wget
+BuildRequires: cmake
+%define _cmake_prog cmake
+%define _ctest_prog ctest
+%endif
+%if 0%{?el9}
+BuildRequires: gcc-c++
+BuildRequires: make
+BuildRequires: glibc-langpack-en
+BuildRequires: cmake
+%define _cmake_prog cmake
+%define _ctest_prog ctest
+%endif
+%if 0%{?fedora}
+BuildRequires: gcc-c++
+BuildRequires: make
+BuildRequires: cmake
+BuildRequires: glibc-langpack-en
+%define _cmake_prog cmake
+%define _ctest_prog ctest
+%endif
+BuildRequires: zlib-devel
+%if ! 0%{?el9} && ! 0%{?amzn2022}
+BuildRequires: redhat-lsb-core
+%endif
+BuildRequires: expat-devel
+BuildRequires: libcurl-devel
+BuildRequires: python3-devel
+BuildRequires: python3-numpy
+%if ! 0%{?el9}
+BuildRequires: libunwind
+%endif
+BuildRequires: python3-setuptools
+BuildRequires: bzip2
+
+%description
+ONNX Runtime package for Vespa.
+
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details
+about packaging.
+
+%package devel
+Summary:        ONNX Runtime dev package for Vespa.
+Requires:       %{name} = %{version}-%{release}
+
+%description devel
+%{version} dev package for Vespa.
+
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details
+about packaging.
+%prep
+%setup -q
+%patch0 -p1
+
+%if 0%{?_download_cmake_tar}
+# Download precompiled cmake version on CentOS 7, RHEL 7 and Amazon Linux 2 for now.
+if test -f %{cmake_prog}
+then
+  :
+else
+  wget -O /tmp/cmake.tar.gz https://github.com/Kitware/CMake/releases/download/v%{_cmake_version}/cmake-%{_cmake_version}-Linux-%{_arch}.tar.gz
+  tar xf /tmp/cmake.tar.gz
+  rm -f /tmp/cmake.tar.gz
+fi
+%endif
+
+%build
+
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+
+%ifarch x86_64
+%define nvidia_arch x86_64
+%endif
+%ifarch aarch64
+%define nvidia_arch sbsa
+%endif
+
+sudo dnf -y config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/%{nvidia_arch}/cuda-rhel8.repo
+sudo dnf -y install \
+	--enablerepo cuda-rhel8-%{nvidia_arch} \
+	cuda-libraries-devel-11-8 libcudnn8 libcudnn8-devel cuda-compiler-11-8 cuda-cudart-devel-11-8 cuda-command-line-tools-11-8
+sudo dnf config-manager --set-disabled cuda-rhel8-%{nvidia_arch}
+
+PATH=%{_prefix}/bin:$PATH
+
+./build.sh \
+  --config RelWithDebInfo \
+  --use_cuda --cuda_home=/usr/local/cuda-11.8 --cudnn_home=/usr \
+  --build_java \
+  --skip_tests \
+  --build_shared_lib \
+  --parallel \
+  --cmake_path %{_cmake_prog} \
+  --ctest_path %{_ctest_prog} \
+  --skip_submodule_sync \
+  --cmake_extra_defines \
+    CMAKE_INSTALL_PREFIX=%{_prefix} \
+    CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    CMAKE_CUDA_ARCHITECTURES="60;70;75" \
+    onnxruntime_DEV_MODE=OFF \
+    onnxruntime_USE_OPENMP=OFF \
+    %{?_toolset_compiler_cmake_args}
+
+%install
+rm -rf $RPM_BUILD_ROOT
+
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+
+make -C build/Linux/RelWithDebInfo DESTDIR=%{buildroot} install
+
+cp -p build/Linux/RelWithDebInfo/lib*jni*.so* %{buildroot}%{_prefix}/lib64/.
+mkdir -p %{buildroot}%{_prefix}/lib
+cp -p build/Linux/RelWithDebInfo/java/build/libs/* %{buildroot}%{_prefix}/lib/.
+
+# Compat links with tarfile distribution
+ln -s core/session/onnxruntime_c_api.h %{buildroot}%{_prefix}/include/onnxruntime/onnxruntime_c_api.h
+ln -s core/session/onnxruntime_cxx_api.h %{buildroot}%{_prefix}/include/onnxruntime/onnxruntime_cxx_api.h
+ln -s core/session/onnxruntime_cxx_inline.h %{buildroot}%{_prefix}/include/onnxruntime/onnxruntime_cxx_inline.h
+
+%files
+%{_prefix}/lib64/
+%exclude %{_prefix}/lib64/*cuda*
+%exclude %{_prefix}/bin/
+%license LICENSE
+
+%files devel
+%{_prefix}/include/
+%license LICENSE
+
+%package java
+Summary:        ONNX java runtime support for Vespa.
+Requires:       %{name} = %{version}-%{release}
+
+%description java
+%{version} java support package for Vespa.
+
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details
+about packaging.
+
+%files java
+%{_prefix}/lib/
+%license LICENSE
+
+%package cuda
+Summary:        ONNX provider for CUDA (for Vespa).
+Requires:       %{name} = %{version}-%{release}
+
+%description cuda
+CUDA support package for Vespa.
+
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details
+about packaging.
+
+%files cuda
+%{_prefix}/lib64/*cuda*
+%license LICENSE
+
+%changelog
