@@ -1,0 +1,65 @@
+# Copyright Yahoo. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so(\\.[0-9.]*)?\\([A-Z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+%global __requires_exclude ^libonnxruntime\\.so\\.[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+%define pkg_name vespa-onnxruntime-cuda
+Summary:        ONNX Runtime package for Vespa
+Name:           %{pkg_name}
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        MIT License
+URL:            https://microsoft.github.io/onnxruntime
+Source0:        %{pkg_name}-%{version}.tar.gz
+
+BuildRequires: unzip
+BuildRequires: maven
+BuildRequires: make
+
+Requires: libcublas-11-8
+Requires: cuda-cudart-11-8
+Requires: cuda-cufft-10-2
+Requires: cuda-curand-10-2
+Requires: cuda-license-10-2
+Requires: libcudnn8
+
+%description
+ONNX Runtime CUDA provider, repackaged for Vespa.
+
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details
+about packaging.
+
+%prep
+%setup -q
+
+sudo dnf -y config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+sudo dnf -y install cuda-libraries-devel-11-8
+sudo dnf -y install libcudnn8 libcudnn8-devel
+
+%install
+rm -rf $RPM_BUILD_ROOT
+
+make DESTDIR=%{buildroot} install VERSION=%{version}
+
+%files
+%{_prefix}/lib64/
+%license onnxruntime.LICENSE
+
+%changelog
