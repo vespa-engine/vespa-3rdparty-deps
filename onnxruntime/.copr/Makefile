@@ -22,8 +22,8 @@ SRCTMP=$(SRCTMPBASE)/$(PKGNV)
 SEDCMD = s/_TMPL_VER_MAJOR/$(MAJOR)/;s/_TMPL_VER_MINOR/$(MINOR)/;s/_TMPL_VER_PATCH/$(PATCH)/;s/_TMPL_VER_RELEASE/$(RELEASE)/
 
 srpm:
-	rpm -q rpmdevtools || sudo dnf install -y rpmdevtools
-	rpm -q git || sudo dnf install -y git
+	rpm -q rpmdevtools || dnf install -y rpmdevtools
+	rpm -q git || dnf install -y git
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
 	mkdir -p $(SRCTMPBASE)
 	cd $(SRCTMPBASE) && (cd $(VENDOR_PKG) && git fetch -p) || git clone https://github.com/microsoft/$(VENDOR_PKG).git $(VENDOR_PKG)
