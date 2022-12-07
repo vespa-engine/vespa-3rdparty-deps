@@ -90,7 +90,7 @@ mkdir build
 cd build
 
 env %{?_cmake_env} %{?_cmake_prog}%{!?_cmake_prog:cmake} \
-  -DCMAKE_PREFIX_PATH=${_prefix} \
+  -DCMAKE_PREFIX_PATH=%{_prefix} \
   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
   -DCMAKE_INSTALL_RPATH=%{_libdir}  \
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
