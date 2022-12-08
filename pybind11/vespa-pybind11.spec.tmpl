@@ -72,6 +72,9 @@ pybind11 devel package for Vespa.
 %{_vespa_3rdparty_deps_packaging_notice}
 %prep
 echo preping at $(pwd)
+%if 0%{?ol8}
+python3 -m pip install --user --upgrade pytest
+%endif
 %setup -q -n pybind11-%{version}
 %if 0%{?el9} || 0%{?fedora}
 %patch0 -p0
