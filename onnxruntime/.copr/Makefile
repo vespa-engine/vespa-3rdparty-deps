@@ -3,42 +3,47 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=1
-MINOR=12
+MINOR=13
 PATCH=1
 RELEASE=1
+VENDOR_PKG=onnxruntime
+PKGNAME=vespa-$(VENDOR_PKG)
 
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES
 SPECDIR=$(RPMTOPDIR)/SPECS
-SPECFILE=$(SPECDIR)/vespa-onnxruntime.spec
+SPECFILE=$(SPECDIR)/$(PKGNAME).spec
 VERSION=$(MAJOR).$(MINOR).$(PATCH)
 SRCTMPBASE=$(TOP)/tmp
-SRCTMP_VENDOR=$(SRCTMPBASE)/onnxruntime
-SRCTMP=$(SRCTMPBASE)/vespa-onnxruntime-$(VERSION)
+SRCTMP_VENDOR=$(SRCTMPBASE)/$(VENDOR_PKG)
+PKGNV=$(PKGNAME)-$(VERSION)
+SRCTMP=$(SRCTMPBASE)/$(PKGNV)
+
+SEDCMD = s/_TMPL_VER_MAJOR/$(MAJOR)/;s/_TMPL_VER_MINOR/$(MINOR)/;s/_TMPL_VER_PATCH/$(PATCH)/;s/_TMPL_VER_RELEASE/$(RELEASE)/
 
 srpm:
-	dnf install -y rpmdevtools
-	dnf install -y git
+	rpm -q rpmdevtools || dnf install -y rpmdevtools
+	rpm -q git || dnf install -y git
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
-	rm -rf $(SRCTMPBASE)
 	mkdir -p $(SRCTMPBASE)
-	cd $(SRCTMPBASE) && git clone https://github.com/microsoft/onnxruntime.git onnxruntime
-	cd $(SRCTMP_VENDOR) && git checkout v$(VERSION)
+	cd $(SRCTMPBASE) && (cd $(VENDOR_PKG) && git fetch -p) || git clone https://github.com/microsoft/$(VENDOR_PKG).git $(VENDOR_PKG)
+	cd $(SRCTMP_VENDOR) && git checkout v$(VERSION) && git clean -fxd
 ifdef SUBMODULE_CHECKOUT_SCRIPT
 	cd $(SRCTMP_VENDOR) && $(SUBMODULE_CHECKOUT_SCRIPT)
 else
 	cd $(SRCTMP_VENDOR) && git submodule sync --recursive
 	cd $(SRCTMP_VENDOR) && git submodule update --init --recursive
 endif
+	rm -rf $(SRCTMP)
 	mkdir -p $(SRCTMP)
 	cd $(SRCTMP_VENDOR) && git archive --format=tar HEAD | tar -C $(SRCTMP) -xf -
 	set -e; cd $(SRCTMP_VENDOR) && git submodule status --recursive | cut -d ' ' -f 3 | while read sm_path; do mkdir -p $(SRCTMP)/$$sm_path; ( cd $$sm_path && git archive --format=tar HEAD | tar -C $(SRCTMP)/$$sm_path -xf -); done
-	tar -C $(SRCTMPBASE) -czf $(SOURCEDIR)/vespa-onnxruntime-$(VERSION).tar.gz vespa-onnxruntime-$(VERSION)
-	rm -rf $(SRCTMPBASE)
-	cat vespa-onnxruntime.spec.tmpl | sed "s/_TMPL_VER_MAJOR/$(MAJOR)/" | sed "s/_TMPL_VER_MINOR/$(MINOR)/" | sed "s/_TMPL_VER_PATCH/$(PATCH)/" | sed "s/_TMPL_VER_RELEASE/$(RELEASE)/" > $(SPECFILE)
+	tar -C $(SRCTMPBASE) -czf $(SOURCEDIR)/$(PKGNV).tar.gz $(PKGNV)
+	cat $(PKGNAME).spec.tmpl | sed "$(SEDCMD)" > $(SPECFILE)
 	cp -a *.diff $(SOURCEDIR)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
 	cp -a $(RPMTOPDIR)/SRPMS/* $(outdir)
+
 clean:
 	-rm -rf $(RPMTOPDIR)
 

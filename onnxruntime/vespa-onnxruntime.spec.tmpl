@@ -29,6 +29,7 @@ URL:            https://microsoft.github.io/onnxruntime
 Source0:        vespa-onnxruntime-%{version}.tar.gz
 Patch0:         patches.use-origin-rpath-for-jni-library.diff
 
+BuildRequires: ccache
 BuildRequires: vespa-gradle
 BuildRequires: which
 %if 0%{?el8}
@@ -109,7 +110,21 @@ source %{_devtoolset_enable} || true
 %endif
 
 PATH=%{_prefix}/bin:$PATH
-./build.sh --config RelWithDebInfo  --skip_tests --build_java --build_shared_lib --parallel --cmake_path %{_cmake_prog} --ctest_path %{_ctest_prog} --skip_submodule_sync --cmake_extra_defines CMAKE_INSTALL_PREFIX=%{_prefix} onnxruntime_DEV_MODE=OFF onnxruntime_USE_OPENMP=OFF %{?_toolset_compiler_cmake_args}
+./build.sh \
+    --config RelWithDebInfo \
+    --skip_tests \
+    --build_java \
+    --build_shared_lib \
+    --parallel \
+    --cmake_path %{_cmake_prog} \
+    --ctest_path %{_ctest_prog} \
+    --skip_submodule_sync \
+    --cmake_extra_defines \
+              CMAKE_INSTALL_PREFIX=%{_prefix} \
+            CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            onnxruntime_DEV_MODE=OFF \
+            onnxruntime_USE_OPENMP=OFF \
+            %{?_toolset_compiler_cmake_args}
 
 %install
 rm -rf $RPM_BUILD_ROOT
