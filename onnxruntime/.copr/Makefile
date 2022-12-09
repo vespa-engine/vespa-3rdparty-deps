@@ -6,8 +6,7 @@ MAJOR=1
 MINOR=13
 PATCH=1
 RELEASE=1
-VENDOR_PKG=onnxruntime
-PKGNAME=vespa-$(VENDOR_PKG)
+PKGNAME=vespa-onnxruntime
 
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES
@@ -15,7 +14,7 @@ SPECDIR=$(RPMTOPDIR)/SPECS
 SPECFILE=$(SPECDIR)/$(PKGNAME).spec
 VERSION=$(MAJOR).$(MINOR).$(PATCH)
 SRCTMPBASE=$(TOP)/tmp
-SRCTMP_VENDOR=$(SRCTMPBASE)/$(VENDOR_PKG)
+SRCTMP_VENDOR=$(SRCTMPBASE)/onnxruntime
 PKGNV=$(PKGNAME)-$(VERSION)
 SRCTMP=$(SRCTMPBASE)/$(PKGNV)
 
@@ -26,7 +25,7 @@ srpm:
 	rpm -q git || dnf install -y git
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
 	mkdir -p $(SRCTMPBASE)
-	cd $(SRCTMPBASE) && (cd $(VENDOR_PKG) && git fetch -p) || git clone https://github.com/microsoft/$(VENDOR_PKG).git $(VENDOR_PKG)
+	cd $(SRCTMPBASE) && (cd onnxruntime && git fetch -p) || git clone https://github.com/microsoft/onnxruntime.git onnxruntime
 	cd $(SRCTMP_VENDOR) && git checkout v$(VERSION) && git clean -fxd
 ifdef SUBMODULE_CHECKOUT_SCRIPT
 	cd $(SRCTMP_VENDOR) && $(SUBMODULE_CHECKOUT_SCRIPT)
