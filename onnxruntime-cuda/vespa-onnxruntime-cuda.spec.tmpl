@@ -49,9 +49,10 @@ about packaging.
 %prep
 %setup -q
 
-sudo dnf -y config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
-sudo dnf -y install cuda-libraries-devel-11-8
-sudo dnf -y install libcudnn8 libcudnn8-devel
+dnf -y install \
+    --nogpgcheck \
+    --repofrompath cuda-rhel8-x86_64,https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64 \
+    cuda-libraries-devel-11-8 libcudnn8 libcudnn8-devel
 
 %install
 rm -rf $RPM_BUILD_ROOT
