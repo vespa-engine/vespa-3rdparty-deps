@@ -115,11 +115,11 @@ source %{_devtoolset_enable} || true
 %define nvidia_arch sbsa
 %endif
 
-sudo dnf -y config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/%{nvidia_arch}/cuda-rhel8.repo
-sudo dnf -y install \
+dnf -y config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/%{nvidia_arch}/cuda-rhel8.repo
+dnf -y install \
 	--enablerepo cuda-rhel8-%{nvidia_arch} \
 	cuda-libraries-devel-11-8 libcudnn8 libcudnn8-devel cuda-compiler-11-8 cuda-cudart-devel-11-8 cuda-command-line-tools-11-8
-sudo dnf config-manager --set-disabled cuda-rhel8-%{nvidia_arch}
+dnf config-manager --set-disabled cuda-rhel8-%{nvidia_arch}
 
 PATH=%{_prefix}/bin:$PATH
 
