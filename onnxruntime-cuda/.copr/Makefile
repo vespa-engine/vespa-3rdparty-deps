@@ -21,7 +21,7 @@ outdir ?= $(TOP)
 SEDCMD = s/_TMPL_VER_MAJOR/$(MAJOR)/;s/_TMPL_VER_MINOR/$(MINOR)/;s/_TMPL_VER_PATCH/$(PATCH)/;s/_TMPL_VER_RELEASE/$(RELEASE)/
 
 srpm:
-	rpm -q rpmdevtools || sudo dnf install -y rpmdevtools
+	rpm -q rpmdevtools || dnf install -y rpmdevtools
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
 	tar --transform 's/[.]/$(PKGNV)/' -C $(SRCBASE) -czf $(SOURCEDIR)/$(PKGNV).tar.gz .
 	cat $(TOP)/../$(PKGNAME).spec.tmpl | sed "$(SEDCMD)" > $(SPECFILE)

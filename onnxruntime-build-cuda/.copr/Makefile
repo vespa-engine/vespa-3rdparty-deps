@@ -23,7 +23,7 @@ outdir ?= $(TOP)
 SEDCMD = s/_TMPL_VER_MAJOR/$(MAJOR)/;s/_TMPL_VER_MINOR/$(MINOR)/;s/_TMPL_VER_PATCH/$(PATCH)/;s/_TMPL_VER_RELEASE/$(RELEASE)/
 
 srpm:
-	rpm -q rpmdevtools || sudo dnf install -y rpmdevtools
+	rpm -q rpmdevtools || dnf install -y rpmdevtools
 	rpm -q git || dnf install -y git
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
 	: rm -rf $(SRCTMPBASE)
