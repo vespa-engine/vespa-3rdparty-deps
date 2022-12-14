@@ -32,7 +32,8 @@ Source0:        %{pkg_name}-%{version}.tar.gz
 BuildRequires: unzip
 BuildRequires: maven
 BuildRequires: make
-BuildRequires: dnf
+BuildRequires: cuda-libraries-devel-11-8
+BuildRequires: libcudnn8-devel
 
 %description
 ONNX Runtime CUDA provider, repackaged for Vespa.
@@ -42,11 +43,6 @@ about packaging.
 
 %prep
 %setup -q
-
-dnf -y install \
-    --nogpgcheck \
-    --repofrompath cuda-rhel8-x86_64,https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64 \
-    cuda-libraries-devel-11-8 libcudnn8 libcudnn8-devel
 
 %install
 rm -rf $RPM_BUILD_ROOT
