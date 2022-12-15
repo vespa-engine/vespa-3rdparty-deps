@@ -70,6 +70,11 @@ BuildRequires: libunwind
 %endif
 BuildRequires: python3-setuptools
 BuildRequires: bzip2
+BuildRequires: cuda-libraries-devel-11-8
+BuildRequires: cuda-compiler-11-8
+BuildRequires: cuda-cudart-devel-11-8
+BuildRequires: cuda-command-line-tools-11-8
+BuildRequires: libcudnn8-devel
 
 %description
 ONNX Runtime package for Vespa.
@@ -107,19 +112,6 @@ fi
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-
-%ifarch x86_64
-%define nvidia_arch x86_64
-%endif
-%ifarch aarch64
-%define nvidia_arch sbsa
-%endif
-
-dnf -y config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/%{nvidia_arch}/cuda-rhel8.repo
-dnf -y install \
-	--enablerepo cuda-rhel8-%{nvidia_arch} \
-	cuda-libraries-devel-11-8 libcudnn8 libcudnn8-devel cuda-compiler-11-8 cuda-cudart-devel-11-8 cuda-command-line-tools-11-8
-dnf config-manager --set-disabled cuda-rhel8-%{nvidia_arch}
 
 PATH=%{_prefix}/bin:$PATH
 
