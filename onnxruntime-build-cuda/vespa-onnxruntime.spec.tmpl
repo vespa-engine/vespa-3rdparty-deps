@@ -179,6 +179,9 @@ about packaging.
 %package cuda
 Summary:        ONNX provider for CUDA (for Vespa).
 Requires:       %{name} = %{version}-%{release}
+Requires:       libcufft-11-8
+Requires:       libcublas-11-8
+Requires:       libcurand-11-8
 
 %description cuda
 CUDA support package for Vespa.
