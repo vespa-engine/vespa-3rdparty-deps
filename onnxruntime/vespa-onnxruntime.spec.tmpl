@@ -71,6 +71,13 @@ BuildRequires: libunwind
 %endif
 BuildRequires: python3-setuptools
 BuildRequires: bzip2
+%ifarch x86_64
+BuildRequires: cuda-libraries-devel-11-8
+BuildRequires: cuda-compiler-11-8
+BuildRequires: cuda-cudart-devel-11-8
+BuildRequires: cuda-command-line-tools-11-8
+BuildRequires: libcudnn8-devel
+%endif
 
 %description
 ONNX Runtime package for Vespa.
@@ -110,6 +117,26 @@ source %{_devtoolset_enable} || true
 %endif
 
 PATH=%{_prefix}/bin:$PATH
+%ifarch x86_64
+./build.sh \
+    --config RelWithDebInfo \
+    --use_cuda --cuda_home=/usr/local/cuda-11.8 --cudnn_home=/usr \
+    --skip_tests \
+    --build_java \
+    --build_shared_lib \
+    --parallel \
+    --cmake_path %{_cmake_prog} \
+    --ctest_path %{_ctest_prog} \
+    --skip_submodule_sync \
+    --cmake_extra_defines \
+            CMAKE_INSTALL_PREFIX=%{_prefix} \
+            CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            CMAKE_CUDA_ARCHITECTURES="60;70;75" \
+            onnxruntime_DEV_MODE=OFF \
+            onnxruntime_USE_OPENMP=OFF \
+            %{?_toolset_compiler_cmake_args}
+%else
+
 ./build.sh \
     --config RelWithDebInfo \
     --skip_tests \
@@ -120,11 +147,12 @@ PATH=%{_prefix}/bin:$PATH
     --ctest_path %{_ctest_prog} \
     --skip_submodule_sync \
     --cmake_extra_defines \
-              CMAKE_INSTALL_PREFIX=%{_prefix} \
+            CMAKE_INSTALL_PREFIX=%{_prefix} \
             CMAKE_CXX_COMPILER_LAUNCHER=ccache \
             onnxruntime_DEV_MODE=OFF \
             onnxruntime_USE_OPENMP=OFF \
             %{?_toolset_compiler_cmake_args}
+%endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -146,6 +174,7 @@ ln -s core/session/onnxruntime_cxx_inline.h %{buildroot}%{_prefix}/include/onnxr
 
 %files
 %{_prefix}/lib64/
+%exclude %{_prefix}/lib64/*cuda*
 %exclude %{_prefix}/bin/
 %license LICENSE
 
@@ -166,5 +195,24 @@ about packaging.
 %files java
 %{_prefix}/lib/
 %license LICENSE
+
+%ifarch x86_64
+%package cuda
+Summary:        ONNX provider for CUDA (for Vespa).
+Requires:       %{name} = %{version}-%{release}
+Requires:       libcufft-11-8
+Requires:       libcublas-11-8
+Requires:       libcurand-11-8
+
+%description cuda
+CUDA support package for Vespa.
+
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details
+about packaging.
+
+%files cuda
+%{_prefix}/lib64/*cuda*
+%license LICENSE
+%endif
 
 %changelog
