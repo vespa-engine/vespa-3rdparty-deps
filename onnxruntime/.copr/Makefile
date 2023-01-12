@@ -5,7 +5,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=1
 MINOR=13
 PATCH=1
-RELEASE=1
+RELEASE=2
 PKGNAME=vespa-onnxruntime
 
 RPMTOPDIR=$(TOP)/rpmbuild
@@ -17,6 +17,8 @@ SRCTMPBASE=$(TOP)/tmp
 SRCTMP_VENDOR=$(SRCTMPBASE)/onnxruntime
 PKGNV=$(PKGNAME)-$(VERSION)
 SRCTMP=$(SRCTMPBASE)/$(PKGNV)
+
+outdir ?= $(TOP)
 
 SEDCMD = s/_TMPL_VER_MAJOR/$(MAJOR)/;s/_TMPL_VER_MINOR/$(MINOR)/;s/_TMPL_VER_PATCH/$(PATCH)/;s/_TMPL_VER_RELEASE/$(RELEASE)/
 
@@ -44,6 +46,6 @@ endif
 	cp -a $(RPMTOPDIR)/SRPMS/* $(outdir)
 
 clean:
-	-rm -rf $(RPMTOPDIR)
+	-rm -rf $(RPMTOPDIR) $(SRCTMPBASE) $(TOP)/*.rpm
 
 .PHONY: srpm clean
