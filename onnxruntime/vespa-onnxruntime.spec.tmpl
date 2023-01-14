@@ -41,6 +41,9 @@ BuildRequires: wget
 BuildRequires: cmake
 %define _cmake_prog cmake
 %define _ctest_prog ctest
+%ifarch x86_64
+%global _enable_cuda 1
+%endif
 %endif
 %if 0%{?el9}
 BuildRequires: gcc-c++
@@ -49,6 +52,9 @@ BuildRequires: glibc-langpack-en
 BuildRequires: cmake
 %define _cmake_prog cmake
 %define _ctest_prog ctest
+%ifarch x86_64
+%global _enable_cuda 1
+%endif
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
@@ -71,7 +77,7 @@ BuildRequires: libunwind
 %endif
 BuildRequires: python3-setuptools
 BuildRequires: bzip2
-%ifarch x86_64
+%if 0%{?_enable_cuda:1}
 BuildRequires: cuda-libraries-devel-11-8
 BuildRequires: cuda-compiler-11-8
 BuildRequires: cuda-cudart-devel-11-8
@@ -117,28 +123,14 @@ source %{_devtoolset_enable} || true
 %endif
 
 PATH=%{_prefix}/bin:$PATH
-%ifarch x86_64
-./build.sh \
-    --config RelWithDebInfo \
-    --use_cuda --cuda_home=/usr/local/cuda-11.8 --cudnn_home=/usr \
-    --skip_tests \
-    --build_java \
-    --build_shared_lib \
-    --parallel \
-    --cmake_path %{_cmake_prog} \
-    --ctest_path %{_ctest_prog} \
-    --skip_submodule_sync \
-    --cmake_extra_defines \
-            CMAKE_INSTALL_PREFIX=%{_prefix} \
-            CMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            CMAKE_CUDA_ARCHITECTURES="60;70;75" \
-            onnxruntime_DEV_MODE=OFF \
-            onnxruntime_USE_OPENMP=OFF \
-            %{?_toolset_compiler_cmake_args}
-%else
+%if 0%{?_enable_cuda:1}
+%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-11.8 --cudnn_home=/usr
+%global _enable_cuda_extra_defines CMAKE_CUDA_ARCHITECTURES="60;70;75"
+%endif
 
 ./build.sh \
     --config RelWithDebInfo \
+    %{?_enable_cuda_options:%{_enable_cuda_options}} \
     --skip_tests \
     --build_java \
     --build_shared_lib \
@@ -149,10 +141,10 @@ PATH=%{_prefix}/bin:$PATH
     --cmake_extra_defines \
             CMAKE_INSTALL_PREFIX=%{_prefix} \
             CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            %{?_enable_cuda_extra_defines:%{_enable_cuda_extra_defines}} \
             onnxruntime_DEV_MODE=OFF \
             onnxruntime_USE_OPENMP=OFF \
             %{?_toolset_compiler_cmake_args}
-%endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -196,7 +188,7 @@ about packaging.
 %{_prefix}/lib/
 %license LICENSE
 
-%ifarch x86_64
+%if 0%{?_enable_cuda:1}
 %package cuda
 Summary:        ONNX provider for CUDA (for Vespa).
 Requires:       %{name} = %{version}-%{release}
