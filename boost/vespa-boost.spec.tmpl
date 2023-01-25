@@ -14,6 +14,9 @@
 %define ver_patch _TMPL_VER_PATCH
 %define ver_release _TMPL_VER_RELEASE
 
+%define dotted_version %{ver_major}.%{ver_minor}.%{ver_patch}
+%define underscore_version %{ver_major}_%{ver_minor}_%{ver_patch}
+
 Name:           vespa-boost
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
@@ -23,20 +26,13 @@ Group:          System Environment/Libraries
 
 License: Boost and MIT and Python
 
-Source: https://sourceforge.net/projects/boost/files/boost/%{ver_major}.%{ver_minor}.%{ver_patch}/boost_%{ver_major}_%{ver_minor}_%{ver_patch}.tar.bz2
-
-Requires: bzip2%{?_isa}
-Requires: zlib%{?_isa}
-Requires: libicu%{?_isa}
+Source: https://boostorg.jfrog.io/artifactory/main/release/%{dotted_version}/source/boost_%{underscore_version}.tar.bz2
 
 BuildRequires: m4
-BuildRequires: bzip2-devel%{?_isa}
-BuildRequires: zlib-devel%{?_isa}
-BuildRequires: libicu-devel%{?_isa}
 %if 0%{?el8}
-BuildRequires: gcc-toolset-11-gcc-c++
-BuildRequires: gcc-toolset-11-binutils
-%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: gcc-toolset-12-gcc-c++
+BuildRequires: gcc-toolset-12-binutils
+%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
 BuildRequires: make
 %endif
 
@@ -50,8 +46,7 @@ libraries have already been included in the C++ 2011 standard and
 others have been proposed to the C++ Standards Committee for inclusion
 in future standards.)
 
-This distribution contains the necessary libraries needed for Vespa. The
-original boost distribution has been patched with the included patches.
+This distribution only contains necessary libraries needed for Vespa.
 
 %package        devel
 Summary:        Headers and libraries for building apps that use vspa-boost
@@ -59,20 +54,20 @@ Group:          Development/Libraries
 Requires:       %{name} = %{version}-%{release}
 
 %description devel
-Contains develompemnt headers and static libraries for vespa-boost.
+Contains development headers for vespa-boost.
 
 %prep
-%setup -q -n boost_%{ver_major}_%{ver_minor}_%{ver_patch}
+%setup -q -n boost_%{underscore_version}
 
-%define _cxxflags '-std=c++2a -DNOT_BOOST_SPIRIT_THREADSAFE=1 -DNOT_PHOENIX_THREADSAFE=1 -DBOOST_NO_AUTO_PTR=1'
+%define _cxxflags '-std=c++2a'
 
 %build
 
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-export BOOST_LIBS="iostreams,filesystem,program_options,regex,serialization,system,test,thread,timer,chrono"
-export CXXFLAGS="-std=c++2a -DNOT_BOOST_SPIRIT_THREADSAFE=1 -DNOT_PHOENIX_THREADSAFE=1 -DBOOST_NO_AUTO_PTR=1"
+export BOOST_LIBS="system"
+export CXXFLAGS="-std=c++2a"
 ./bootstrap.sh --with-libraries=$BOOST_LIBS --prefix=%{buildroot}/%{_prefix} --libdir=%{buildroot}/%{_prefix}/lib64
 ./b2 -d+2 %{_smp_mflags} variant=release debug-symbols=on threading=multi link=shared runtime-link=shared dll-path=%{_prefix}/lib64 cxxflags=%{_cxxflags} --layout=versioned --prefix=%{buildroot}/%{_prefix} --libdir=%{buildroot}/%{_prefix}/lib64
 
@@ -106,6 +101,5 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %license LICENSE_1_0.txt
 %{_includedir}/boost
-%{_prefix}/lib64/*.a
 
 %changelog
