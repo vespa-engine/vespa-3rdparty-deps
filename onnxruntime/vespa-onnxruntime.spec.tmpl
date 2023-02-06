@@ -166,7 +166,9 @@ ln -s core/session/onnxruntime_cxx_inline.h %{buildroot}%{_prefix}/include/onnxr
 
 %files
 %{_prefix}/lib64/
+%if 0%{?_enable_cuda:1}
 %exclude %{_prefix}/lib64/*cuda*
+%endif
 %exclude %{_prefix}/bin/
 %license LICENSE
 
