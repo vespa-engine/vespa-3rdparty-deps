@@ -1,0 +1,16 @@
+--- a/cmake/patches/abseil/Fix_Nvidia_Build_Break.patch	2022-10-21 23:18:22.000000000 +0000
++++ b/cmake/patches/abseil/Fix_Nvidia_Build_Break.patch	2023-02-05 21:29:01.629318908 +0000
+@@ -97,3 +97,13 @@
+    uint64_t carry;
+    uint64_t low = _umul128(Uint128Low64(lhs), Uint128Low64(rhs), &carry);
+    return MakeUint128(Uint128Low64(lhs) * Uint128High64(rhs) +
++--- a/absl/strings/internal/str_format/extension.h	2021-11-03 15:26:14.000000000 +0000
+++++ b/absl/strings/internal/str_format/extension.h	2023-02-05 21:10:43.830283913 +0000
++@@ -19,6 +19,7 @@
++ #include <limits.h>
++ 
++ #include <cstddef>
+++#include <cstdint>
++ #include <cstring>
++ #include <ostream>
++ 
