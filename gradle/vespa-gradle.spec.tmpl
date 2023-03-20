@@ -22,7 +22,7 @@ URL:            https://gradle.org/
 Source0:        https://services.gradle.org/distributions/gradle-%{version}-bin.zip
 Source1:        script.sh
 
-%if 0%{?amzn2022}
+%if 0%{?amzn2023}
 Requires: java-11-amazon-corretto-devel
 Requires: java-11-amazon-corretto
 %else
