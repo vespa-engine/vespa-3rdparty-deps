@@ -28,11 +28,11 @@ License:        BSD
 URL:            https://github.com/xianyi/OpenBLAS/
 Source0:        https://github.com/xianyi/OpenBLAS/archive/v%{version}/openblas-%{version}.tar.gz
 
-%if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
-BuildRequires: gcc-toolset-11-gcc
-BuildRequires: gcc-toolset-11-gcc-c++
-BuildRequires: gcc-toolset-11-gcc-gfortran
+%if 0%{?el8}%{?el9}
+%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+BuildRequires: gcc-toolset-12-gcc
+BuildRequires: gcc-toolset-12-gcc-c++
+BuildRequires: gcc-toolset-12-gcc-gfortran
 BuildRequires: perl-devel
 %endif
 %if 0%{?fedora}
