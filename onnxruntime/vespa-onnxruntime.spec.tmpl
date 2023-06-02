@@ -29,6 +29,7 @@ URL:            https://microsoft.github.io/onnxruntime
 Source0:        vespa-onnxruntime-%{version}.tar.gz
 Patch0:         patches.use-origin-rpath-for-jni-library.diff
 Patch1:         patches.include.cstdint.diff
+Patch2:         patches.disable-gcc-13-warnings-for-flatbuffers.diff
 
 BuildRequires: ccache
 BuildRequires: vespa-gradle
@@ -105,6 +106,7 @@ about packaging.
 %setup -q
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1
 
 %if 0%{?_download_cmake_tar}
 # Download precompiled cmake version on CentOS 7, RHEL 7 and Amazon Linux 2 for now.
