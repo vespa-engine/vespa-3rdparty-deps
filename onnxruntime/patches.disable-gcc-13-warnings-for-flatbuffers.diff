@@ -1,0 +1,13 @@
+--- a/cmake/external/flatbuffers/CMakeLists.txt	2020-03-12 22:33:39.000000000 +0000
++++ b/cmake/external/flatbuffers/CMakeLists.txt	2023-04-23 19:10:17.191306327 +0000
+@@ -232,6 +232,10 @@
+     endif()
+     set(CMAKE_CXX_FLAGS
+       "${CMAKE_CXX_FLAGS} -Wunused-result -Werror=unused-result -Wunused-parameter -Werror=unused-parameter")
++    # Disable stringop-oveflow and array-bounds warning when using gcc 13.
++    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "13")
++      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-stringop-overflow -Wno-array-bounds")
++    endif()
+   endif()
+ 
+   # Certain platforms such as ARM do not use signed chars by default
