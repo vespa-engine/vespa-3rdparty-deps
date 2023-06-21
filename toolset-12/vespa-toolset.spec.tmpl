@@ -1,0 +1,44 @@
+# Copyright 2018 Yahoo Holdings. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# no debuggable binaries here
+%define debug_package %{nil}
+BuildArchitectures: noarch
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+Summary:        Vespa meta-package for gcc-toolset
+Name:           vespa-toolset-%{ver_major}-meta
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        Apache
+URL:            https://vespa.ai/
+
+%if 0%{?el8}%{?el9}
+Requires: gcc-toolset-%{ver_major}-gcc-c++
+Requires: gcc-toolset-%{ver_major}-annobin-plugin-gcc
+%define _devtoolset_enable /opt/rh/gcc-toolset-%{ver_major}/enable
+%endif
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+Meta-package for required gcc-toolset packages and fixups.
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%files
+
+%post
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable}
+lgcf=`gcc -print-libgcc-file-name`
+pdir=${lgcf%/libgcc.*}/plugin
+cd $pdir && test -f annobin.so && ln -sf annobin.so gcc-annobin.so
+%endif
+
+%changelog
