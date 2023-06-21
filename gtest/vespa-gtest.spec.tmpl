@@ -32,6 +32,7 @@ Source0:        https://github.com/google/googletest/archive/release-%{version}.
 BuildRequires: python3-devel
 %if 0%{?el8}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
+BuildRequires: vespa-toolset-11-meta
 BuildRequires: gcc-toolset-11-gcc-c++
 BuildRequires: gcc-toolset-11-annobin
 BuildRequires: gcc-toolset-11-annobin-plugin-gcc
