@@ -27,15 +27,12 @@ Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        BSD
 URL:            https://github.com/google/googletest
-Source0:        https://github.com/google/googletest/archive/release-%{version}.tar.gz
+Source0:        https://github.com/google/googletest/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires: python3-devel
 %if 0%{?el8}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
 BuildRequires: vespa-toolset-11-meta
-BuildRequires: gcc-toolset-11-gcc-c++
-BuildRequires: gcc-toolset-11-annobin
-BuildRequires: gcc-toolset-11-annobin-plugin-gcc
 %define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
 BuildRequires: cmake
 %endif
@@ -59,7 +56,7 @@ generation.
 %{_vespa_3rdparty_deps_packaging_notice}
 
 %prep
-%setup -q -n googletest-release-%{version}
+%setup -q -n googletest-%{version}
 
 %build
 %if 0%{?_devtoolset_enable:1}
