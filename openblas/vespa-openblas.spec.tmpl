@@ -27,11 +27,17 @@ Release:        %{ver_release}%{?dist}
 License:        BSD
 URL:            https://github.com/xianyi/OpenBLAS/
 Source0:        https://github.com/xianyi/OpenBLAS/archive/v%{version}/openblas-%{version}.tar.gz
+Patch0:         patches.driver-others-dynamic-arm64.diff
 
-%if 0%{?el8}%{?el9}
+%if 0%{?el8}
+%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
+BuildRequires: vespa-toolset-11-meta
+BuildRequires: gcc-toolset-11-gcc-gfortran
+BuildRequires: perl-devel
+%endif
+%if 0%{?el9}
 %define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
-BuildRequires: gcc-toolset-12-gcc
-BuildRequires: gcc-toolset-12-gcc-c++
+BuildRequires: vespa-toolset-12-meta
 BuildRequires: gcc-toolset-12-gcc-gfortran
 BuildRequires: perl-devel
 %endif
@@ -59,6 +65,7 @@ openblas compiled for vespa -- devel
 %{_vespa_3rdparty_deps_packaging_notice}
 %prep
 %setup -n OpenBLAS-%{version}
+%patch0 -p0
 
 %build
 %if 0%{?_devtoolset_enable:1}
