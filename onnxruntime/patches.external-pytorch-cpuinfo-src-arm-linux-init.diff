@@ -1,0 +1,15 @@
+Submodule cmake/external/pytorch_cpuinfo contains modified content
+diff --git a/cmake/external/pytorch_cpuinfo/src/arm/linux/init.c b/cmake/external/pytorch_cpuinfo/src/arm/linux/init.c
+index 23d8439..99805a5 100644
+--- a/cmake/external/pytorch_cpuinfo/src/arm/linux/init.c
++++ b/cmake/external/pytorch_cpuinfo/src/arm/linux/init.c
+@@ -171,6 +171,9 @@ void cpuinfo_arm_linux_init(void) {
+ #endif
+ 	char proc_cpuinfo_revision[CPUINFO_REVISION_VALUE_MAX];
+ 
++#if !defined(__ANDROID__)
++        proc_cpuinfo_hardware[0] = '\0'; /* Variable must be initialized */
++#endif
+ 	if (!cpuinfo_arm_linux_parse_proc_cpuinfo(
+ #if defined(__ANDROID__)
+ 			android_properties.proc_cpuinfo_hardware,
