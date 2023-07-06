@@ -22,7 +22,6 @@ Release:        %{ver_release}%{?dist}
 License:        BSD
 URL:            https://github.com/pybind/pybind11
 Source0:        https://github.com/pybind/pybind11/archive/refs/tags/v%{version}.tar.gz
-Patch0:         patches.use-newer-catch.diff
 
 %if 0%{?el8}
 %define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
@@ -76,9 +75,6 @@ echo preping at $(pwd)
 python3 -m pip install --user --upgrade pytest
 %endif
 %setup -q -n pybind11-%{version}
-%if 0%{?el9} || 0%{?fedora}
-%patch0 -p0
-%endif
 
 %build
 echo building at $(pwd)
