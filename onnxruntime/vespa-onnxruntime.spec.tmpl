@@ -116,6 +116,7 @@ PATH=%{_prefix}/bin:$PATH
 %endif
 
 ./build.sh \
+    --allow_running_as_root \
     --config RelWithDebInfo \
     %{?_enable_cuda_options:%{_enable_cuda_options}} \
     --skip_tests \
