@@ -1,0 +1,10 @@
+--- cmake/CMakeLists.txt.orig	2023-05-24 03:37:38.000000000 +0000
++++ cmake/CMakeLists.txt	2023-06-15 10:45:30.557414011 +0000
+@@ -548,6 +548,7 @@
+     endif()
+ 
+ else()
++  list(APPEND ORT_WARNING_FLAGS -Wno-array-bounds -Wno-maybe-uninitialized)
+   check_cxx_compiler_flag(-Wunused-but-set-parameter HAS_UNUSED_BUT_SET_PARAMETER)
+   check_cxx_compiler_flag(-Wunused-but-set-variable HAS_UNUSED_BUT_SET_VARIABLE)
+   check_cxx_compiler_flag(-Wunused-variable HAS_UNUSED_VARIABLE)
