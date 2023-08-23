@@ -1,0 +1,46 @@
+--- tools/ci_build/build.py.orig	2023-08-21 12:03:03.350097004 +0000
++++ tools/ci_build/build.py	2023-08-23 12:46:38.540201003 +0000
+@@ -1614,8 +1614,7 @@
+             run_adb_shell(f"{device_dir}/onnxruntime_test_all")
+ 
+             if args.build_java:
+-                # use the gradle wrapper under <repo root>/java
+-                gradle_executable = os.path.join(source_dir, "java", "gradlew.bat" if is_windows() else "gradlew")
++                gradle_executable = "gradle"
+                 android_test_path = os.path.join(cwd, "java", "androidtest", "android")
+                 run_subprocess(
+                     [
+diff -ru cmake/external/onnxruntime-extensions/cmake/ext_java.cmake ./cmake/external/onnxruntime-extensions/cmake/ext_java.cmake
+--- cmake/external/onnxruntime-extensions/cmake/ext_java.cmake	2022-12-21 14:57:32.000000000 +0000
++++ ./cmake/external/onnxruntime-extensions/cmake/ext_java.cmake	2023-08-23 12:56:03.358960001 +0000
+@@ -9,15 +9,9 @@
+ set(JAVA_OUTPUT_TEMP ${CMAKE_CURRENT_BINARY_DIR}/java-temp)
+ set(JAVA_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/java)
+ 
+-# use the gradle wrapper if it exists
+-if(EXISTS "${JAVA_ROOT}/gradlew")
+-    set(GRADLE_EXECUTABLE "${JAVA_ROOT}/gradlew")
+-else()
+-    # fall back to gradle on our PATH
+-    find_program(GRADLE_EXECUTABLE gradle)
+-    if(NOT GRADLE_EXECUTABLE)
+-        message(SEND_ERROR "Gradle installation not found")
+-    endif()
++find_program(GRADLE_EXECUTABLE gradle)
++if(NOT GRADLE_EXECUTABLE)
++    message(SEND_ERROR "Gradle installation not found")
+ endif()
+ message(STATUS "Using gradle: ${GRADLE_EXECUTABLE}")
+ 
+diff -ru cmake/onnxruntime_java.cmake ./cmake/onnxruntime_java.cmake
+--- cmake/onnxruntime_java.cmake	2023-06-16 15:51:14.000000000 +0000
++++ ./cmake/onnxruntime_java.cmake	2023-08-23 12:56:27.096960012 +0000
+@@ -19,7 +19,7 @@
+   set(JAVA_DEPENDS onnxruntime)
+ endif()
+ 
+-set(GRADLE_EXECUTABLE "${JAVA_ROOT}/gradlew")
++set(GRADLE_EXECUTABLE "gradle")
+ 
+ # Specify the Java source files
+ file(GLOB_RECURSE onnxruntime4j_gradle_files "${JAVA_ROOT}/*.gradle")

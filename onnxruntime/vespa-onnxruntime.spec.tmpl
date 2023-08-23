@@ -31,6 +31,7 @@ Patch0:         patches.use-origin-rpath-for-jni-library.diff
 Patch1:         patches.no-array-bounds.diff
 Patch2:         patches.mlas.diff
 Patch3:         patches.apply-cpuinfo.diff
+Patch4:         patches.use-gradle.diff
 
 BuildRequires: vespa-cmake
 %define _cmake_prog cmake
@@ -102,6 +103,7 @@ about packaging.
 %patch1 -p0
 %patch2 -p1
 %patch3 -p1
+%patch4 -p0
 
 %build
 
