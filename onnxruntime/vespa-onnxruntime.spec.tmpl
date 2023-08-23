@@ -28,33 +28,29 @@ License:        MIT License
 URL:            https://microsoft.github.io/onnxruntime
 Source0:        vespa-onnxruntime-%{version}.tar.gz
 Patch0:         patches.use-origin-rpath-for-jni-library.diff
-Patch1:         patches.include.cstdint.diff
-Patch2:         patches.disable-gcc-13-warnings-for-flatbuffers.diff
-Patch3:         patches.external-pytorch-cpuinfo-src-arm-linux-init.diff
+Patch1:         patches.no-array-bounds.diff
+Patch2:         patches.mlas.diff
+Patch3:         patches.apply-cpuinfo.diff
 
+BuildRequires: vespa-cmake
+%define _cmake_prog cmake
+%define _ctest_prog ctest
 BuildRequires: ccache
 BuildRequires: vespa-gradle
 BuildRequires: which
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
-BuildRequires: gcc-toolset-11-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+BuildRequires: vespa-toolset-12-meta
+BuildRequires: vespa-gtest
 BuildRequires: make
 BuildRequires: glibc-langpack-en
 BuildRequires: wget
-BuildRequires: cmake
-%define _cmake_prog cmake
-%define _ctest_prog ctest
-%ifarch x86_64
 %global _enable_cuda 1
-%endif
 %endif
 %if 0%{?el9}
 BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: glibc-langpack-en
-BuildRequires: cmake
-%define _cmake_prog cmake
-%define _ctest_prog ctest
 %ifarch x86_64
 %global _enable_cuda 1
 %endif
@@ -62,10 +58,7 @@ BuildRequires: cmake
 %if 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: make
-BuildRequires: cmake
 BuildRequires: glibc-langpack-en
-%define _cmake_prog cmake
-%define _ctest_prog ctest
 %endif
 BuildRequires: zlib-devel
 %if ! 0%{?el9} && ! 0%{?amzn2023}
@@ -81,11 +74,11 @@ BuildRequires: libunwind
 BuildRequires: python3-setuptools
 BuildRequires: bzip2
 %if 0%{?_enable_cuda:1}
-BuildRequires: cuda-libraries-devel-11-8
-BuildRequires: cuda-compiler-11-8
-BuildRequires: cuda-cudart-devel-11-8
-BuildRequires: cuda-command-line-tools-11-8
-BuildRequires: libcudnn8-devel
+BuildRequires: cuda-libraries-devel-12-2
+BuildRequires: cuda-compiler-12-2
+BuildRequires: cuda-cudart-devel-12-2
+BuildRequires: cuda-command-line-tools-12-2
+BuildRequires: libcudnn8-devel = 8.9.4.25-1.cuda12.2
 %endif
 
 %description
@@ -106,31 +99,19 @@ about packaging.
 %prep
 %setup -q
 %patch0 -p1
-%patch1 -p1
+%patch1 -p0
 %patch2 -p1
 %patch3 -p1
-
-%if 0%{?_download_cmake_tar}
-# Download precompiled cmake version on CentOS 7, RHEL 7 and Amazon Linux 2 for now.
-if test -f %{cmake_prog}
-then
-  :
-else
-  wget -O /tmp/cmake.tar.gz https://github.com/Kitware/CMake/releases/download/v%{_cmake_version}/cmake-%{_cmake_version}-Linux-%{_arch}.tar.gz
-  tar xf /tmp/cmake.tar.gz
-  rm -f /tmp/cmake.tar.gz
-fi
-%endif
 
 %build
 
 %if 0%{?_devtoolset_enable:1}
-source %{_devtoolset_enable} || true
+source %{_devtoolset_enable}
 %endif
 
 PATH=%{_prefix}/bin:$PATH
 %if 0%{?_enable_cuda:1}
-%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-11.8 --cudnn_home=/usr
+%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-12.2 --cudnn_home=/usr
 %global _enable_cuda_extra_defines CMAKE_CUDA_ARCHITECTURES="60;70;75"
 %endif
 
@@ -156,7 +137,7 @@ PATH=%{_prefix}/bin:$PATH
 rm -rf $RPM_BUILD_ROOT
 
 %if 0%{?_devtoolset_enable:1}
-source %{_devtoolset_enable} || true
+source %{_devtoolset_enable}
 %endif
 
 make -C build/Linux/RelWithDebInfo DESTDIR=%{buildroot} install
@@ -200,9 +181,10 @@ about packaging.
 %package cuda
 Summary:        ONNX provider for CUDA (for Vespa).
 Requires:       %{name} = %{version}-%{release}
-Requires:       libcufft-11-8
-Requires:       libcublas-11-8
-Requires:       libcurand-11-8
+Requires:       libcufft-12-2
+Requires:       libcublas-12-2
+Requires:       libcurand-12-2
+Requires:       libcudnn8 = 8.9.4.25-1.cuda12.2
 
 %description cuda
 CUDA support package for Vespa.

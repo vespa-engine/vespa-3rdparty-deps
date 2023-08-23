@@ -3,9 +3,9 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=1
-MINOR=13
+MINOR=15
 PATCH=1
-RELEASE=5
+RELEASE=4
 PKGNAME=vespa-onnxruntime
 
 RPMTOPDIR=$(TOP)/rpmbuild
@@ -38,6 +38,8 @@ endif
 	rm -rf $(SRCTMP)
 	mkdir -p $(SRCTMP)
 	cd $(SRCTMP_VENDOR) && git archive --format=tar HEAD | tar -C $(SRCTMP) -xf -
+	mkdir -p $(SRCTMP)/cmake/patches/pytorch_cpuinfo
+	cp -a patches.external-pytorch-cpuinfo-src-arm-linux-init.diff $(SRCTMP)/cmake/patches/pytorch_cpuinfo/arm-linux-init.diff
 	set -e; cd $(SRCTMP_VENDOR) && git submodule status --recursive | cut -d ' ' -f 3 | while read sm_path; do mkdir -p $(SRCTMP)/$$sm_path; ( cd $$sm_path && git archive --format=tar HEAD | tar -C $(SRCTMP)/$$sm_path -xf -); done
 	tar -C $(SRCTMPBASE) -czf $(SOURCEDIR)/$(PKGNV).tar.gz $(PKGNV)
 	cat $(PKGNAME).spec.tmpl | sed "$(SEDCMD)" > $(SPECFILE)
