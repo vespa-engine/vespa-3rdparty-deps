@@ -48,7 +48,7 @@ about packaging.
 source %{_devtoolset_enable} || true
 %endif
 
-./bootstrap --enable-ccache --prefix=/opt/vespa-deps
+./bootstrap --enable-ccache --prefix=/opt/vespa-deps --parallel=8
 make %{?_smp_mflags}
 
 %install
