@@ -143,6 +143,7 @@ rm -rf $RPM_BUILD_ROOT
 source %{_devtoolset_enable}
 %endif
 
+PATH=%{_prefix}/bin:$PATH
 make -C build/Linux/RelWithDebInfo DESTDIR=%{buildroot} install
 
 cp -p build/Linux/RelWithDebInfo/lib*jni*.so* %{buildroot}%{_prefix}/lib64/.
