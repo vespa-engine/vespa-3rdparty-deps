@@ -33,7 +33,11 @@ Patch2:         patches.mlas.diff
 Patch3:         patches.apply-cpuinfo.diff
 Patch4:         patches.use-gradle.diff
 
+%if 0%{?fedora} && !0%{?amzn}
+BuildRequires: cmake
+%else
 BuildRequires: vespa-cmake
+%endif
 %define _cmake_prog cmake
 %define _ctest_prog ctest
 BuildRequires: ccache
