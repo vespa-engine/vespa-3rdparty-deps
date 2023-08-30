@@ -1,7 +1,15 @@
 diff -ru ./cmake/external/onnxruntime_external_deps.cmake /home/arnej/rpmbuild/BUILD/vespa-onnxruntime-1.15.1/cmake/external/onnxruntime_external_deps.cmake
 --- ./cmake/external/onnxruntime_external_deps.cmake	2023-06-16 15:51:14.000000000 +0000
 +++ /home/arnej/rpmbuild/BUILD/vespa-onnxruntime-1.15.1/cmake/external/onnxruntime_external_deps.cmake	2023-08-22 10:54:00.980951002 +0000
-@@ -260,6 +260,7 @@
+@@ -97,6 +97,7 @@
+     flatbuffers
+     URL ${DEP_URL_flatbuffers}
+     URL_HASH SHA1=${DEP_SHA1_flatbuffers}
++    PATCH_COMMAND ${Patch_EXECUTABLE} -p4 < ${PROJECT_SOURCE_DIR}/patches/flatbuffers/patches.disable-gcc-13-warnings.diff
+     FIND_PACKAGE_ARGS 1.12.0...<2.0.0 NAMES Flatbuffers
+ )
+ 
+@@ -260,6 +261,7 @@
      pytorch_cpuinfo
      URL ${DEP_URL_pytorch_cpuinfo}
      URL_HASH SHA1=${DEP_SHA1_pytorch_cpuinfo}
