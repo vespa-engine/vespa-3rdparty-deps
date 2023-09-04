@@ -23,11 +23,11 @@ Source0:        https://services.gradle.org/distributions/gradle-%{version}-bin.
 Source1:        script.sh
 
 %if 0%{?amzn2023}
-Requires: java-11-amazon-corretto-devel
-Requires: java-11-amazon-corretto
+Requires: java-17-amazon-corretto-devel
+Requires: java-17-amazon-corretto
 %else
 %if 0%{?el8} || 0%{?el9} || 0%{?fedora}
-Requires: java-11-openjdk-devel
+Requires: java-17-openjdk-devel
 %endif
 %endif
 

@@ -4,7 +4,7 @@
 version=_TMPL_VERSION
 
 gdir=/opt/vespa-deps/lib/gradle-${version}
-jdir=/usr/lib/jvm/java-11-openjdk
+jdir=/usr/lib/jvm/java-17-openjdk
 
 PATH=${gdir}/bin:${jdir}/bin:${PATH}
 
