@@ -4,7 +4,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 # Version
 MAJOR=12
 MINOR=0
-PATCH=0
+PATCH=1
 RELEASE=1
 PKGNAME=vespa-toolset
 
@@ -22,6 +22,7 @@ SEDCMD = s/_TMPL_VER_MAJOR/$(MAJOR)/;s/_TMPL_VER_MINOR/$(MINOR)/;s/_TMPL_VER_PAT
 srpm:
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
 	cat $(PKGNAME).spec.tmpl | sed "$(SEDCMD)" > $(SPECFILE)
+	cp -a patch.gthr-default.h.diff patch.stl_vector.h.diff $(SOURCEDIR)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
 	cp -a $(RPMTOPDIR)/SRPMS/* $(outdir)
 
