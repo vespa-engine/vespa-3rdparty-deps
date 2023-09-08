@@ -16,6 +16,8 @@ Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        Apache
 URL:            https://vespa.ai/
+Patch0:         patch.gthr-default.h.diff
+Patch1:         patch.stl_vector.h.diff
 
 %if 0%{?el8}%{?el9}
 Requires: gcc-toolset-%{ver_major}-gcc-c++
@@ -31,14 +33,31 @@ about packaging.
 Meta-package for required gcc-toolset packages and fixups.
 %{_vespa_3rdparty_deps_packaging_notice}
 
+%global mydir %{_prefix}/share/toolset-meta
+%install
+mkdir -p %{buildroot}%{mydir}
+cp -a %{_sourcedir}/patch.gthr-default.h.diff %{buildroot}%{mydir}
+cp -a %{_sourcedir}/patch.stl_vector.h.diff   %{buildroot}%{mydir}
+
 %files
+%{mydir}
 
 %post
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable}
 lgcf=`gcc -print-libgcc-file-name`
-pdir=${lgcf%/libgcc.*}/plugin
-cd $pdir && test -f annobin.so && ln -sf annobin.so gcc-annobin.so
+libdir=${lgcf%/libgcc.*}
+plugindir=${libdir}/plugin
+cd $plugindir && test -f annobin.so && ln -sf annobin.so gcc-annobin.so
+vernum=${libdir##*/}
+parentdir=${libdir%/*}
+triple=${parentdir##*/}
+rootdir=${parentdir%/lib/gcc/*}
+incdir=${rootdir}/include/c++/${vernum}
+cd ${incdir} || exit 1
+cat %{mydir}/patch.stl_vector.h.diff | patch -p0 -r -
+cd ${triple} || exit 1
+cat %{mydir}/patch.gthr-default.h.diff | patch -p0 -r -
 %endif
 
 %changelog
