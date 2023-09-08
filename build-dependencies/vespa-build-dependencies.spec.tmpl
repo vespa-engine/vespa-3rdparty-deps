@@ -1,0 +1,119 @@
+# Copyright Yahoo. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+Name:           vespa-build-dependencies
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+Summary:        Vespa - The open big data serving engine - build dependencies
+Group:          Applications/Databases
+License:        Apache-2.0
+URL:            http://vespa.ai
+BuildArch:      noarch
+
+Requires: bison >= 3.0.0
+Requires: flex >= 2.5.0
+Requires: git
+Requires: golang
+Requires: libedit-devel
+Requires: libicu-devel
+Requires: make
+Requires: perf
+Requires: perl
+Requires: perl-Getopt-Long
+Requires: rpm-build
+Requires: systemd
+Requires: valgrind
+Requires: zlib-devel
+
+%if 0%{?el8}
+%global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
+Requires: cmake >= 3.11.4-3
+Requires: gcc-toolset-12-gcc-c++
+Requires: gcc-toolset-12-binutils
+Requires: gcc-toolset-12-libatomic-devel
+Requires: glibc-langpack-en
+Requires: llvm-devel
+Requires: maven
+Requires: python39-devel
+Requires: python39-pip
+Requires: vespa-boost-devel >= 1.76.0-1
+Requires: vespa-libzstd-devel >= 1.5.4-1
+Requires: vespa-openblas-devel >= 0.3.21
+Requires: vespa-openssl-devel >= 1.1.1o-1
+Requires: vespa-gtest = 1.13.0
+Requires: vespa-lz4-devel >= 1.9.4-1
+Requires: vespa-onnxruntime-devel = 1.15.1
+Requires: vespa-protobuf-devel = 3.21.12
+Requires: vespa-pybind11-devel
+%endif
+
+%if 0%{?el9}
+%global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
+Requires: boost-devel >= 1.75
+Requires: cmake >= 3.20.2
+Requires: gcc-toolset-12-gcc-c++
+Requires: gcc-toolset-12-binutils
+Requires: gcc-toolset-12-libatomic-devel
+Requires: glibc-langpack-en
+Requires: gmock-devel
+Requires: gtest-devel
+Requires: llvm-devel
+Requires: maven
+Requires: openblas-devel
+Requires: openssl-devel
+Requires: pybind11-devel
+Requires: python3-devel
+Requires: python3-pytest
+Requires: vespa-libzstd-devel >= 1.5.4-1
+Requires: vespa-lz4-devel >= 1.9.4-1
+Requires: vespa-onnxruntime-devel = 1.15.1
+Requires: vespa-protobuf-devel = 3.21.12
+%endif
+
+%if 0%{?fedora}
+Requires: boost-devel
+Requires: cmake >= 3.9.1
+Requires: gcc-c++
+Requires: glibc-langpack-en
+Requires: gmock-devel
+Requires: gtest-devel
+Requires: libatomic
+Requires: llvm-devel
+Requires: pybind11-devel
+Requires: python3-pytest
+Requires: python3-devel
+Requires: maven
+Requires: openblas-devel
+Requires: openssl-devel
+Requires: protobuf-devel
+Requires: vespa-lz4-devel >= 1.9.4-1
+Requires: vespa-onnxruntime-devel = 1.15.1
+Requires: vespa-libzstd-devel >= 1.5.4-1
+
+%endif
+
+# For Amazon Linux 2023 fedora is also defined
+%if 0%{?amzn2023}
+Requires: java-17-amazon-corretto-devel
+Requires: java-17-amazon-corretto
+Requires: maven-amazon-corretto17
+Requires: vespa-re2-devel = 20210801
+Requires: vespa-xxhash-devel >= 0.8.1
+%else
+Requires: java-17-openjdk-devel
+Requires: maven-openjdk17
+Requires: re2-devel
+Requires: xxhash-devel >= 0.8.1
+%endif
+
+%description
+
+Vespa - The open big data serving engine - build dependencies
+
+%files
+
