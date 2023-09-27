@@ -29,9 +29,8 @@ URL:            https://microsoft.github.io/onnxruntime
 Source0:        vespa-onnxruntime-%{version}.tar.gz
 Patch0:         patches.use-origin-rpath-for-jni-library.diff
 Patch1:         patches.no-array-bounds.diff
-Patch2:         patches.mlas.diff
+Patch2:         patches.use-gradle.diff
 Patch3:         patches.apply-cpuinfo.diff
-Patch4:         patches.use-gradle.diff
 
 %if 0%{?fedora} && !0%{?amzn}
 BuildRequires: cmake
@@ -50,12 +49,20 @@ BuildRequires: vespa-gtest
 BuildRequires: make
 BuildRequires: glibc-langpack-en
 BuildRequires: wget
+BuildRequires: python39
+BuildRequires: python39-devel
+BuildRequires: python39-numpy
+BuildRequires: python39-setuptools
 %global _enable_cuda 1
 %endif
 %if 0%{?el9}
 BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: glibc-langpack-en
+BuildRequires: python3
+BuildRequires: python3-devel
+BuildRequires: python3-numpy
+BuildRequires: python3-setuptools
 %ifarch x86_64
 %global _enable_cuda 1
 %endif
@@ -71,12 +78,9 @@ BuildRequires: redhat-lsb-core
 %endif
 BuildRequires: expat-devel
 BuildRequires: libcurl-devel
-BuildRequires: python3-devel
-BuildRequires: python3-numpy
 %if ! 0%{?el9}
 BuildRequires: libunwind
 %endif
-BuildRequires: python3-setuptools
 BuildRequires: bzip2
 %if 0%{?_enable_cuda:1}
 BuildRequires: cuda-libraries-devel-12-2
@@ -104,10 +108,9 @@ about packaging.
 %prep
 %setup -q
 %patch0 -p1
-%patch1 -p0
-%patch2 -p1
+%patch1 -p1
+%patch2 -p0
 %patch3 -p1
-%patch4 -p0
 
 %build
 
@@ -128,7 +131,7 @@ PATH=%{_prefix}/bin:$PATH
     --skip_tests \
     --build_java \
     --build_shared_lib \
-    --parallel 8 \
+    --parallel 4 \
     --cmake_path %{_cmake_prog} \
     --ctest_path %{_ctest_prog} \
     --skip_submodule_sync \
@@ -136,7 +139,6 @@ PATH=%{_prefix}/bin:$PATH
             CMAKE_INSTALL_PREFIX=%{_prefix} \
             CMAKE_CXX_COMPILER_LAUNCHER=ccache \
             %{?_enable_cuda_extra_defines:%{_enable_cuda_extra_defines}} \
-            onnxruntime_DEV_MODE=OFF \
             onnxruntime_USE_OPENMP=OFF \
             %{?_toolset_compiler_cmake_args}
 
@@ -153,11 +155,6 @@ make -C build/Linux/RelWithDebInfo DESTDIR=%{buildroot} install
 cp -p build/Linux/RelWithDebInfo/lib*jni*.so* %{buildroot}%{_prefix}/lib64/.
 mkdir -p %{buildroot}%{_prefix}/lib
 cp -p build/Linux/RelWithDebInfo/java/build/libs/* %{buildroot}%{_prefix}/lib/.
-
-# Compat links with tarfile distribution
-ln -s core/session/onnxruntime_c_api.h %{buildroot}%{_prefix}/include/onnxruntime/onnxruntime_c_api.h
-ln -s core/session/onnxruntime_cxx_api.h %{buildroot}%{_prefix}/include/onnxruntime/onnxruntime_cxx_api.h
-ln -s core/session/onnxruntime_cxx_inline.h %{buildroot}%{_prefix}/include/onnxruntime/onnxruntime_cxx_inline.h
 
 %files
 %{_prefix}/lib64/

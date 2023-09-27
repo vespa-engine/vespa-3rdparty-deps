@@ -1,27 +1,28 @@
---- cmake/CMakeLists.txt.orig	2023-05-24 03:37:38.000000000 +0000
-+++ cmake/CMakeLists.txt	2023-06-15 10:45:30.557414011 +0000
-@@ -548,6 +548,7 @@
-     endif()
- 
- else()
-+  list(APPEND ORT_WARNING_FLAGS -Wno-array-bounds -Wno-maybe-uninitialized)
-   check_cxx_compiler_flag(-Wunused-but-set-parameter HAS_UNUSED_BUT_SET_PARAMETER)
+diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
+index 82a454791d..0bdb3bf583 100644
+--- a/cmake/CMakeLists.txt
++++ b/cmake/CMakeLists.txt
+@@ -612,6 +612,8 @@ else()
    check_cxx_compiler_flag(-Wunused-but-set-variable HAS_UNUSED_BUT_SET_VARIABLE)
    check_cxx_compiler_flag(-Wunused-variable HAS_UNUSED_VARIABLE)
-@@ -572,6 +573,7 @@
-   check_cxx_compiler_flag(-Wbitwise-instead-of-logical HAS_BITWISE_INSTEAD_OF_LOGICAL)
-   check_cxx_compiler_flag(-Wenum-constexpr-conversion HAS_ENUM_CONSTEXPR_CONVERSION)
-   check_cxx_compiler_flag(-Wdeprecated-builtins HAS_DEPRECATED_BUILTINS)
+   check_cxx_compiler_flag(-Wuseless-cast HAS_USELESS_CAST)
 +  check_cxx_compiler_flag(-Wdangling-reference HAS_DANGLING_REFERENCE)
++  check_cxx_compiler_flag(-Warray-bounds HAS_ARRAY_BOUNDS)
    check_function_exists(reallocarray HAS_REALLOCARRAY)
  
    if (HAS_TAUTOLOGICAL_POINTER_COMPARE)
-@@ -595,6 +597,9 @@
+@@ -635,6 +637,15 @@ else()
    if (HAS_DEPRECATED_BUILTINS)
      list(APPEND ORT_WARNING_FLAGS -Wno-deprecated-builtins)
    endif()
 +  if (HAS_DANGLING_REFERENCE)
 +    list(APPEND ORT_WARNING_FLAGS -Wno-dangling-reference)
++  endif()
++  if (HAS_ARRAY_BOUNDS)
++    list(APPEND ORT_WARNING_FLAGS -Wno-array-bounds)
++  endif()
++  if (HAS_MAYBE_UNINITIALIZED)
++    list(APPEND ORT_WARNING_FLAGS -Wno-maybe-uninitialized)
 +  endif()
    #see:https://reviews.llvm.org/D131307
    #It was intended that the 'enum-constexpr-conversion' type warnings can not be silenced by -w
