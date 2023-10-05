@@ -3,9 +3,9 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=1
-MINOR=15
-PATCH=1
-RELEASE=5
+MINOR=16
+PATCH=0
+RELEASE=1
 PKGNAME=vespa-onnxruntime
 
 RPMTOPDIR=$(TOP)/rpmbuild
@@ -38,8 +38,6 @@ endif
 	rm -rf $(SRCTMP)
 	mkdir -p $(SRCTMP)
 	cd $(SRCTMP_VENDOR) && git archive --format=tar HEAD | tar -C $(SRCTMP) -xf -
-	mkdir -p $(SRCTMP)/cmake/patches/flatbuffers
-	cp -a patches.disable-gcc-13-warnings-for-flatbuffers.diff $(SRCTMP)/cmake/patches/flatbuffers/patches.disable-gcc-13-warnings.diff
 	mkdir -p $(SRCTMP)/cmake/patches/pytorch_cpuinfo
 	cp -a patches.external-pytorch-cpuinfo-src-arm-linux-init.diff $(SRCTMP)/cmake/patches/pytorch_cpuinfo/arm-linux-init.diff
 	set -e; cd $(SRCTMP_VENDOR) && git submodule status --recursive | cut -d ' ' -f 3 | while read sm_path; do mkdir -p $(SRCTMP)/$$sm_path; ( cd $$sm_path && git archive --format=tar HEAD | tar -C $(SRCTMP)/$$sm_path -xf -); done
