@@ -3,7 +3,7 @@
 @@ -1,5 +1,7 @@
  #!/bin/sh
  
-+exec gradle --debug "$@"
++exec gradle "$@"
 +
  #
  # Copyright © 2015-2021 the original authors.
