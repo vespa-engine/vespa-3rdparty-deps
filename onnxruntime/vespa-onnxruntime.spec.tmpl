@@ -31,7 +31,6 @@ Patch0:         patches.use-origin-rpath-for-jni-library.diff
 Patch1:         patches.no-array-bounds.diff
 Patch2:         patches.use-gradle.diff
 Patch3:         patches.apply-cpuinfo.diff
-Patch4:         patches.no-asm-mrs.diff
 
 %if 0%{?fedora} && !0%{?amzn}
 BuildRequires: cmake
@@ -112,7 +111,6 @@ about packaging.
 %patch1 -p1
 %patch2 -p0
 %patch3 -p1
-%patch4 -p0
 
 %build
 
