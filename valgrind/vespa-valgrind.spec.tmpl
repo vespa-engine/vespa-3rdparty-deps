@@ -20,12 +20,12 @@ License:        GPLv2+
 URL:            http://www.valgrind.org/
 Source0:        https://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
 
-
-%define _devtoolset_enable /opt/rh/devtoolset-9/enable
-%define _devtoolset_gdb /opt/rh/devtoolset-9/root/usr/bin/gdb
-BuildRequires: devtoolset-9-gcc-c++%{?_isa}
+%if 0%{?el8}
+%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+%define _devtoolset_gdb /opt/rh/gcc-toolset-12/root/usr/bin/gdb
+BuildRequires: vespa-toolset-12-meta
 BuildRequires: glibc-devel
-BuildRequires: devtoolset-9-gdb
+BuildRequires: gcc-toolset-12-gdb
 BuildRequires: procps
 BuildRequires: perl-generators
 BuildRequires: perl(Getopt::Long)
@@ -33,6 +33,11 @@ BuildRequires: automake
 BuildRequires: autoconf
 BuildRequires: docbook-dtds
 BuildRequires: make
+BuildRequires: elfutils-debuginfod
+BuildRequires: elfutils-debuginfod-client
+BuildRequires: python3.11
+BuildRequires: python3.11-rpm-macros
+%endif
 
 %description
 Valgrind compiled for vespa.

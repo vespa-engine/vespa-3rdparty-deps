@@ -3,7 +3,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=3
-MINOR=17
+MINOR=22
 PATCH=0
 RELEASE=1
 
@@ -12,13 +12,16 @@ SOURCEDIR=$(RPMTOPDIR)/SOURCES
 SPECDIR=$(RPMTOPDIR)/SPECS
 SPECFILE=$(SPECDIR)/vespa-valgrind.spec
 
+outdir ?= $(TOP)
+
 srpm:
-	dnf install -y rpmdevtools
+	rpm -q rpmdevtools || dnf install -y rpmdevtools
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
 	cat vespa-valgrind.spec.tmpl | sed "s/_TMPL_VER_MAJOR/$(MAJOR)/" | sed "s/_TMPL_VER_MINOR/$(MINOR)/" | sed "s/_TMPL_VER_PATCH/$(PATCH)/" | sed "s/_TMPL_VER_RELEASE/$(RELEASE)/" > $(SPECFILE)
 	spectool -g -C $(SOURCEDIR) $(SPECFILE)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
 	cp -a $(RPMTOPDIR)/SRPMS/* $(outdir)
+
 clean:
 	-rm -rf $(RPMTOPDIR)
 
