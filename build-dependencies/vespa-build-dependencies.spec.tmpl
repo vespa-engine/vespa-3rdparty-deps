@@ -33,30 +33,30 @@ Requires: zlib-devel
 %if 0%{?el8}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
 Requires: cmake >= 3.11.4-3
-Requires: gcc-toolset-12-gcc-c++
-Requires: gcc-toolset-12-binutils
-Requires: gcc-toolset-12-libatomic-devel
+Requires: gcc-toolset-13-gcc-c++
+Requires: gcc-toolset-13-binutils
+Requires: gcc-toolset-13-libatomic-devel
 Requires: glibc-langpack-en
 Requires: llvm-devel
 Requires: maven
 Requires: vespa-boost-devel >= 1.76.0-1
-Requires: vespa-libzstd-devel >= 1.5.4-1
+Requires: vespa-libzstd-devel >= 1.5.5-1
 Requires: vespa-openblas-devel >= 0.3.25
 Requires: vespa-openssl-devel >= 3.1.2
 Requires: vespa-gtest = 1.13.0
-Requires: vespa-lz4-devel >= 1.9.4-1
+Requires: vespa-lz4-devel >= 1.9.4-2
 Requires: vespa-onnxruntime-devel = 1.16.3
 Requires: vespa-protobuf-devel = 3.21.12
-Requires: vespa-toolset-12-meta >= 12.0.1
+Requires: vespa-toolset-13-meta >= 13.1.1
 %endif
 
 %if 0%{?el9}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
 Requires: boost-devel >= 1.75
 Requires: cmake >= 3.20.2
-Requires: gcc-toolset-12-gcc-c++
-Requires: gcc-toolset-12-binutils
-Requires: gcc-toolset-12-libatomic-devel
+Requires: gcc-toolset-13-gcc-c++
+Requires: gcc-toolset-13-binutils
+Requires: gcc-toolset-13-libatomic-devel
 Requires: glibc-langpack-en
 Requires: gmock-devel
 Requires: gtest-devel
@@ -64,11 +64,11 @@ Requires: llvm-devel
 Requires: maven
 Requires: openblas-devel
 Requires: openssl-devel
-Requires: vespa-libzstd-devel >= 1.5.4-1
-Requires: vespa-lz4-devel >= 1.9.4-1
+Requires: vespa-libzstd-devel >= 1.5.5-1
+Requires: vespa-lz4-devel >= 1.9.4-2
 Requires: vespa-onnxruntime-devel = 1.16.3
 Requires: vespa-protobuf-devel = 3.21.12
-Requires: vespa-toolset-12-meta >= 12.0.1
+Requires: vespa-toolset-13-meta >= 13.1.1
 %endif
 
 %if 0%{?fedora}
@@ -84,9 +84,9 @@ Requires: maven
 Requires: openblas-devel
 Requires: openssl-devel
 Requires: protobuf-devel
-Requires: vespa-lz4-devel >= 1.9.4-1
+Requires: vespa-lz4-devel >= 1.9.4-2
 Requires: vespa-onnxruntime-devel = 1.16.3
-Requires: vespa-libzstd-devel >= 1.5.4-1
+Requires: vespa-libzstd-devel >= 1.5.5-1
 
 %endif
 
