@@ -58,6 +58,8 @@ cd ${incdir} || exit 1
 cat %{mydir}/patch.stl_vector.h.diff | patch -p0 -r -
 cd ${triple} || exit 1
 cat %{mydir}/patch.gthr-default.h.diff | patch -p0 -r -
+ln -sf %{_devtoolset_enable} /opt/rh/gcc-toolset-enable
+printf '%s\n'  "# gcc"  "source /opt/rh/gcc-toolset-enable"  > /etc/profile.d/enable-gcc-toolset.sh
 %endif
 
 %changelog
