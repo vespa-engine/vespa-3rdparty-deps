@@ -31,8 +31,8 @@ Source0:        https://github.com/protocolbuffers/protobuf/releases/download/v%
 Patch0:         patches.protobuf-linker-maps.diff
 
 %if 0%{?el8} || 0%{?el9}
-%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
-BuildRequires: gcc-toolset-12-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
+BuildRequires: gcc-toolset-13-gcc-c++
 BuildRequires: make
 %endif
 %if 0%{?fedora}

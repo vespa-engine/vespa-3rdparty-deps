@@ -28,9 +28,9 @@ URL:            https://github.com/google/re2/
 Source0:        https://github.com/google/re2/archive/%{ver_major_long}.tar.gz
 
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
-BuildRequires: gcc-toolset-11-gcc
-BuildRequires: gcc-toolset-11-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
+BuildRequires: gcc-toolset-13-gcc
+BuildRequires: gcc-toolset-13-gcc-c++
 %endif
 %if 0%{?el9}
 BuildRequires: gcc

@@ -6,7 +6,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=3
 MINOR=26
 PATCH=4
-RELEASE=1
+RELEASE=2
 PKGNAME=vespa-cmake
 
 # https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz

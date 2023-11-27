@@ -30,15 +30,15 @@ Source0:        https://github.com/xianyi/OpenBLAS/archive/v%{version}/openblas-
 Patch0:         patches.driver-others-dynamic-arm64.diff
 
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-11/enable
-BuildRequires: vespa-toolset-11-meta
-BuildRequires: gcc-toolset-11-gcc-gfortran
+%define _devtoolset_enable /opt/rh/gcc-toolset/enable
+BuildRequires: vespa-toolset-13-meta
+BuildRequires: gcc-toolset-13-gcc-gfortran
 BuildRequires: perl-devel
 %endif
 %if 0%{?el9}
-%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
-BuildRequires: vespa-toolset-12-meta
-BuildRequires: gcc-toolset-12-gcc-gfortran
+%define _devtoolset_enable /opt/rh/gcc-toolset/enable
+BuildRequires: vespa-toolset-13-meta
+BuildRequires: gcc-toolset-13-gcc-gfortran
 BuildRequires: perl-devel
 %endif
 %if 0%{?fedora}
