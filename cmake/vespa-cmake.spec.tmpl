@@ -23,8 +23,8 @@ URL:            http://www.cmake.org
 Source0:        https://github.com/Kitware/CMake/releases/download/v%{version}/cmake-%{version}.tar.gz
 
 %if 0%{?el8}%{?el9}
-BuildRequires: gcc-toolset-12-gcc-c++
-%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+BuildRequires: gcc-toolset-13-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
