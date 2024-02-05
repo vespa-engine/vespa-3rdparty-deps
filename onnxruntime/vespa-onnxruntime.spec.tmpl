@@ -43,8 +43,9 @@ BuildRequires: ccache
 BuildRequires: vespa-gradle
 BuildRequires: which
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset/enable
-BuildRequires: vespa-toolset-13-meta
+%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+BuildRequires: vespa-toolset-12-meta
+BuildRequires: gcc-toolset-12-dwz
 BuildRequires: vespa-gtest
 BuildRequires: make
 BuildRequires: glibc-langpack-en
@@ -54,18 +55,21 @@ BuildRequires: python39-devel
 BuildRequires: python39-numpy
 BuildRequires: python39-setuptools
 %global _enable_cuda 1
+%define _cudnn_version 8.9.4.25-1.cuda12.2
 %endif
 %if 0%{?el9}
-BuildRequires: gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+BuildRequires: vespa-toolset-12-meta
+BuildRequires: gcc-toolset-12-dwz
+BuildRequires: gtest-devel
 BuildRequires: make
 BuildRequires: glibc-langpack-en
 BuildRequires: python3
 BuildRequires: python3-devel
 BuildRequires: python3-numpy
 BuildRequires: python3-setuptools
-%ifarch x86_64
 %global _enable_cuda 1
-%endif
+%define _cudnn_version 8.9.6.50-1.cuda12.2
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
@@ -87,7 +91,7 @@ BuildRequires: cuda-libraries-devel-12-2
 BuildRequires: cuda-compiler-12-2
 BuildRequires: cuda-cudart-devel-12-2
 BuildRequires: cuda-command-line-tools-12-2
-BuildRequires: libcudnn8-devel = 8.9.4.25-1.cuda12.2
+BuildRequires: libcudnn8-devel = %{_cudnn_version}
 %endif
 
 %description
@@ -194,7 +198,7 @@ Requires:       cuda-cudart-12-2
 Requires:       libcufft-12-2
 Requires:       libcublas-12-2
 Requires:       libcurand-12-2
-Requires:       libcudnn8 = 8.9.4.25-1.cuda12.2
+Requires:       libcudnn8 = %{_cudnn_version}
 
 %description cuda
 CUDA support package for Vespa.
