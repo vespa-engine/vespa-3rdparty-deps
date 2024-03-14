@@ -24,7 +24,7 @@ Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{ve
 
 %if 0%{?el8} || 0%{?el9} || 0%{?fedora}
 BuildRequires: java-17-openjdk-devel
-BuildRequires: maven
+BuildRequires: maven >= 3.8.0
 %endif
 
 %if 0%{?el8}%{?el9}
@@ -36,7 +36,6 @@ BuildRequires: gcc-c++
 %endif
 BuildRequires: vespa-cmake
 BuildRequires: make
-BuildRequires: ccache
 
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
