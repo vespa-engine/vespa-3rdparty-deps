@@ -1,0 +1,76 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+%global debug_package %{nil}
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+Summary:        Cross-platform make system
+Name:           vespa-jllama
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        MIT
+URL:            https://github.com/kherud/
+Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
+
+%if 0%{?el8} || 0%{?el9} || 0%{?fedora}
+BuildRequires: java-17-openjdk-devel
+%endif
+%if 0%{?el8}
+BuildRequires: maven >= 1:3.8.0
+%else
+BuildRequires: maven
+%endif
+
+%if 0%{?el8}%{?el9}
+BuildRequires: gcc-toolset-13-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
+%endif
+%if 0%{?fedora}
+BuildRequires: gcc-c++
+%endif
+BuildRequires: vespa-cmake
+BuildRequires: make
+BuildRequires: git
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q -n java-llama.cpp-%{version}
+
+%build
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+
+PATH=%{_prefix}/bin:$PATH
+mvn compile
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Release
+
+%install
+
+mkdir -p %{buildroot}%{_libdir}
+cp -p src/main/resources/de/kherud/llama/Linux/*/lib*.so %{buildroot}%{_libdir}
+
+%files
+%license LICENSE.md
+%{_libdir}
+
+%changelog
