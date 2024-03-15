@@ -53,12 +53,11 @@ about packaging.
 source %{_devtoolset_enable} || true
 %endif
 
+PATH=%{_prefix}/bin:$PATH
 mvn compile
 mkdir build
 cd build
-PATH=%{_prefix}/bin:$PATH
 cmake ..
-PATH=%{_prefix}/bin:$PATH
 cmake --build . --config Release
 
 %install
