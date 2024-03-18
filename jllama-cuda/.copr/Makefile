@@ -7,7 +7,7 @@ MAJOR=2
 MINOR=3
 PATCH=5
 RELEASE=1
-PKGNAME=vespa-jllama-gpu
+PKGNAME=vespa-jllama-cuda
 
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES

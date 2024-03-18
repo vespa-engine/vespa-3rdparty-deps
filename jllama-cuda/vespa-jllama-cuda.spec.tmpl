@@ -15,7 +15,7 @@
 %define ver_release _TMPL_VER_RELEASE
 
 Summary:        Cross-platform make system
-Name:           vespa-jllama-gpu
+Name:           vespa-jllama-cuda
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        MIT
@@ -63,8 +63,8 @@ cmake --build . --config Release
 
 %install
 
-mkdir -p %{buildroot}%{_libdir}/gpu
-cp -p src/main/resources/de/kherud/llama/Linux/*/lib*.so %{buildroot}%{_libdir}/gpu
+mkdir -p %{buildroot}%{_libdir}/cuda
+cp -p src/main/resources/de/kherud/llama/Linux/*/lib*.so %{buildroot}%{_libdir}/cuda
 
 Requires:       cuda-cudart-12-2
 Requires:       libcublas-12-2
