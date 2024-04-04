@@ -94,7 +94,7 @@ mkdir build
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
    -Dgtest_build_tests=ON \
    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
-   -DCMAKE_INSTALL_RPATH=%{_prefix}/lib64 \
+   -DCMAKE_INSTALL_RPATH=\$ORIGIN \
    -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
    -S . \
    -B build
