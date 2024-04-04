@@ -11,11 +11,16 @@
 # Only strip debug info
 %global _find_debuginfo_opts -g
 
+%if 0%{?el8} || 0%{?el9} || 0%{?amzn2023}
+%global _use_vespa_gtest 1
+%global _vespa_gtest_version 1.14.0
+%endif
+
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
 
 # Exclude automated requires for libraries in /opt/vespa-deps/lib64.
-%global __requires_exclude ^libabsl.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)$
+%global __requires_exclude ^(lib(absl%{?_use_vespa_gtest:|(gtest|gmock)(_main)?}).*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
 
 Summary:        abseil-cpp compiled for vespa
 Name:           vespa-abseil-cpp
@@ -38,6 +43,13 @@ BuildRequires: make
 BuildRequires: gcc-c++
 BuildRequires: make
 %endif
+%if 0%{?_use_vespa_gtest}
+BuildRequires: vespa-gtest-devel%{?_isa} = %{_vespa_gtest_version}
+BuildRequires: vespa-gmock-devel%{?_isa} = %{_vespa_gtest_version}
+%else
+BuildRequires: gtest-devel
+BuildRequires: gmock-devel
+%endif
 
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
@@ -48,13 +60,31 @@ Abseil - C++ Common Libraries.
 
 This package contains Abseil C++ normal runtime libraries.
 %{_vespa_3rdparty_deps_packaging_notice}
+
+%package testing
+Summary:        abseil-cpp compiled for vespa -- testing
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+%if 0%{?_use_vespa_gtest}
+Requires:       vespa-gtest%{?_isa} = %{_vespa_gtest_version}
+Requires:       vespa-gmock%{?_isa} = %{_vespa_gtest_version}
+%else
+Requires:       gtest
+Requires:       gmock
+%endif
+
 %package devel
 Summary:        abseil-cpp compiled for vespa -- devel
 Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-testing%{?_isa} = %{version}-%{release}
+
+%description testing
+This package contains Abseil C++ testing runtime libraries.
+%{_vespa_3rdparty_deps_packaging_notice}
 
 %description devel
-This package contains Abseil C++ headers and libraries
+This package contains Abseil C++ headers and libraries.
 %{_vespa_3rdparty_deps_packaging_notice}
+
 %prep
 %setup -q -n abseil-cpp-%{version}
 
@@ -67,16 +97,16 @@ mkdir build
 %{_cmake_prog} \
     -DCMAKE_INSTALL_PREFIX=%{_prefix} \
     -DCMAKE_INSTALL_DO_STRIP=OFF \
-    -DCMAKE_INSTALL_RPATH=%{_libdir} \
+    -DCMAKE_INSTALL_RPATH=\$ORIGIN \
     -DCMAKE_PREFIX_PATH=%{_prefix} \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DBUILD_SHARED_LIBS=ON \
     -DABSL_BUILD_TESTING=ON \
     -DABSL_ENABLE_INSTALL=ON \
-    -DABSL_USE_EXTERNAL_GOOGLETEST=OFF \
-    -DABSL_USE_GOOGLETEST_HEAD=ON \
-    -DABSL_FIND_GOOGLETEST=OFF \
+    -DABSL_USE_EXTERNAL_GOOGLETEST=ON \
+    -DABSL_USE_GOOGLETEST_HEAD=OFF \
+    -DABSL_FIND_GOOGLETEST=ON \
     -DABSL_PROPAGATE_CXX_STD=ON \
     -DCMAKE_CXX_STANDARD=20 \
     -S . \
@@ -96,9 +126,7 @@ cd build
 %make_install
 
 %files
-%exclude %{_includedir}/absl
 %dir %{_libdir}
-%exclude %{_libdir}/pkgconfig
 %exclude %{_libdir}/libabsl_atomic_hook_test_helper.so.*
 %exclude %{_libdir}/libabsl_exception_safety_testing.so.*
 %exclude %{_libdir}/libabsl_hash_generator_testing.so.*
@@ -115,12 +143,29 @@ cd build
 %{_libdir}/*.so.*
 %license LICENSE
 
+%files testing
+%dir %{_libdir}
+%{_libdir}/libabsl_atomic_hook_test_helper.so.*
+%{_libdir}/libabsl_exception_safety_testing.so.*
+%{_libdir}/libabsl_hash_generator_testing.so.*
+%{_libdir}/libabsl_log_internal_test_actions.so.*
+%{_libdir}/libabsl_log_internal_test_helpers.so.*
+%{_libdir}/libabsl_log_internal_test_matchers.so.*
+%{_libdir}/libabsl_per_thread_sem_test_common.so.*
+%{_libdir}/libabsl_pow10_helper.so.*
+%{_libdir}/libabsl_scoped_mock_log.so.*
+%{_libdir}/libabsl_spinlock_test_common.so.*
+%{_libdir}/libabsl_stack_consumption.so.*
+%{_libdir}/libabsl_test_instance_tracker.so.*
+%{_libdir}/libabsl_time_internal_test_util.so.*
+%license LICENSE
+
 %files devel
-%dir %{_includedir}/absl
 %{_includedir}/absl
 %dir %{_libdir}
 %{_libdir}/*.so
 %{_libdir}/cmake/absl
+%{_libdir}/pkgconfig
 %license LICENSE
 
 %changelog
