@@ -1,0 +1,126 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_release _TMPL_VER_RELEASE
+
+# Force special prefix for Vespa
+%global _prefix /opt/vespa-deps
+
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+# Exclude automated requires for libraries in /opt/vespa-deps/lib64.
+%global __requires_exclude ^libabsl.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)$
+
+Summary:        abseil-cpp compiled for vespa
+Name:           vespa-abseil-cpp
+Version:        %{ver_major}.%{ver_minor}
+Release:        %{ver_release}%{?dist}
+License:        Apache License, Version 2.0
+URL:            https://github.com/abseil/abseil-cpp
+Source0:        https://github.com/abseil/abseil-cpp/releases/download/%{version}/abseil-cpp-%{version}.tar.gz
+
+BuildRequires: cmake
+%global _cmake_prog cmake
+%global _ctest_prog ctest
+%if 0%{?el8} || 0%{?el9}
+%global _devtoolset_enable /opt/rh/gcc-toolset-13/enable
+BuildRequires: gcc-toolset-13-gcc-c++
+BuildRequires: gcc-toolset-13-annobin-plugin-gcc
+BuildRequires: make
+%endif
+%if 0%{?fedora}
+BuildRequires: gcc-c++
+BuildRequires: make
+%endif
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+Abseil - C++ Common Libraries.
+
+This package contains Abseil C++ normal runtime libraries.
+%{_vespa_3rdparty_deps_packaging_notice}
+%package devel
+Summary:        abseil-cpp compiled for vespa -- devel
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+
+%description devel
+This package contains Abseil C++ headers and libraries
+%{_vespa_3rdparty_deps_packaging_notice}
+%prep
+%setup -q -n abseil-cpp-%{version}
+
+%build
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+PATH=%{_prefix}/bin:$PATH
+mkdir build
+%{_cmake_prog} \
+    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+    -DCMAKE_INSTALL_DO_STRIP=OFF \
+    -DCMAKE_INSTALL_RPATH=%{_libdir} \
+    -DCMAKE_PREFIX_PATH=%{_prefix} \
+    -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DBUILD_SHARED_LIBS=ON \
+    -DABSL_BUILD_TESTING=ON \
+    -DABSL_ENABLE_INSTALL=ON \
+    -DABSL_USE_EXTERNAL_GOOGLETEST=OFF \
+    -DABSL_USE_GOOGLETEST_HEAD=ON \
+    -DABSL_FIND_GOOGLETEST=OFF \
+    -DABSL_PROPAGATE_CXX_STD=ON \
+    -DCMAKE_CXX_STANDARD=20 \
+    -S . \
+    -B build
+make -C build %{?_smp_mflags}
+
+%check
+PATH=%{_prefix}/bin:$PATH
+%{_ctest_prog} --test-dir build %{?_smp_mflags}
+
+%install
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+PATH=%{_prefix}/bin:$PATH
+cd build
+%make_install
+
+%files
+%exclude %{_includedir}/absl
+%dir %{_libdir}
+%exclude %{_libdir}/pkgconfig
+%exclude %{_libdir}/libabsl_atomic_hook_test_helper.so.*
+%exclude %{_libdir}/libabsl_exception_safety_testing.so.*
+%exclude %{_libdir}/libabsl_hash_generator_testing.so.*
+%exclude %{_libdir}/libabsl_log_internal_test_actions.so.*
+%exclude %{_libdir}/libabsl_log_internal_test_helpers.so.*
+%exclude %{_libdir}/libabsl_log_internal_test_matchers.so.*
+%exclude %{_libdir}/libabsl_per_thread_sem_test_common.so.*
+%exclude %{_libdir}/libabsl_pow10_helper.so.*
+%exclude %{_libdir}/libabsl_scoped_mock_log.so.*
+%exclude %{_libdir}/libabsl_spinlock_test_common.so.*
+%exclude %{_libdir}/libabsl_stack_consumption.so.*
+%exclude %{_libdir}/libabsl_test_instance_tracker.so.*
+%exclude %{_libdir}/libabsl_time_internal_test_util.so.*
+%{_libdir}/*.so.*
+%license LICENSE
+
+%files devel
+%dir %{_includedir}/absl
+%{_includedir}/absl
+%dir %{_libdir}
+%{_libdir}/*.so
+%{_libdir}/cmake/absl
+%license LICENSE
+
+%changelog
