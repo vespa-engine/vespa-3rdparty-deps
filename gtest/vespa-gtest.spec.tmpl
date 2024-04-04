@@ -42,6 +42,18 @@ BuildRequires: gcc-c++
 %endif
 BuildRequires: make
 
+%package devel
+Summary: Google C++ testing framework -- gtest devel
+Requires: %{name}%{?_isa} = %{version}-%{release}
+
+%package -n vespa-gmock
+Summary: Google C++ testing framework -- gmock
+Requires: %{name}%{?_isa} = %{version}-%{release}
+
+%package -n vespa-gmock-devel
+Summary: Google C++ testing framework -- gmock devel
+Requires: vespa-gmock%{?_isa} = %{version}-%{release}
+
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
 about packaging.
@@ -55,6 +67,18 @@ failures, various options for running the tests, and XML test report
 generation.
 %{_vespa_3rdparty_deps_packaging_notice}
 
+%description devel
+Google C++ testing framework -- gtest devel
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%description -n vespa-gmock
+Google C++ testing framework -- gmock
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%description -n vespa-gmock-devel
+Google C++ testing framework -- gmock devel
+%{_vespa_3rdparty_deps_packaging_notice}
+
 %prep
 %setup -q -n googletest-%{version}
 
@@ -62,18 +86,22 @@ generation.
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-mkdir build && cd build
+mkdir build
 %{?_cmake_prog}%{!?_cmake_prog:cmake} \
-       -DBUILD_SHARED_LIBS=ON \
-       -DCMAKE_CXX_FLAGS="-std=c++2a ${RPM_OPT_FLAGS}" \
-       -DCMAKE_CXX_STANDARD=20 \
-       -Dgtest_build_tests=ON \
-       -DCMAKE_INSTALL_PREFIX=%{_prefix} \
-       -DCMAKE_INSTALL_RPATH=%{_prefix}/lib64 \
-       -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
-        %{?_toolset_compiler_cmake_args} \
-       ..
-make %{?_smp_mflags}
+   -DBUILD_SHARED_LIBS=ON \
+   -DCMAKE_CXX_FLAGS="-std=c++2a ${RPM_OPT_FLAGS}" \
+   -DCMAKE_CXX_STANDARD=20 \
+   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+   -Dgtest_build_tests=ON \
+   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+   -DCMAKE_INSTALL_RPATH=%{_prefix}/lib64 \
+   -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
+   -S . \
+   -B build
+make -C build %{?_smp_mflags}
+
+%check
+%{?_ctest_prog}%{!?_ctest_prog:ctest} --test-dir build %{?_smp_mflags}
 
 %install
 %if 0%{?_devtoolset_enable:1}
@@ -84,12 +112,27 @@ cd build
 
 %files
 %license LICENSE
+%{_libdir}/libgtest*.so.*
+
+%files devel
+%license LICENSE
 %doc CONTRIBUTORS
 %doc README.md
 %doc googletest/docs/
 %doc googletest/samples
-%{_includedir}/gtest/
-%{_includedir}/gmock/
-%{_prefix}/lib64/*
+%{_includedir}/gtest
+%{_libdir}/libgtest*.so
+%{_libdir}/cmake
+%{_libdir}/pkgconfig
+
+%files -n vespa-gmock
+%license LICENSE
+%{_libdir}/libgmock*.so.*
+
+%files -n vespa-gmock-devel
+%license LICENSE
+%doc googletest/docs
+%{_includedir}/gmock
+%{_libdir}/libgmock*.so
 
 %changelog
