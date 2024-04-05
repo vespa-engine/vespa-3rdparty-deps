@@ -1,5 +1,13 @@
 # Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
 
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+%global version_suffix %{ver_minor}.%{ver_patch}.0
+
 # Disable build id note requirement for now
 %undefine _missing_build_ids_terminate_build
 
@@ -9,17 +17,17 @@
 # Only strip debug info
 %global _find_debuginfo_opts -g
 
+%if 0%{?el8} || 0%{?el9} || 0%{?amzn2023}
+%global _use_vespa_gtest 1
+%global _vespa_gtest_version 1.14.0
+%endif
+%global _vespa_abseil_cpp_version 20240116.1
+
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
 
 # Exclude automated requires for libraries in /opt/vespa-deps/lib64.
-%global __requires_exclude ^lib(protobuf|protoc)\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)$
-
-# Version
-%define ver_major _TMPL_VER_MAJOR
-%define ver_minor _TMPL_VER_MINOR
-%define ver_patch _TMPL_VER_PATCH
-%define ver_release _TMPL_VER_RELEASE
+%global __requires_exclude ^(lib(protobuf|protobuf-lite|protoc|absl_[a-z_0-9]*)\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
 
 Summary:        Protocol Buffers for C++ runtime
 Name:           vespa-protobuf
@@ -27,8 +35,7 @@ Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        BSD
 URL:            https://github.com/protocolbuffers/protobuf
-Source0:        https://github.com/protocolbuffers/protobuf/releases/download/v%{ver_minor}.%{ver_patch}/protobuf-cpp-%{version}.tar.gz
-Patch0:         patches.protobuf-linker-maps.diff
+Source0:        https://github.com/protocolbuffers/protobuf/releases/download/v%{ver_minor}.%{ver_patch}/protobuf-%{ver_minor}.%{ver_patch}.tar.gz
 
 %if 0%{?el8} || 0%{?el9}
 %define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
@@ -39,6 +46,20 @@ BuildRequires: make
 BuildRequires: gcc-c++
 BuildRequires: make
 %endif
+BuildRequires: vespa-abseil-cpp-devel%{?_isa} = %{_vespa_abseil_cpp_version}
+BuildRequires: cmake
+%global _cmake_prog cmake
+%global _ctest_prog ctest
+BuildRequires: zlib-devel
+%if 0%{?_use_vespa_gtest}
+BuildRequires: vespa-gtest-devel%{?_isa} = %{_vespa_gtest_version}
+BuildRequires: vespa-gmock-devel%{?_isa} = %{_vespa_gtest_version}
+%else
+BuildRequires: gtest-devel
+BuildRequires: gmock-devel
+%endif
+Requires: zlib
+Requires: vespa-abseil-cpp%{?_isa} = %{_vespa_abseil_cpp_version}
 
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
@@ -52,22 +73,36 @@ This package contains protobuf runtime library for C++.
 %{_vespa_3rdparty_deps_packaging_notice}
 %package devel
 Summary:        Protocol Buffers for C++ development
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description devel
 This package contains protobuf compiler for C++ and C++ headers and libraries.
 %{_vespa_3rdparty_deps_packaging_notice}
+
 %prep
-%setup -q -n protobuf-%{version}
+%setup -q -n protobuf-%{ver_minor}.%{ver_patch}
 
 %build
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-mkdir build && cd build
-CXXFLAGS="-std=c++14 -g -O3" \
-../configure --prefix=%{_prefix} --libdir=%{_prefix}/lib64 %{?_configure_args}
-make %{?_smp_mflags}
+mkdir build
+%{_cmake_prog} \
+   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+   -DCMAKE_INSTALL_RPATH=%{_libdir} \
+   -DCMAKE_PREFIX_PATH=%{_prefix} \
+   -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
+   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+   -DBUILD_SHARED_LIBS=ON \
+   -DCMAKE_CXX_STANDARD=20 \
+   -Dprotobuf_USE_EXTERNAL_GTEST=ON \
+   -Dprotobuf_ABSL_PROVIDER=package \
+   -S . \
+   -B build
+make -C build %{?_smp_mflags}
+
+%check
+%{_ctest_prog} --test-dir build %{?_smp_mflags}
 
 %install
 %if 0%{?_devtoolset_enable:1}
@@ -76,19 +111,28 @@ source %{_devtoolset_enable} || true
 cd build
 %make_install
 
-%define _unpackaged_files_terminate_build 0
-
 %files
-%{_libdir}/libprotobuf.so.32*
+%{_libdir}/libprotobuf.so.%{version_suffix}
+%{_libdir}/libprotobuf-lite.so.%{version_suffix}
 %license LICENSE
 
 %files devel
 %dir %{_includedir}/google
-%{_includedir}/google/protobuf/
+%{_includedir}/google/protobuf
+%{_includedir}/java/core/src/main/resources/google/protobuf/java_features.proto
+%{_includedir}/upb_generator/mangle.h
+%{_includedir}/utf8_range.h
+%{_includedir}/utf8_validity.h
+%{_libdir}/cmake
+%{_libdir}/pkgconfig
 %{_libdir}/libprotobuf.so
+%{_libdir}/libprotobuf-lite.so
 %{_libdir}/libprotoc.so
-%{_libdir}/libprotoc.so.32*
+%{_libdir}/libprotoc.so.%{version_suffix}
+%{_libdir}/libutf8_range.a
+%{_libdir}/libutf8_validity.a
 %{_bindir}/protoc
+%{_bindir}/protoc-%{version_suffix}
 %license LICENSE
 
 %changelog
