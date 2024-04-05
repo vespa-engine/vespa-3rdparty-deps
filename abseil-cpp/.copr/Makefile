@@ -6,6 +6,12 @@ MAJOR=20240116
 MINOR=1
 RELEASE=1
 
+# Note:
+#
+# Version above must be kept in sync with _vespa_abseil_cpp_version in
+# rpm spec files for vespa-protobuf, vespa-build-dependencies and
+# vespa.
+
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES
 SPECDIR=$(RPMTOPDIR)/SPECS
