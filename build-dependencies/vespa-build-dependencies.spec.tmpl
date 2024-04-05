@@ -6,6 +6,10 @@
 %define ver_patch _TMPL_VER_PATCH
 %define ver_release _TMPL_VER_RELEASE
 
+%global _vespa_abseil_cpp_version 20240116.1
+%global _vespa_gtest_version 1.14.0
+%global _vespa_protobuf_version 5.26.1
+
 Name:           vespa-build-dependencies
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
@@ -43,10 +47,12 @@ Requires: vespa-boost-devel >= 1.76.0-1
 Requires: vespa-libzstd-devel >= 1.5.5-1
 Requires: vespa-openblas-devel >= 0.3.26
 Requires: vespa-openssl-devel >= 3.1.2
-Requires: vespa-gtest = 1.13.0
+Requires: vespa-gmock-devel = %{_vespa_gtest_version}
+Requires: vespa-gtest-devel = %{_vespa_gtest_version}
 Requires: vespa-lz4-devel >= 1.9.4-2
 Requires: vespa-onnxruntime-devel = 1.17.1
-Requires: vespa-protobuf-devel = 3.21.12
+Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
+Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 Requires: vespa-toolset-13-meta >= 13.1.2
 %endif
 
@@ -58,8 +64,8 @@ Requires: gcc-toolset-13-gcc-c++
 Requires: gcc-toolset-13-binutils
 Requires: gcc-toolset-13-libatomic-devel
 Requires: glibc-langpack-en
-Requires: gmock-devel
-Requires: gtest-devel
+Requires: vespa-gmock-devel = %{_vespa_gtest_version}
+Requires: vespa-gtest-devel = %{_vespa_gtest_version}
 Requires: llvm-devel
 Requires: maven
 Requires: openblas-devel
@@ -67,7 +73,8 @@ Requires: openssl-devel
 Requires: vespa-libzstd-devel >= 1.5.5-1
 Requires: vespa-lz4-devel >= 1.9.4-2
 Requires: vespa-onnxruntime-devel = 1.17.1
-Requires: vespa-protobuf-devel = 3.21.12
+Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
+Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 Requires: vespa-toolset-13-meta >= 13.1.2
 %endif
 
@@ -76,14 +83,20 @@ Requires: boost-devel
 Requires: cmake >= 3.9.1
 Requires: gcc-c++
 Requires: glibc-langpack-en
+%if 0%{?amzn2023}
+Requires: vespa-gmock-devel = %{_vespa_gtest_version}
+Requires: vespa-gtest-devel = %{_vespa_gtest_version}
+%else
 Requires: gmock-devel
 Requires: gtest-devel
+%endif
 Requires: libatomic
 Requires: llvm-devel
 Requires: maven
 Requires: openblas-devel
 Requires: openssl-devel
-Requires: protobuf-devel
+Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
+Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 Requires: vespa-lz4-devel >= 1.9.4-2
 Requires: vespa-onnxruntime-devel = 1.17.1
 Requires: vespa-libzstd-devel >= 1.5.5-1
