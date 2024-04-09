@@ -3,9 +3,9 @@
 TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
-MAJOR=2
-MINOR=3
-PATCH=5
+MAJOR=3
+MINOR=0
+PATCH=0
 RELEASE=1
 PKGNAME=vespa-jllama
 
