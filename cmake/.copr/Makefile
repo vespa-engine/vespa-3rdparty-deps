@@ -9,8 +9,6 @@ PATCH=1
 RELEASE=1
 PKGNAME=vespa-cmake
 
-# https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz
-
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES
 SPECDIR=$(RPMTOPDIR)/SPECS
