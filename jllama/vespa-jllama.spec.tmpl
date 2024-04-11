@@ -61,7 +61,10 @@ PATH=%{_prefix}/bin:$PATH
 mvn compile
 mkdir build
 cd build
-cmake ..
+cmake \
+    -DCMAKE_INSTALL_RPATH=\$ORIGIN \
+    -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
+    ..
 cmake --build . --config Release
 
 %install
