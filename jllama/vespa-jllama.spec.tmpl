@@ -22,6 +22,11 @@ License:        MIT
 URL:            https://github.com/kherud/
 Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
 
+%if 0%{?amzn2023}
+BuildRequires: java-17-amazon-corretto-devel
+BuildRequires: java-17-amazon-corretto
+BuildRequires: maven-amazon-corretto17
+%else
 %if 0%{?el8} || 0%{?el9} || 0%{?fedora}
 BuildRequires: java-17-openjdk-devel
 %endif
@@ -29,6 +34,7 @@ BuildRequires: java-17-openjdk-devel
 BuildRequires: maven >= 1:3.8.0
 %else
 BuildRequires: maven
+%endif
 %endif
 
 %if 0%{?el8}%{?el9}
@@ -64,6 +70,7 @@ cd build
 cmake \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
+    -DLLAMA_NATIVE=OFF \
     ..
 cmake --build . --config Release
 
