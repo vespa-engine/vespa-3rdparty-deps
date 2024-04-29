@@ -6,7 +6,8 @@
 # Force special prefix for Vespa
 %define _prefix /opt/vespa-deps
 
-%global debug_package %{nil}
+# Only strip debug info
+%global _find_debuginfo_opts -g
 
 # Version
 %define ver_major _TMPL_VER_MAJOR
@@ -35,6 +36,15 @@ BuildRequires: cuda-compiler-12-2
 BuildRequires: cuda-cudart-devel-12-2
 BuildRequires: cuda-command-line-tools-12-2
 %endif
+
+%if 0%{?el8}
+BuildRequires: vespa-openblas-devel >= 0.3.27
+Requires: vespa-openblas >= 0.3.27
+%else
+BuildRequires: openblas-devel
+Requires: openblas-serial
+%endif
+
 BuildRequires: vespa-cmake
 BuildRequires: make
 BuildRequires: git
@@ -61,8 +71,12 @@ PATH=%{_prefix}/bin:/usr/local/cuda-12.2/bin:$PATH
 mvn compile
 mkdir build
 cd build
-cmake .. -DLLAMA_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES="60;70;75" -DLLAMA_NATIVE=OFF
-cmake --build . --config Release
+cmake  \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DLLAMA_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES="60;70;75" \
+    -DLLAMA_NATIVE=OFF -DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS \
+    ..
+cmake --build .
 
 %install
 
