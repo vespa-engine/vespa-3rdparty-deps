@@ -48,12 +48,12 @@ BuildRequires: vespa-cmake
 BuildRequires: make
 BuildRequires: git
 
-%if 0%{?el8} || 0%{?el9}
+%if 0%{?el8}
 BuildRequires: vespa-openblas-devel >= 0.3.27
 Requires: vespa-openblas >= 0.3.27
 %else
 BuildRequires: openblas-devel
-Requires: openblas
+Requires: openblas-serial
 %endif
 
 %global _vespa_3rdparty_deps_packaging_notice \

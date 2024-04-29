@@ -36,12 +36,12 @@ BuildRequires: cuda-cudart-devel-12-2
 BuildRequires: cuda-command-line-tools-12-2
 %endif
 
-%if 0%{?el8} || 0%{?el9}
+%if 0%{?el8}
 BuildRequires: vespa-openblas-devel >= 0.3.27
 Requires: vespa-openblas >= 0.3.27
 %else
 BuildRequires: openblas-devel
-Requires: openblas
+Requires: openblas-serial
 %endif
 
 BuildRequires: vespa-cmake
