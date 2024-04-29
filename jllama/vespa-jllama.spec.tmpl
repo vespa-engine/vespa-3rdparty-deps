@@ -6,7 +6,9 @@
 # Force special prefix for Vespa
 %define _prefix /opt/vespa-deps
 
-%global debug_package %{nil}
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
 
 # Version
 %define ver_major _TMPL_VER_MAJOR
@@ -78,10 +80,11 @@ cd build
 cmake \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DLLAMA_NATIVE=OFF \
     -DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS \
     ..
-cmake --build . --config Release
+cmake --build .
 
 %install
 
