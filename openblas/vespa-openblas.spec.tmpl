@@ -10,7 +10,7 @@
 %global _find_debuginfo_opts -g
 
 # Don't provide shared library or pkgconfig
-%global __provides_exclude ^(lib.*\\.so\\.[0-9]*\\(\\)\\(64bit\\)|pkgconfig\\(.*)$
+%global __provides_exclude ^(lib.*\\.so\\.[0-9]*\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
 
 %global __requires_exclude ^libopenblas\\.so\\.[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
 
@@ -90,14 +90,17 @@ ln -s openblas/openblas_config.h %{buildroot}%{_prefix}/include/openblas_config.
 
 %files
 %license LICENSE
-%{_bindir}
 %{_libdir}
+%exclude %{_libdir}/cmake
 %exclude %{_libdir}/libopenblas.so
 %exclude %{_libdir}/libopenblas.a
+%exclude %{_libdir}/pkgconfig
 
 %files devel
 %license LICENSE
 %{_includedir}
+%{_libdir}/cmake
 %{_libdir}/libopenblas.so
+%{_libdir}/pkgconfig
 
 %changelog
