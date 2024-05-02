@@ -14,8 +14,6 @@
 %define ver_patch _TMPL_VER_PATCH
 %define ver_release _TMPL_VER_RELEASE
 
-%global _vespa_openblas_version 0.3.27
-
 Summary:        Native part of Java Bindings for llama.cpp using CUDA
 Name:           vespa-jllama-cuda
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
@@ -37,9 +35,6 @@ BuildRequires: cuda-compiler-12-2
 BuildRequires: cuda-cudart-devel-12-2
 BuildRequires: cuda-command-line-tools-12-2
 %endif
-
-BuildRequires: vespa-openblas-devel >= %{_vespa_openblas_version}
-Requires: vespa-openblas >= %{_vespa_openblas_version}
 
 BuildRequires: vespa-cmake
 BuildRequires: make
@@ -71,7 +66,6 @@ cmake  \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
     -DLLAMA_NATIVE=OFF \
-    -DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS \
     -DLLAMA_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES="60;70;75" \
     ..
 cmake --build . --config Release
