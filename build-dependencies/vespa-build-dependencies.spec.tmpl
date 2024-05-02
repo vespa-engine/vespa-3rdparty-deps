@@ -13,6 +13,7 @@
 %global _vespa_libzstd_version 1.5.6-1
 %global _vespa_lz4_version 1.9.4-2
 %global _vespa_toolset_version 13.1.2
+%global _vespa_openblas_version 0.3.27
 
 Name:           vespa-build-dependencies
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
@@ -49,7 +50,7 @@ Requires: llvm-devel
 Requires: maven
 Requires: vespa-boost-devel >= 1.76.0-1
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
-Requires: vespa-openblas-devel >= 0.3.27
+Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
 Requires: vespa-openssl-devel >= 3.1.5
 Requires: vespa-gmock-devel = %{_vespa_gtest_version}
 Requires: vespa-gtest-devel = %{_vespa_gtest_version}
@@ -72,7 +73,7 @@ Requires: vespa-gmock-devel = %{_vespa_gtest_version}
 Requires: vespa-gtest-devel = %{_vespa_gtest_version}
 Requires: llvm-devel
 Requires: maven
-Requires: openblas-devel
+Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
 Requires: openssl-devel
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
@@ -97,7 +98,7 @@ Requires: gtest-devel
 Requires: libatomic
 Requires: llvm-devel
 Requires: maven
-Requires: openblas-devel
+Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
 Requires: openssl-devel
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
