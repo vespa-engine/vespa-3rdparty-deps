@@ -14,6 +14,8 @@
 %define ver_patch _TMPL_VER_PATCH
 %define ver_release _TMPL_VER_RELEASE
 
+%global _vespa_openblas_version 0.3.27
+
 Summary:        Native part of Java Bindings for llama.cpp
 Name:           vespa-jllama
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
@@ -48,13 +50,8 @@ BuildRequires: vespa-cmake
 BuildRequires: make
 BuildRequires: git
 
-%if 0%{?el8}
-BuildRequires: vespa-openblas-devel >= 0.3.27
-Requires: vespa-openblas >= 0.3.27
-%else
-BuildRequires: openblas-devel
-Requires: openblas-serial
-%endif
+BuildRequires: vespa-openblas-devel >= %{_vespa_openblas_version}
+Requires: vespa-openblas >= %{_vespa_openblas_version}
 
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \

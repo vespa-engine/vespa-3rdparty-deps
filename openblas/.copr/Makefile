@@ -7,6 +7,12 @@ MINOR=3
 PATCH=27
 RELEASE=2
 
+# Note:
+#
+# Version above must be kept in sync with _vespa_openblas_version in
+# rpm spec files for vespa-build-dependencies, vespa-jllama,
+# vespa-jllama-cuda and vespa.
+
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES
 SPECDIR=$(RPMTOPDIR)/SPECS
