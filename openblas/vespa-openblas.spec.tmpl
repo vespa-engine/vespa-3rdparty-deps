@@ -12,7 +12,7 @@
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so\\.[0-9]*\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
 
-%global __requires_exclude ^libopenblas\\.so\\.[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
+%global __requires_exclude ^libopenblas.*\.so\\.[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
 
 # Version
 %define ver_major _TMPL_VER_MAJOR
@@ -25,26 +25,23 @@ Name:           vespa-openblas
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        BSD
-URL:            https://github.com/xianyi/OpenBLAS/
-Source0:        https://github.com/xianyi/OpenBLAS/archive/v%{version}/openblas-%{version}.tar.gz
+URL:            https://github.com/OpenMathLib/OpenBLAS/
+Source0:        https://github.com/OpenMathLib/OpenBLAS/archive/v%{version}/openblas-%{version}.tar.gz
 Patch0:         patches.driver-others-dynamic-arm64.diff
 
 %if 0%{?el8}
 %define _devtoolset_enable /opt/rh/gcc-toolset/enable
 BuildRequires: vespa-toolset-13-meta
-BuildRequires: gcc-toolset-13-gcc-gfortran
 BuildRequires: perl-devel
 %endif
 %if 0%{?el9}
 %define _devtoolset_enable /opt/rh/gcc-toolset/enable
 BuildRequires: vespa-toolset-13-meta
-BuildRequires: gcc-toolset-13-gcc-gfortran
 BuildRequires: perl-devel
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc
 BuildRequires: gcc-c++
-BuildRequires: gcc-gfortran
 BuildRequires: perl-devel
 %endif
 BuildRequires: make
@@ -77,13 +74,19 @@ source %{_devtoolset_enable} || true
 %ifarch aarch64
 %define _openblas_target ARMV8
 %endif
-%make_build NO_STATIC=1 TARGET=%{?_openblas_target} DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_THREAD=0 USE_OPENMP=0 FC=gfortran CC=%{?_gcc_compiler}%{!?_gcc_compiler:gcc} COMMON_OPT="-O3 -g -fPIC" FCOMMON_OPT="-O3 -g -fPIC -frecursive" LIBPREFIX="libopenblas" INTERFACE64=0
+
+%global common_cmake_args -DUSE_OPENMP=0 -DINTERFACE64=0 -DNOFORTRAN=1 -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=OFF -DDYNAMIC_ARCH=1 -DTARGET_CORE=core2 -DCMAKE_C_FLAGS_RELWITHDEBINFO='-g -O3 -DNDEBUG' -DNUM_THREADS=64 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=%{_prefix}
+cmake -S . -B multithreaded -DUSE_THREAD=1 -DLIBNAMESUFFIX="p" %common_cmake_args
+cmake -S . -B singlethreaded -DUSE_THREAD=0 -DLIBNAMESUFFIX="" %common_cmake_args
+cmake --build multithreaded -j `nproc`
+cmake --build singlethreaded -j `nproc`
 
 %install
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-%make_install NO_STATIC=1 USE_THREAD=0 PREFIX=%{_prefix} OPENBLAS_LIBRARY_DIR=%{_libdir} OPENBLAS_INCLUDE_DIR=%{_prefix}/include/openblas OPENBLAS_BINARY_DIR=%{_prefix}/bin OPENBLAS_CMAKE_DIR=%{_libdir}/cmake
+DESTDIR="%{buildroot}" cmake --install multithreaded
+DESTDIR="%{buildroot}" cmake --install singlethreaded
 
 ln -s openblas/cblas.h %{buildroot}%{_prefix}/include/cblas.h
 ln -s openblas/openblas_config.h %{buildroot}%{_prefix}/include/openblas_config.h
@@ -94,6 +97,8 @@ ln -s openblas/openblas_config.h %{buildroot}%{_prefix}/include/openblas_config.
 %exclude %{_libdir}/cmake
 %exclude %{_libdir}/libopenblas.so
 %exclude %{_libdir}/libopenblas.a
+%exclude %{_libdir}/libopenblasp.so
+%exclude %{_libdir}/libopenblasp.a
 %exclude %{_libdir}/pkgconfig
 
 %files devel
@@ -101,6 +106,7 @@ ln -s openblas/openblas_config.h %{buildroot}%{_prefix}/include/openblas_config.
 %{_includedir}
 %{_libdir}/cmake
 %{_libdir}/libopenblas.so
+%{_libdir}/libopenblasp.so
 %{_libdir}/pkgconfig
 
 %changelog
