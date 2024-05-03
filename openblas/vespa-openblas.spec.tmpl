@@ -84,6 +84,7 @@ cmake --build multithreaded -j `nproc`
 cmake --build singlethreaded -j `nproc`
 
 %install
+PATH=%{_prefix}/bin:$PATH
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
