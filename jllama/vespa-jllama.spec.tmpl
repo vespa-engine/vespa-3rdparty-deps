@@ -21,6 +21,7 @@ Release:        %{ver_release}%{?dist}
 License:        MIT
 URL:            https://github.com/kherud/
 Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
+Patch0:         patch.apply.llama.patches.diff
 
 %if 0%{?amzn2023}
 BuildRequires: java-17-amazon-corretto-devel
@@ -57,6 +58,7 @@ about packaging.
 
 %prep
 %setup -q -n java-llama.cpp-%{version}
+%patch -P 0 -p1
 
 %build
 %if 0%{?_devtoolset_enable:1}
@@ -66,6 +68,7 @@ source %{_devtoolset_enable} || true
 PATH=%{_prefix}/bin:$PATH
 mvn compile
 mkdir build
+cp ../../SOURCES/patch.ggml.c.visible_sync.diff .
 cd build
 cmake \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
@@ -75,7 +78,6 @@ cmake \
     -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3" \
     -DLLAMA_NATIVE=OFF \
     ..
-patch -d _deps/llama.cpp-src -p1 < ../../../SOURCES/patch.ggml.c.visible_sync.diff
 VERBOSE=1 cmake --build .
 
 %install

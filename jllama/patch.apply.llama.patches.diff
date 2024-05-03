@@ -1,0 +1,12 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c1873c2..be39dc0 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -23,6 +23,7 @@ FetchContent_Declare(
+ 	llama.cpp
+ 	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
+ 	GIT_TAG        b2702
++	PATCH_COMMAND patch -p1 < ${PROJECT_SOURCE_DIR}/patch.ggml.c.visible_sync.diff
+ )
+ FetchContent_MakeAvailable(llama.cpp)
+ 
