@@ -11,7 +11,7 @@
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so\\.[0-9]*\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
 
-%global __requires_exclude ^lib.*lama\.so\\.[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
+%global __requires_exclude ^lib(jllama|llama|openblas|openblasp)\.so[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
 
 # Version
 %define ver_major _TMPL_VER_MAJOR
