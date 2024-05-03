@@ -58,7 +58,7 @@ about packaging.
 
 %prep
 %setup -q -n java-llama.cpp-%{version}
-%patch0 -p1
+%patch 0 -p1
 
 %build
 %if 0%{?_devtoolset_enable:1}
