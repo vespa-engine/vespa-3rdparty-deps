@@ -21,6 +21,7 @@ Release:        %{ver_release}%{?dist}
 License:        MIT
 URL:            https://github.com/kherud/
 Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
+Source1:        patch.ggml.c.visible_sync.diff
 Patch0:         patch.apply.llama.patches.diff
 
 %if 0%{?amzn2023}
@@ -68,7 +69,7 @@ source %{_devtoolset_enable} || true
 PATH=%{_prefix}/bin:$PATH
 mvn compile
 mkdir build
-cp ../../SOURCES/patch.ggml.c.visible_sync.diff .
+cp %{SOURCE1} .
 cd build
 cmake \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
