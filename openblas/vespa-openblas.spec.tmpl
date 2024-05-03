@@ -75,7 +75,7 @@ source %{_devtoolset_enable} || true
 %define _openblas_target ARMV8
 %endif
 
-%global common_cmake_args -DUSE_OPENMP=0 -DINTERFACE64=0 -DNOFORTRAN=1 -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=OFF -DDYNAMIC_ARCH=1 -DTARGET_CORE=core2 -DCMAKE_C_FLAGS_RELWITHDEBINFO='-g -O3 -DNDEBUG' -DNUM_THREADS=64 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=%{_prefix}
+%global common_cmake_args -DUSE_OPENMP=0 -DINTERFACE64=0 -DNOFORTRAN=1 -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=OFF -DDYNAMIC_ARCH=1 -DTARGET=%{_openblas_target} -DCMAKE_C_FLAGS_RELWITHDEBINFO='-g -O3 -DNDEBUG' -DNUM_THREADS=64 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=%{_prefix}
 cmake -S . -B multithreaded -DUSE_THREAD=1 -DLIBNAMESUFFIX="p" %common_cmake_args
 cmake -S . -B singlethreaded -DUSE_THREAD=0 -DLIBNAMESUFFIX="" %common_cmake_args
 cmake --build multithreaded -j `nproc`
