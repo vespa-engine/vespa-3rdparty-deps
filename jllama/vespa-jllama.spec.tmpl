@@ -8,11 +8,18 @@
 
 %global debug_package %{nil}
 
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so[0-9.]*\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
+
+%global __requires_exclude ^lib(jllama|llama|openblas|openblasp)\.so[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
+
 # Version
 %define ver_major _TMPL_VER_MAJOR
 %define ver_minor _TMPL_VER_MINOR
 %define ver_patch _TMPL_VER_PATCH
 %define ver_release _TMPL_VER_RELEASE
+
+%global _vespa_openblas_version 0.3.27
 
 Summary:        Native part of Java Bindings for llama.cpp
 Name:           vespa-jllama
@@ -50,6 +57,9 @@ BuildRequires: vespa-cmake
 BuildRequires: make
 BuildRequires: git
 
+BuildRequires: vespa-openblas-devel >= %{_vespa_openblas_version}
+Requires: vespa-openblas >= %{_vespa_openblas_version}
+
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
 about packaging.
@@ -78,6 +88,7 @@ cmake \
     -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DLLAMA_NATIVE=OFF \
+    -DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS \
     ..
 VERBOSE=1 cmake --build .
 
