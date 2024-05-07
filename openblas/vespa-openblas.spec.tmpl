@@ -89,6 +89,7 @@ PATH=%{_prefix}/bin:$PATH
 source %{_devtoolset_enable} || true
 %endif
 DESTDIR="%{buildroot}" cmake --install multithreaded
+mv %{buildroot}%{_prefix}/lib64/pkgconfig/openblas.pc %{buildroot}%{_prefix}/lib64/pkgconfig/openblasp.pc
 DESTDIR="%{buildroot}" cmake --install singlethreaded
 
 ln -s openblas/cblas.h %{buildroot}%{_prefix}/include/cblas.h
