@@ -5,8 +5,8 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 # Version
 MAJOR=3
 MINOR=0
-PATCH=1
-RELEASE=10
+PATCH=2
+RELEASE=1
 PKGNAME=vespa-jllama-cuda
 
 RPMTOPDIR=$(TOP)/rpmbuild
