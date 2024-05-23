@@ -1,18 +1,18 @@
 diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
-index 94d650f685..7952827aca 100644
+index 8edbb6ad6f..281ba7cd6f 100644
 --- a/cmake/CMakeLists.txt
 +++ b/cmake/CMakeLists.txt
-@@ -640,6 +640,9 @@ else()
+@@ -651,6 +651,9 @@ else()
    check_cxx_compiler_flag(-Wunused-but-set-variable HAS_UNUSED_BUT_SET_VARIABLE)
    check_cxx_compiler_flag(-Wunused-variable HAS_UNUSED_VARIABLE)
    check_cxx_compiler_flag(-Wuseless-cast HAS_USELESS_CAST)
 +  check_cxx_compiler_flag(-Wdangling-reference HAS_DANGLING_REFERENCE)
 +  check_cxx_compiler_flag(-Warray-bounds HAS_ARRAY_BOUNDS)
 +  check_cxx_compiler_flag(-Woverloaded-virtual HAS_OVERLOADED_VIRTUAL)
+   check_cxx_compiler_flag(-Wstringop-overflow HAS_STRINGOP_OVERFLOW)
    check_function_exists(reallocarray HAS_REALLOCARRAY)
    if (NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten" AND onnxruntime_target_platform STREQUAL "aarch64")
-    check_cxx_compiler_flag(-march=armv8.2-a+bf16 HAS_ARM64_BFLOAT16)
-@@ -672,6 +675,18 @@ else()
+@@ -684,6 +687,18 @@ else()
    if (HAS_DEPRECATED_BUILTINS)
      list(APPEND ORT_WARNING_FLAGS -Wno-deprecated-builtins)
    endif()
