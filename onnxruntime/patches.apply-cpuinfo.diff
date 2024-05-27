@@ -1,12 +1,12 @@
 diff --git a/cmake/external/onnxruntime_external_deps.cmake b/cmake/external/onnxruntime_external_deps.cmake
-index 78f63227c8..9236745b53 100644
+index 8839dbc8fd..2a7679e404 100644
 --- a/cmake/external/onnxruntime_external_deps.cmake
 +++ b/cmake/external/onnxruntime_external_deps.cmake
-@@ -309,6 +309,7 @@ if (CPUINFO_SUPPORTED)
-     pytorch_cpuinfo
-     URL ${DEP_URL_pytorch_cpuinfo}
-     URL_HASH SHA1=${DEP_SHA1_pytorch_cpuinfo}
-+    PATCH_COMMAND ${Patch_EXECUTABLE} -p4 < ${PROJECT_SOURCE_DIR}/patches/pytorch_cpuinfo/arm-linux-init.diff
-     FIND_PACKAGE_ARGS NAMES cpuinfo
-   )
-   set(ONNXRUNTIME_CPUINFO_PROJ pytorch_cpuinfo)
+@@ -329,6 +329,7 @@ if (CPUINFO_SUPPORTED)
+         pytorch_cpuinfo
+         URL ${DEP_URL_pytorch_cpuinfo}
+         URL_HASH SHA1=${DEP_SHA1_pytorch_cpuinfo}
++        PATCH_COMMAND ${Patch_EXECUTABLE} -p4 < ${PROJECT_SOURCE_DIR}/patches/pytorch_cpuinfo/arm-linux-init.diff
+         FIND_PACKAGE_ARGS NAMES cpuinfo
+       )
+   endif()
