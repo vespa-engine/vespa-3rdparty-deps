@@ -27,6 +27,7 @@ Release:        %{ver_release}%{?dist}
 License:        MIT License
 URL:            https://microsoft.github.io/onnxruntime
 Source0:        vespa-onnxruntime-%{version}.tar.gz
+Source1:        patches.external-pytorch-cpuinfo-src-arm-linux-init.diff
 Patch0:         patches.use-origin-rpath-for-jni-library.diff
 Patch1:         patches.no-array-bounds.diff
 Patch2:         patches.use-gradle.diff
@@ -112,11 +113,13 @@ See https://github.com/vespa-engine/vespa-3rdparty-deps for details
 about packaging.
 %prep
 %setup -q
-%patch0 -p1
-%patch1 -p1
-%patch2 -p0
-%patch3 -p1
-%patch4 -p0
+%patch -P 0 -p1
+%patch -P 1 -p1
+%patch -P 2 -p0
+%patch -P 3 -p1
+%patch -P 4 -p0
+mkdir cmake/patches/pytorch_cpuinfo
+cp -a %{SOURCE1} cmake/patches/pytorch_cpuinfo/arm-linux-init.diff
 
 %build
 
