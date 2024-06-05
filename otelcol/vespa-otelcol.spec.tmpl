@@ -1,0 +1,50 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# no debuggable binaries here
+%define debug_package %{nil}
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+Summary:        Open Telemetry Collector
+Name:           vespa-otelcol
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        Apache
+URL:            https://opentelemetry.io/docs/collector/
+Source0:        https://github.com/open-telemetry/opentelemetry-collector/archive/refs/tags/v%{version}.tar.gz
+Source1:        builder-config.yaml
+
+BuildRequires: golang
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q -n opentelemetry-collector-%{version}
+
+%build
+
+go install go.opentelemetry.io/collector/cmd/builder@v%{version}
+$HOME/go/bin/builder --verbose --config=%{SOURCE1}
+
+%install
+mkdir -p %{buildroot}%{_bindir}
+cp -p %{name}/%{name} %{buildroot}%{_bindir}
+
+%files
+%{_bindir}
+%license LICENSE
+
+%changelog
