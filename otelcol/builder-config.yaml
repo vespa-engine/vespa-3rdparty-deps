@@ -21,4 +21,5 @@ processors:
   - gomod: "go.opentelemetry.io/collector/processor/batchprocessor v0.98.0"
   - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.98.0"
   - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.98.0"
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.98.0"
   - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.98.0"
