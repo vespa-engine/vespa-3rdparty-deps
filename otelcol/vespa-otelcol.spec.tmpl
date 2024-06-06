@@ -36,8 +36,13 @@ about packaging.
 
 %build
 
-go install go.opentelemetry.io/collector/cmd/builder@v%{version}
-$HOME/go/bin/builder --verbose --config=%{SOURCE1}
+PATH=$HOME/go/bin:$PATH
+go install golang.org/dl/go1.21.0@latest
+go1.21.0 download
+
+go1.21.0 install go.opentelemetry.io/collector/cmd/builder@v%{version}
+sed 's=VERSION=%{version}=g' < %{SOURCE1} > builder-config.yaml
+$HOME/go/bin/builder --verbose --config=builder-config.yaml
 
 %install
 mkdir -p %{buildroot}%{_bindir}
