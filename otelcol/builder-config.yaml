@@ -11,6 +11,7 @@ exporters:
   - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/lokiexporter vVERSION"
   - gomod: "go.opentelemetry.io/collector/exporter/loggingexporter vVERSION"
   - gomod: "go.opentelemetry.io/collector/exporter/otlpexporter vVERSION"
+  - gomod: "go.opentelemetry.io/collector/exporter/otlphttpexporter vVERSION"
 
 receivers:
   - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver vVERSION"
