@@ -11,7 +11,7 @@
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so[0-9.]*\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
 
-%global __requires_exclude ^lib(jllama|llama|ggml)\.so[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
+%global __requires_exclude ^lib(jllama|llama)\.so[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
 
 # Version
 %define ver_major _TMPL_VER_MAJOR
@@ -26,6 +26,8 @@ Release:        %{ver_release}%{?dist}
 License:        MIT
 URL:            https://github.com/kherud/
 Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
+Source1:        patch.ggml.c.visible_sync.diff
+Patch0:         patch.apply.llama.patches.diff
 
 %if 0%{?amzn2023}
 BuildRequires: java-17-amazon-corretto-devel
@@ -62,6 +64,7 @@ about packaging.
 
 %prep
 %setup -q -n java-llama.cpp-%{version}
+%patch -P 0 -p1
 
 %build
 %if 0%{?_devtoolset_enable:1}
@@ -71,6 +74,7 @@ source %{_devtoolset_enable} || true
 PATH=%{_prefix}/bin:$PATH
 mvn compile
 mkdir build
+cp %{SOURCE1} .
 cd build
 cmake \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
