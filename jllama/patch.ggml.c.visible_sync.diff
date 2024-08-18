@@ -1,0 +1,24 @@
+diff --git a/ggml.c b/ggml.c
+index 74ecd592..0e68df48 100644
+--- a/ggml.c
++++ b/ggml.c
+@@ -18589,7 +18589,8 @@ static int ggml_get_n_tasks(struct ggml_tensor * node, int n_threads, int n_cur_
+     return n_tasks;
+ }
+ 
+-static void ggml_graph_compute_thread_sync_node(int * node_n, struct ggml_compute_state * state, const bool do_yield) {
++void ggml_graph_compute_thread_sync_node(int * node_n, struct ggml_compute_state * state, const bool do_yield) __attribute__((noinline));
++void ggml_graph_compute_thread_sync_node(int * node_n, struct ggml_compute_state * state, const bool do_yield) {
+     // wait for other threads to finish
+     const int last_node_n = * node_n;
+ 
+@@ -18603,7 +18604,8 @@ static void ggml_graph_compute_thread_sync_node(int * node_n, struct ggml_comput
+     }
+ }
+ 
+-static void ggml_graph_compute_thread_sync_task(int * task_phase, struct ggml_compute_state * state, const bool do_yield) {
++void ggml_graph_compute_thread_sync_task(int * task_phase, struct ggml_compute_state * state, const bool do_yield) __attribute__((noinline));
++void ggml_graph_compute_thread_sync_task(int * task_phase, struct ggml_compute_state * state, const bool do_yield) {
+     // wait for other threads to finish
+     const int last_task_phase = * task_phase;
+ 
