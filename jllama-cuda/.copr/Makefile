@@ -6,7 +6,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=3
 MINOR=2
 PATCH=1
-RELEASE=2
+RELEASE=3
 PKGNAME=vespa-jllama-cuda
 
 RPMTOPDIR=$(TOP)/rpmbuild
@@ -25,7 +25,6 @@ srpm:
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
 	cat $(PKGNAME).spec.tmpl | sed "$(SEDCMD)" > $(SPECFILE)
 	spectool -g -C $(SOURCEDIR) $(SPECFILE)
-	cp -a ../jllama/*.diff $(SOURCEDIR)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
 	cp -a $(RPMTOPDIR)/SRPMS/* $(outdir)
 

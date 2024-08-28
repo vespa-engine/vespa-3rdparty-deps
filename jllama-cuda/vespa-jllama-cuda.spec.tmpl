@@ -26,8 +26,6 @@ Release:        %{ver_release}%{?dist}
 License:        MIT
 URL:            https://github.com/kherud/
 Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
-Source1:        patch.ggml.c.visible_sync.diff
-Patch0:         patch.apply.llama.patches.diff
 
 %if 0%{?el8} || 0%{?el9} || 0%{?fedora}
 BuildRequires: java-17-openjdk-devel
@@ -59,7 +57,6 @@ about packaging.
 
 %prep
 %setup -q -n java-llama.cpp-%{version}
-%patch -P 0 -p1
 
 %build
 %if 0%{?_devtoolset_enable:1}
@@ -69,7 +66,6 @@ source %{_devtoolset_enable} || true
 PATH=%{_prefix}/bin:/usr/local/cuda-12.2/bin:$PATH
 mvn compile
 mkdir build
-cp %{SOURCE1} .
 cd build
 cmake \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
@@ -80,7 +76,7 @@ cmake \
     -DLLAMA_NATIVE=OFF \
     -DLLAMA_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES="60;70;75" \
     ..
-VERBOSE=1 cmake --build .
+VERBOSE=1 cmake --build . -j 4
 
 %install
 
