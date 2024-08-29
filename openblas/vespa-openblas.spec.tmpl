@@ -63,7 +63,7 @@ openblas compiled for vespa -- devel
 %{_vespa_3rdparty_deps_packaging_notice}
 %prep
 %setup -n OpenBLAS-%{version}
-%patch0 -p0
+%patch -P 0 -p0
 
 %build
 PATH=%{_prefix}/bin:$PATH
