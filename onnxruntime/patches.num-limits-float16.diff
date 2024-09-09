@@ -1,0 +1,124 @@
+diff --git a/include/onnxruntime/core/framework/float16.h b/include/onnxruntime/core/framework/float16.h
+index 2d289d6feb..ef04c7c627 100644
+--- a/include/onnxruntime/core/framework/float16.h
++++ b/include/onnxruntime/core/framework/float16.h
+@@ -299,3 +299,119 @@ inline void FloatToBFloat16(const float* flt, BFloat16* blf, size_t size) {
+ }
+ 
+ }  // namespace onnxruntime
++
++template <>
++class std::numeric_limits<onnxruntime::MLFloat16> {
++  using T = onnxruntime::MLFloat16;
++
++ public:
++  static constexpr bool has_denorm = true;
++  static constexpr bool has_denorm_loss = false;
++  static constexpr bool has_infinity = true;
++  static constexpr bool has_quiet_NaN = true;
++  static constexpr bool has_signaling_NaN = true;
++  static constexpr bool is_bounded = true;
++  static constexpr bool is_exact = false;
++  static constexpr bool is_iec559 = true;
++  static constexpr bool is_integer = false;
++  static constexpr bool is_modulo = false;
++  static constexpr bool is_signed = true;
++  static constexpr bool is_specialized = true;
++  static constexpr bool tinyness_before = false;
++  static constexpr bool traps = false;
++  static constexpr std::float_round_style round_style = std::round_to_nearest;
++  static constexpr int radix = 2;
++  static constexpr int digits = 11;
++  static constexpr int digits10 = 3;
++  static constexpr int max_digits10 = 4;
++  static constexpr int min_exponent = -13;
++  static constexpr int min_exponent10 = -4;
++  static constexpr int max_exponent = 14;
++  static constexpr int max_exponent10 = 4;
++
++  static constexpr T denorm_min() noexcept {
++    return T::FromBits(0x0001);  // 0x1p-24 =~ 5.960e-8
++  }
++  static constexpr T epsilon() noexcept {
++    return T::FromBits(0x1400);  // 0x1p-9 = 0.0009765625
++  }
++  static constexpr T lowest() noexcept {
++    return T::FromBits(T::kMaxValueBits ^ T::kSignMask);  // -65504
++  }
++  static constexpr T max() noexcept {
++    return T::FromBits(T::kMaxValueBits);  // 65504
++  }
++  static constexpr T min() noexcept {
++    return T::FromBits(0x0400);  // 0x1p-14 =~ 6.1035e-5
++  }
++  static constexpr T round_error() noexcept {
++    return T::FromBits(0x3800);  // 0.5
++  }
++  static constexpr T infinity() noexcept {
++    return T::FromBits(T::kPositiveInfinityBits);
++  }
++  static constexpr T quiet_NaN() noexcept {
++    return T::FromBits(T::kPositiveQNaNBits);
++  }
++  static constexpr T signaling_NaN() noexcept {
++    return T::FromBits(0x7D01);
++  }
++};
++
++template <>
++class std::numeric_limits<onnxruntime::BFloat16> {
++  using B = onnxruntime::BFloat16;
++
++ public:
++  static constexpr bool has_denorm = true;
++  static constexpr bool has_denorm_loss = false;
++  static constexpr bool has_infinity = true;
++  static constexpr bool has_quiet_NaN = true;
++  static constexpr bool has_signaling_NaN = true;
++  static constexpr bool is_bounded = true;
++  static constexpr bool is_exact = false;
++  static constexpr bool is_iec559 = false;
++  static constexpr bool is_integer = false;
++  static constexpr bool is_modulo = false;
++  static constexpr bool is_signed = true;
++  static constexpr bool is_specialized = true;
++  static constexpr bool tinyness_before = false;
++  static constexpr bool traps = false;
++  static constexpr std::float_round_style round_style = std::round_to_nearest;
++  static constexpr int radix = 2;
++  static constexpr int digits = 8;
++  static constexpr int digits10 = 2;
++  static constexpr int max_digits10 = 4;
++  static constexpr int min_exponent = -125;
++  static constexpr int min_exponent10 = -37;
++  static constexpr int max_exponent = 128;
++  static constexpr int max_exponent10 = 38;
++
++  static constexpr B denorm_min() noexcept {
++    return B::FromBits(0x0001);  // 0x1.0p-133 =~ 9.1835e-41
++  }
++  static constexpr B epsilon() noexcept {
++    return B::FromBits(0x3C00);  // 0x1.0p-7 = 0.0078125
++  }
++  static constexpr B lowest() noexcept {
++    return B::FromBits(B::kMaxValueBits ^ B::kSignMask);  // -max() =~ -3.3895+38
++  }
++  static constexpr B max() noexcept {
++    return B::FromBits(B::kMaxValueBits);  // 0x1.FEp127 =~ 3.3895e+38
++  }
++  static constexpr B min() noexcept {
++    return B::FromBits(0x0080);  // 0x1.0p-126 =~ 1.175e-38
++  }
++  static constexpr B round_error() noexcept {
++    return B::FromBits(0x3F00);  // -> 0.5
++  }
++  static constexpr B infinity() noexcept {
++    return B::FromBits(B::kPositiveInfinityBits);
++  }
++  static constexpr B quiet_NaN() noexcept {
++    return B::FromBits(B::kPositiveQNaNBits);
++  }
++  static constexpr B signaling_NaN() noexcept {
++    return B::FromBits(0x7FA1);
++  }
++};
