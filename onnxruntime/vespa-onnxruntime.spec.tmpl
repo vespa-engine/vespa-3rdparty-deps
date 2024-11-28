@@ -32,9 +32,7 @@ Patch0:         patches.use-origin-rpath-for-jni-library.diff
 Patch1:         patches.no-array-bounds.diff
 Patch2:         patches.use-gradle.diff
 Patch3:         patches.apply-cpuinfo.diff
-Patch4:         patches.onnxruntime-core-providers-cpu-ml-tree-ensemble-aggregator.diff
-Patch5:         patches.test-clip-float16.diff
-Patch6:         patches.num-limits-float16.diff
+Patch4:         patches.onnx-use-extra.diff
 
 %if 0%{?fedora} && !0%{?amzn}
 BuildRequires: cmake
@@ -119,9 +117,7 @@ about packaging.
 %patch -P 1 -p1
 %patch -P 2 -p0
 %patch -P 3 -p1
-%patch -P 4 -p0
-%patch -P 5 -p1
-%patch -P 6 -p1
+%patch -P 4 -p1
 
 mkdir cmake/patches/pytorch_cpuinfo
 cp -a %{SOURCE1} cmake/patches/pytorch_cpuinfo/arm-linux-init.diff

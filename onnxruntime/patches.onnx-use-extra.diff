@@ -1,0 +1,20 @@
+diff --git a/cmake/patches/onnx/onnx.patch b/cmake/patches/onnx/onnx.patch
+index 4ca96834c6..34ae5905ae 100644
+--- a/cmake/patches/onnx/onnx.patch
++++ b/cmake/patches/onnx/onnx.patch
+@@ -31,6 +31,15 @@ index 6d7ca846..69aa622f 100644
+                                   ${EXTRA_FLAGS})
+    if(ONNX_USE_PROTOBUF_SHARED_LIBS)
+        target_compile_options(onnx_proto
++@@ -696,7 +686,7 @@
++ elseif(APPLE)
++ 
++ else()
++-  target_compile_options(onnx PRIVATE -Wall -Wextra)
+++  target_compile_options(onnx PRIVATE -Wall -Wextra ${EXTRA_FLAGS})
++ endif()
++ 
++ if(APPLE)
+ diff --git a/onnx/common/file_utils.h b/onnx/common/file_utils.h
+ index b847798e..a6c31904 100644
+ --- a/onnx/common/file_utils.h

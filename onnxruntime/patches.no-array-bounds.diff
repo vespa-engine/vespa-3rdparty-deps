@@ -1,23 +1,21 @@
 diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
-index 5555fa692e..a646e2ac41 100644
+index d90a2a3550..db111fe0e0 100644
 --- a/cmake/CMakeLists.txt
 +++ b/cmake/CMakeLists.txt
-@@ -664,6 +664,14 @@ else()
-   check_cxx_compiler_flag(-Wunused-variable HAS_UNUSED_VARIABLE)
-   check_cxx_compiler_flag(-Wuseless-cast HAS_USELESS_CAST)
+@@ -676,6 +676,12 @@ else()
+   check_cxx_compiler_flag(-Wstrict-aliasing HAS_STRICT_ALIASING)
+   check_nvcc_compiler_flag(-Wstrict-aliasing NVCC_HAS_STRICT_ALIASING)
    check_cxx_compiler_flag(-Wstringop-overflow HAS_STRINGOP_OVERFLOW)
 +  check_cxx_compiler_flag(-Warray-bounds HAS_ARRAY_BOUNDS)
-+  check_cxx_compiler_flag(-Wdangling-reference HAS_DANGLING_REFERENCE)
 +  check_cxx_compiler_flag(-Wdeprecated HAS_DEPRECATED)
 +  check_cxx_compiler_flag(-Wdeprecated-pragma HAS_DEPRECATED_PRAGMA)
-+  check_cxx_compiler_flag(-Wdeprecated-this-capture HAS_DEPRECATED_THIS_CAPTURE)
 +  check_cxx_compiler_flag(-Woverloaded-virtual HAS_OVERLOADED_VIRTUAL)
 +  check_cxx_compiler_flag(-Wuninitialized HAS_UNINITIALIZED)
 +  check_cxx_compiler_flag(-Wpsabi HAS_PSABI_WARNING)
-   if(onnxruntime_ENABLE_TRAINING_APIS)
-     check_cxx_compiler_flag(-Wdangling-reference HAS_DANGLING_REFERENCE)
-     if(HAS_DANGLING_REFERENCE)
-@@ -702,6 +710,36 @@ else()
+   check_cxx_compiler_flag(-Wtautological-pointer-compare HAS_TAUTOLOGICAL_POINTER_COMPARE)
+   check_cxx_compiler_flag(-Wundefined-var-template HAS_UNDEFINED_VAR_TEMPLATE)
+   check_cxx_compiler_flag(-Wunused-but-set-parameter HAS_UNUSED_BUT_SET_PARAMETER)
+@@ -720,6 +726,36 @@ else()
    if (HAS_DEPRECATED_BUILTINS)
      list(APPEND ORT_WARNING_FLAGS -Wno-deprecated-builtins)
    endif()
