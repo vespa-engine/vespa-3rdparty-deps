@@ -11,7 +11,7 @@ index 4ca96834c6..34ae5905ae 100644
 + 
 + else()
 +-  target_compile_options(onnx PRIVATE -Wall -Wextra)
-++  target_compile_options(onnx PRIVATE -Wall -Wextra ${EXTRA_FLAGS})
+++  target_compile_options(onnx PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable)
 + endif()
 + 
 + if(APPLE)
