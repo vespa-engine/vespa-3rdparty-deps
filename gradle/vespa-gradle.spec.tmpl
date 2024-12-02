@@ -13,9 +13,18 @@ BuildArchitectures: noarch
 %define ver_patch _TMPL_VER_PATCH
 %define ver_release _TMPL_VER_RELEASE
 
+%if 0%{?fedora}
+%if %{fedora} > 41
+%global _vespa_java_version 21
+%endif
+%endif
+%if ! 0%{?_vespa_java_version:1}
+%global _vespa_java_version 17
+%endif
+
 Summary:        Gradle for building other 3rd party deps
 Name:           vespa-gradle
-Version:        %{ver_major}.%{ver_minor}
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        Apache
 URL:            https://gradle.org/
@@ -27,7 +36,7 @@ Requires: java-17-amazon-corretto-devel
 Requires: java-17-amazon-corretto
 %else
 %if 0%{?el8} || 0%{?el9} || 0%{?fedora}
-Requires: java-17-openjdk-devel
+Requires: java-%{_vespa_java_version}-openjdk-devel
 %endif
 %endif
 
