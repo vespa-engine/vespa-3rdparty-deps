@@ -79,9 +79,6 @@ BuildRequires: make
 BuildRequires: glibc-langpack-en
 %endif
 BuildRequires: zlib-devel
-%if ! 0%{?el9} && ! 0%{?amzn2023}
-BuildRequires: redhat-lsb-core
-%endif
 BuildRequires: expat-devel
 BuildRequires: libcurl-devel
 %if ! 0%{?el9}
