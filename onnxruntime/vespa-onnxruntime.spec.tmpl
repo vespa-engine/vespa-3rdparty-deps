@@ -73,6 +73,17 @@ BuildRequires: python3-setuptools
 %global _enable_cuda 1
 %define _cudnn_version 8.9.6.50-1.cuda12.2
 %endif
+%if 0%{?el10}
+BuildRequires: gcc-c++
+BuildRequires: gtest-devel
+BuildRequires: gmock-devel
+BuildRequires: make
+BuildRequires: glibc-langpack-en
+BuildRequires: python3
+BuildRequires: python3-devel
+BuildRequires: python3-numpy
+BuildRequires: python3-setuptools
+%endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: make
@@ -81,7 +92,7 @@ BuildRequires: glibc-langpack-en
 BuildRequires: zlib-devel
 BuildRequires: expat-devel
 BuildRequires: libcurl-devel
-%if ! 0%{?el9}
+%if ! 0%{?el9} && ! 0%{?el10}
 BuildRequires: libunwind
 %endif
 BuildRequires: bzip2
