@@ -33,7 +33,7 @@ Source0:        https://github.com/lz4/lz4/archive/v%{version}/lz4-%{version}.ta
 %define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
 BuildRequires: gcc-toolset-13-gcc
 %endif
-%if 0%{?el9}
+%if 0%{?el9} || 0%{?el10}
 BuildRequires: gcc
 %endif
 %if 0%{?fedora}
