@@ -26,7 +26,7 @@ Source0:        https://github.com/Kitware/CMake/releases/download/v%{version}/c
 BuildRequires: gcc-toolset-13-gcc-c++
 %define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
 %endif
-%if 0%{?fedora}
+%if 0%{?el10} || 0%{?fedora}
 BuildRequires: gcc-c++
 %endif
 BuildRequires: make
