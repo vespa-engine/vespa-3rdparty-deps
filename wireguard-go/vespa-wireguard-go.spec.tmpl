@@ -6,6 +6,9 @@
 # Force special prefix for Vespa
 %define _prefix /opt/vespa-deps
 
+# Leave the debug symbols in the binary
+%define __strip /bin/true
+
 # Version
 %define ver_major _TMPL_VER_MAJOR
 %define ver_minor _TMPL_VER_MINOR
