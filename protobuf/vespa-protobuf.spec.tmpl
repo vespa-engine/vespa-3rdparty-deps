@@ -17,7 +17,7 @@
 # Only strip debug info
 %global _find_debuginfo_opts -g
 
-%if 0%{?el8} || 0%{?el9} || 0%{?amzn2023}
+%if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
 %global _use_vespa_gtest 1
 %global _vespa_gtest_version 1.14.0
 %endif
@@ -42,7 +42,7 @@ Source0:        https://github.com/protocolbuffers/protobuf/releases/download/v%
 BuildRequires: gcc-toolset-13-gcc-c++
 BuildRequires: make
 %endif
-%if 0%{?fedora}
+%if 0%{?el10} || 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: make
 %endif
