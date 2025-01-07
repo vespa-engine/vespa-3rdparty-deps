@@ -101,8 +101,8 @@ Requires: cmake >= 3.30.5
 Requires: gcc-c++
 Requires: libatomic
 Requires: glibc-langpack-en
-Requires: vespa-gmock-devel = %{_vespa_gtest_version}
-Requires: vespa-gtest-devel = %{_vespa_gtest_version}
+Requires: gmock-devel
+Requires: gtest-devel
 Requires: llvm-devel
 Requires: maven
 Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
@@ -110,7 +110,7 @@ Requires: openssl-devel
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
-Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
+Requires: abseil-cpp-devel
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 %endif
 
@@ -131,7 +131,11 @@ Requires: llvm-devel
 Requires: maven
 Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
 Requires: openssl-devel
+%if 0%{?amzn2023}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
+%else
+Requires: abseil-cpp-devel
+%endif
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
