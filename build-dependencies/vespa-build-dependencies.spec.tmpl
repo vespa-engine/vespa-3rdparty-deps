@@ -53,9 +53,9 @@ Requires: zlib-devel
 %if 0%{?el8}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
 Requires: cmake >= 3.11.4-3
-Requires: gcc-toolset-13-gcc-c++
-Requires: gcc-toolset-13-binutils
-Requires: gcc-toolset-13-libatomic-devel
+Requires: gcc-toolset-14-gcc-c++
+Requires: gcc-toolset-14-binutils
+Requires: gcc-toolset-14-libatomic-devel
 Requires: glibc-langpack-en
 Requires: llvm-devel
 Requires: maven
@@ -76,9 +76,9 @@ Requires: vespa-toolset-14-meta >= %{_vespa_toolset_version}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
 Requires: boost-devel >= 1.75
 Requires: cmake >= 3.20.2
-Requires: gcc-toolset-13-gcc-c++
-Requires: gcc-toolset-13-binutils
-Requires: gcc-toolset-13-libatomic-devel
+Requires: gcc-toolset-14-gcc-c++
+Requires: gcc-toolset-14-binutils
+Requires: gcc-toolset-14-libatomic-devel
 Requires: glibc-langpack-en
 Requires: vespa-gmock-devel = %{_vespa_gtest_version}
 Requires: vespa-gtest-devel = %{_vespa_gtest_version}
