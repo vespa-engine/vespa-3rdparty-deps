@@ -12,7 +12,7 @@
 %global _vespa_onnxruntime_version 1.20.1
 %global _vespa_libzstd_version 1.5.6-1
 %global _vespa_lz4_version 1.9.4-2
-%global _vespa_toolset_version 13.1.2
+%global _vespa_toolset_version 14.2.1
 %global _vespa_openblas_version 0.3.27
 %if 0%{?fedora}
 %if %{fedora} > 41
@@ -69,7 +69,7 @@ Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
-Requires: vespa-toolset-13-meta >= %{_vespa_toolset_version}
+Requires: vespa-toolset-14-meta >= %{_vespa_toolset_version}
 %endif
 
 %if 0%{?el9}
@@ -91,7 +91,7 @@ Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
-Requires: vespa-toolset-13-meta >= %{_vespa_toolset_version}
+Requires: vespa-toolset-14-meta >= %{_vespa_toolset_version}
 %endif
 
 %if 0%{?el10}
