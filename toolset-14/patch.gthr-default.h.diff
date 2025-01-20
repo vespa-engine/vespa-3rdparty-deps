@@ -1,0 +1,13 @@
+--- bits/gthr-default.h.orig	2024-11-06 19:48:33.000000000 +0000
++++ bits/gthr-default.h	2025-01-20 10:18:54.899369100 +0000
+@@ -260,9 +260,7 @@
+ static inline int
+ __gthread_active_p (void)
+ {
+-  static void *const __gthread_active_ptr
+-    = __extension__ (void *) &GTHR_ACTIVE_PROXY;
+-  return __gthread_active_ptr != 0;
++  return 1;
+ }
+ 
+ #endif /* FreeBSD or Solaris */
