@@ -1,0 +1,78 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+%global debug_package %{nil}
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+Summary:        C/C++ compiler cache  
+Name:           vespa-ccache
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        GPLv3+
+URL:            http://ccache.dev/
+Source0:        https://github.com/ccache/ccache/releases/download/v%{version}/ccache-%{version}.tar.gz
+
+%if 0%{?el8}%{?el9}
+BuildRequires: gcc-toolset-12-gcc-c++
+BuildRequires: vespa-toolset-12-meta
+%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+%endif
+%if 0%{?el10} || 0%{?fedora}
+BuildRequires: gcc-c++
+%endif
+BuildRequires: make
+BuildRequires: libzstd-devel
+BuildRequires: asciidoctor
+%if 0
+BuildRequires: xxhash-devel
+%endif
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+Ccache is a compiler cache. It speeds up recompilation by caching previous
+compilations and detecting when the same compilation is being done again.
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q -n ccache-%{version}
+
+%build
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+
+echo cmake -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_POLICY_DEFAULT_CMP0169=OLD .
+
+cmake -DCMAKE_INSTALL_PREFIX=%{_prefix}    \
+	-DENABLE_TESTING=OFF               \
+	-DREDIS_STORAGE_BACKEND=OFF        \
+	-DCMAKE_POLICY_DEFAULT_CMP0169=OLD \
+        .
+
+make %{?_smp_mflags}
+
+%install
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+
+%make_install
+
+%files
+%{_bindir}
+%{_prefix}/share
+
+%changelog
