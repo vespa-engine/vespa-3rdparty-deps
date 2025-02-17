@@ -36,12 +36,13 @@ Patch4:         patches.onnx-use-extra.diff
 
 %if 0%{?fedora} && !0%{?amzn}
 BuildRequires: cmake
+BuildRequires: ccache
 %else
 BuildRequires: vespa-cmake
+BuildRequires: vespa-ccache
 %endif
 %define _cmake_prog cmake
 %define _ctest_prog ctest
-BuildRequires: ccache
 BuildRequires: vespa-gradle
 BuildRequires: which
 %if 0%{?el8}
@@ -139,7 +140,7 @@ source %{_devtoolset_enable}
 PATH=%{_prefix}/bin:$PATH
 %if 0%{?_enable_cuda:1}
 %global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-12.2 --cudnn_home=/usr
-%global _enable_cuda_extra_defines CMAKE_CUDA_ARCHITECTURES="60;70;75"
+%global _enable_cuda_extra_defines CMAKE_CUDA_ARCHITECTURES="75;80;89"
 %endif
 
 if [ -f /usr/bin/python3.9 ]; then
@@ -153,13 +154,15 @@ fi
     --skip_tests \
     --build_java \
     --build_shared_lib \
-    --parallel 6 \
+    --parallel 4 \
     --cmake_path %{_cmake_prog} \
     --ctest_path %{_ctest_prog} \
     --skip_submodule_sync \
     --cmake_extra_defines \
             CMAKE_INSTALL_PREFIX=%{_prefix} \
+            CMAKE_POLICY_DEFAULT_CMP0169=OLD \
             CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            CMAKE_CUDA_COMPILER_LAUNCHER=ccache \
             %{?_enable_cuda_extra_defines:%{_enable_cuda_extra_defines}} \
             onnxruntime_USE_OPENMP=OFF \
             %{?_toolset_compiler_cmake_args}
