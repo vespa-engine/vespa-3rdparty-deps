@@ -53,12 +53,12 @@ compilations and detecting when the same compilation is being done again.
 source %{_devtoolset_enable} || true
 %endif
 
-echo cmake -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_POLICY_DEFAULT_CMP0169=OLD .
+PATH=%{_prefix}/bin:$PATH
 
 cmake -DCMAKE_INSTALL_PREFIX=%{_prefix}    \
-	-DENABLE_TESTING=OFF               \
-	-DREDIS_STORAGE_BACKEND=OFF        \
-	-DCMAKE_POLICY_DEFAULT_CMP0169=OLD \
+        -DENABLE_TESTING=OFF               \
+        -DREDIS_STORAGE_BACKEND=OFF        \
+        -DCMAKE_POLICY_DEFAULT_CMP0169=OLD \
         .
 
 make %{?_smp_mflags}
