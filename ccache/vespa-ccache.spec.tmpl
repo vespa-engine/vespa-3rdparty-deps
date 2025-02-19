@@ -25,10 +25,13 @@ Source0:        https://github.com/ccache/ccache/releases/download/v%{version}/c
 %if 0%{?el8}%{?el9}
 BuildRequires: gcc-toolset-12-gcc-c++
 BuildRequires: vespa-toolset-12-meta
+BuildRequires: vespa-cmake
+BuildRequires: perl
 %define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
 %endif
 %if 0%{?el10} || 0%{?fedora}
 BuildRequires: gcc-c++
+BuildRequires: cmake
 %endif
 BuildRequires: make
 BuildRequires: libzstd-devel
@@ -51,12 +54,12 @@ compilations and detecting when the same compilation is being done again.
 source %{_devtoolset_enable} || true
 %endif
 
-echo cmake -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_POLICY_DEFAULT_CMP0169=OLD .
+PATH=%{_prefix}/bin:$PATH
 
 cmake -DCMAKE_INSTALL_PREFIX=%{_prefix}    \
-	-DENABLE_TESTING=OFF               \
-	-DREDIS_STORAGE_BACKEND=OFF        \
-	-DCMAKE_POLICY_DEFAULT_CMP0169=OLD \
+        -DENABLE_TESTING=OFF               \
+        -DREDIS_STORAGE_BACKEND=OFF        \
+        -DCMAKE_POLICY_DEFAULT_CMP0169=OLD \
         .
 
 make %{?_smp_mflags}
