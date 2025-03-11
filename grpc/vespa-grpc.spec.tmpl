@@ -1,0 +1,204 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+%global version_suffix %{ver_minor}.%{ver_patch}.0
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+%if 0%{?el8} || 0%{?el9} || 0%{?amzn2023}
+%global _use_vespa_gtest 1
+%global _vespa_gtest_version 1.14.0
+%global _use_vespa_abseil_cpp 1
+%global _vespa_abseil_cpp_version 20240116.1
+%global _use_vespa_openssl 1
+%global _vespa_openssl_version 3.1.7
+%global _use_vespa_re2 1
+%global _vespa_re2_version 20210801
+%endif
+
+%global _vespa_protobuf_version 5.26.1
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+# Exclude automated requires for libraries in /opt/vespa-deps/lib64.
+# %global __requires_exclude ^(lib(protobuf|protobuf-lite|protoc%{?_use_vespa_abseil_cpp:|absl_[a-z_0-9]*})\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+Summary:        gRPC for C++ runtime
+Name:           vespa-grpc
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        Apache-2.0
+URL:            https://github.com/grpc/grpc
+# Source0:        https://github.com/grpc/grpc/archive/refs/tags/v%{version}.tar.gz
+
+%if 0%{?el8} || 0%{?el9}
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: gcc-toolset-14-gcc-c++
+BuildRequires: make
+%endif
+
+%if 0%{?el10} || 0%{?fedora}
+BuildRequires: gcc-c++
+BuildRequires: make
+%endif
+
+%if 0%{?_use_vespa_abseil_cpp}
+BuildRequires: vespa-abseil-cpp-devel%{?_isa} = %{_vespa_abseil_cpp_version}
+%else
+BuildRequires: abseil-cpp-devel%{?_isa}
+%endif
+
+%if 0%{_use_vespa_openssl}
+BuildRequires: vespa-openssl-devel%{?_isa} = %{_vespa_openssl_version}
+%else
+BuildRequires: openssl-devel%{?_isa}
+%endif
+
+BuildRequires: cmake
+%global _cmake_prog cmake
+%global _ctest_prog ctest
+BuildRequires: which
+BuildRequires: zlib-devel
+
+%if 0%{?_use_vespa_gtest}
+BuildRequires: vespa-gtest-devel%{?_isa} = %{_vespa_gtest_version}
+BuildRequires: vespa-gmock-devel%{?_isa} = %{_vespa_gtest_version}
+%else
+BuildRequires: gtest-devel
+BuildRequires: gmock-devel
+%endif
+
+BuildRequires: vespa-protobuf-devel%{?_isa} = %{_vespa_protobuf_version}
+Requires: zlib
+Requires: vespa-protobuf%{?_isa} = %{_vespa_protobuf_version}
+
+%if 0%{?_use_vespa_abseil_cpp}
+Requires: vespa-abseil-cpp%{?_isa} = %{_vespa_abseil_cpp_version}
+%else
+Requires: abseil-cpp%{?_isa}
+%endif
+
+%if 0%{_use_vespa_openssl}
+Requires: vespa-openssl%{?_isa} = %{_vespa_openssl_version}
+%else
+Requires: openssl%{?_isa}
+%endif
+
+%if 0%{_use_vespa_re2}
+Requires: vespa-re2%{?_isa} = %{_vespa_re2_version}
+BuildRequires: vespa-re2-devel%{?_isa} = %{_vespa_re2_version}
+%else
+Requires: re2%{?_isa}
+BuildRequires: re2-devel
+%endif
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+gRPC is a modern, open source, high-performance remote procedure call
+(RPC) framework that can run anywhere. gRPC enables client and server
+applications to communicate transparently, and simplifies the building
+of connected systems.
+
+This package contains gRPC runtime libraries for C++.
+%{_vespa_3rdparty_deps_packaging_notice}
+%package devel
+Summary:        gRPC for C++ development
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+%if 0%{?_use_vespa_abseil_cpp}
+Requires:       vespa-abseil-cpp-devel%{?_isa} = %{_vespa_abseil_cpp_version}
+%else
+Requires:       abseil-cpp-devel%{?_isa}
+%endif
+
+Requires: vespa-protobuf-devel%{?_isa} = %{_vespa_protobuf_version}
+# TODO non-vespa protobuf?
+
+# TODO which other -devel packages must be here?
+
+%description devel
+This package contains gRPC for C++ and C++ headers and libraries.
+%{_vespa_3rdparty_deps_packaging_notice}
+
+# TODO https://stackoverflow.com/questions/39344956/how-do-i-download-github-source-code-in-my-spec-file
+# gRPC supplies all non-provided dependencies via Git submodules. We provide
+# all dependencies except cARES, so we have to fetch everything anyway.
+# We will only build and install gRPC and cARES related artifacts.
+%prep
+rm -rf grpc-%{version}
+git clone %{url}.git --branch v%{version} --depth 1 grpc-%{version}
+cd grpc-%{version}
+git submodule update --depth 1 --init
+# %setup -q -n grpc-%{version}
+
+%build
+cd grpc-%{version}
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+mkdir build
+%{_cmake_prog} \
+   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+   -DCMAKE_INSTALL_RPATH=%{_libdir} \
+   -DCMAKE_PREFIX_PATH=%{_prefix} \
+   -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
+   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+   -DBUILD_SHARED_LIBS=ON \
+   -DCMAKE_CXX_STANDARD=20 \
+   -DgRPC_INSTALL=ON \
+   -DgRPC_ABSL_PROVIDER=package \
+   -DgRPC_CARES_PROVIDER=module \
+   -DgRPC_PROTOBUF_PROVIDER=package \
+   -DgRPC_RE2_PROVIDER=package \
+   -DgRPC_SSL_PROVIDER=package \
+   -DgRPC_ZLIB_PROVIDER=package \
+   -S . \
+   -B build
+make -C build %{?_smp_mflags}
+
+%check
+%{_ctest_prog} --test-dir grpc-%{version}/build %{?_smp_mflags}
+
+%install
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+cd grpc-%{version}/build
+%make_install
+
+%files
+%{_libdir}/*.so.%{version_suffix}
+%exclude %{_libdir}/*.so
+%license LICENSE
+
+%files devel
+%{_includedir}
+%{_prefix}/lib64/cmake
+%{_prefix}/lib64/pkgconfig
+%{_prefix}/lib64/libcares.a
+%{_libdir}/cmake/
+%{_libdir}/pkgconfig/
+%{_libdir}/libcares.a
+%{_libdir}/*.so
+%{_bindir}/grpc_cpp_plugin
+%license LICENSE
+
+%changelog
+* Tue Feb 4 2025 Tor Brede Vekterli <vekterli@vespa.ai> - 1.70.1
+- Initial version of gRPC Vespa C++ RPM
+
