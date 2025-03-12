@@ -1,0 +1,130 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+%global version_suffix %{ver_major}.%{ver_minor}.%{ver_patch}
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+%if 0%{?el8} || 0%{?el9} || 0%{?amzn2023}
+%global _use_vespa_gtest 1
+%global _vespa_gtest_version 1.16.0
+%endif
+
+# Libraries use shared libraries in /opt/vespa-deps/lib64
+%global __brp_check_rpaths %{nil}
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+# Exclude automated requires for libraries in /opt/vespa-deps/lib64.
+%global __requires_exclude ^(lib(hwy|hwy_contrib)\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+Summary:        Google Highway for C++ runtime
+Name:           vespa-highway
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        Apache 2 and BSD 3
+URL:            https://github.com/google/highway
+Source0:        https://github.com/google/highway/releases/download/%{version}/highway-%{version}.tar.gz
+
+%if 0%{?el8} || 0%{?el9}
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: gcc-toolset-14-gcc-c++
+BuildRequires: make
+%endif
+%if 0%{?el10} || 0%{?fedora}
+BuildRequires: gcc-c++
+BuildRequires: make
+%endif
+BuildRequires: cmake
+%global _cmake_prog cmake
+%global _ctest_prog ctest
+BuildRequires: which
+%if 0%{?_use_vespa_gtest}
+BuildRequires: vespa-gtest-devel%{?_isa} = %{_vespa_gtest_version}
+BuildRequires: vespa-gmock-devel%{?_isa} = %{_vespa_gtest_version}
+%else
+BuildRequires: gtest-devel
+BuildRequires: gmock-devel
+%endif
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+Highway is a C++ library that provides portable SIMD/vector intrinsics.
+
+This package contains the Highway runtime library for C++.
+%{_vespa_3rdparty_deps_packaging_notice}
+%package devel
+Summary:        Google Highway for C++ runtime
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+
+%description devel
+This package contains Highway for C++ with headers and libraries.
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q -n highway-%{version}
+
+%build
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+mkdir build
+%{_cmake_prog} \
+   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+   -DCMAKE_INSTALL_RPATH=%{_libdir} \
+   -DCMAKE_PREFIX_PATH=%{_prefix} \
+   -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
+   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+   -DBUILD_SHARED_LIBS=ON \
+   -DCMAKE_CXX_STANDARD=23 \
+   -DHWY_ENABLE_TESTS=ON \
+   -DHWY_SYSTEM_GTEST=ON \
+   -S . \
+   -B build
+make -C build %{?_smp_mflags}
+
+%check
+%{_ctest_prog} --test-dir build %{?_smp_mflags}
+
+%install
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+cd build
+%make_install
+
+%files
+%{_libdir}/libhwy.so.*
+%{_libdir}/libhwy_contrib.so.*
+%license LICENSE
+
+%files devel
+%dir %{_includedir}/
+%{_includedir}/hwy
+%{_libdir}/cmake
+%{_libdir}/pkgconfig
+%{_libdir}/libhwy.so
+%{_libdir}/libhwy_contrib.so
+%exclude %{_libdir}/libhwy_test.so*
+%license LICENSE
+
+%changelog
+* Mon Aug 25 2025 Tor Brede Vekterli <vekterli@vespa.ai> - 1.3.0
+- Initial version of Google Highway Vespa C++ RPM
+
