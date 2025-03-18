@@ -32,7 +32,7 @@ Source0:        https://github.com/google/googletest/archive/refs/tags/v%{versio
 BuildRequires: python3-devel
 %if 0%{?el8} || 0%{?el9}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
-BuildRequires: vespa-toolset-13-meta
+BuildRequires: vespa-toolset-14-meta
 %define _devtoolset_enable /opt/rh/gcc-toolset/enable
 BuildRequires: cmake
 %endif
@@ -89,9 +89,9 @@ source %{_devtoolset_enable} || true
 mkdir build
 %{?_cmake_prog}%{!?_cmake_prog:cmake} \
    -DBUILD_SHARED_LIBS=ON \
-   -DCMAKE_CXX_FLAGS="-std=c++2a ${RPM_OPT_FLAGS}" \
-   -DCMAKE_CXX_STANDARD=20 \
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3" \
+   -DCMAKE_CXX_STANDARD=23 \
    -Dgtest_build_tests=ON \
    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
    -DCMAKE_INSTALL_RPATH=\$ORIGIN \
@@ -136,3 +136,5 @@ cd build
 %{_libdir}/libgmock*.so
 
 %changelog
+* Tue Mar 18 2025 Tor Egge <Tor.Egge@online.no> - 1.16.0
+- Track upstream release of googletest 1.16.0
