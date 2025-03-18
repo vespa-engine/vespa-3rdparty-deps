@@ -2,7 +2,7 @@
 TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
-MAJOR=20240116
+MAJOR=20250127
 MINOR=1
 RELEASE=1
 
