@@ -28,7 +28,7 @@
 %global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
 
 # Exclude automated requires for libraries in /opt/vespa-deps/lib64.
-%global __requires_exclude ^(lib(protobuf|protobuf-lite|protoc%{?_use_vespa_abseil_cpp:|absl_[a-z_0-9]*})\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+%global __requires_exclude ^(lib(protobuf|protobuf-lite|protoc|utf8_range|utf8_validity%{?_use_vespa_abseil_cpp:|absl_[a-z_0-9]*})\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
 
 Summary:        Protocol Buffers for C++ runtime
 Name:           vespa-protobuf
@@ -39,8 +39,8 @@ URL:            https://github.com/protocolbuffers/protobuf
 Source0:        https://github.com/protocolbuffers/protobuf/releases/download/v%{ver_minor}.%{ver_patch}/protobuf-%{ver_minor}.%{ver_patch}.tar.gz
 
 %if 0%{?el8} || 0%{?el9}
-%define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
-BuildRequires: gcc-toolset-13-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: gcc-toolset-14-gcc-c++
 BuildRequires: make
 %endif
 %if 0%{?el10} || 0%{?fedora}
@@ -108,10 +108,12 @@ mkdir build
    -DCMAKE_PREFIX_PATH=%{_prefix} \
    -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3" \
    -DBUILD_SHARED_LIBS=ON \
-   -DCMAKE_CXX_STANDARD=20 \
+   -DCMAKE_CXX_STANDARD=23 \
    -Dprotobuf_USE_EXTERNAL_GTEST=ON \
    -Dprotobuf_ABSL_PROVIDER=package \
+   -Dprotobuf_BUILD_LIBUPB=OFF \
    -S . \
    -B build
 make -C build %{?_smp_mflags}
@@ -129,13 +131,13 @@ cd build
 %files
 %{_libdir}/libprotobuf.so.%{version_suffix}
 %{_libdir}/libprotobuf-lite.so.%{version_suffix}
+%{_libdir}/libutf8_range.so.%{version_suffix}
+%{_libdir}/libutf8_validity.so.%{version_suffix}
 %license LICENSE
 
 %files devel
 %dir %{_includedir}/google
 %{_includedir}/google/protobuf
-%{_includedir}/java/core/src/main/resources/google/protobuf/java_features.proto
-%{_includedir}/upb_generator/mangle.h
 %{_includedir}/utf8_range.h
 %{_includedir}/utf8_validity.h
 %{_libdir}/cmake
@@ -144,10 +146,12 @@ cd build
 %{_libdir}/libprotobuf-lite.so
 %{_libdir}/libprotoc.so
 %{_libdir}/libprotoc.so.%{version_suffix}
-%{_libdir}/libutf8_range.a
-%{_libdir}/libutf8_validity.a
+%{_libdir}/libutf8_range.so
+%{_libdir}/libutf8_validity.so
 %{_bindir}/protoc
 %{_bindir}/protoc-%{version_suffix}
 %license LICENSE
 
 %changelog
+* Tue Mar 18 2025 Tor Egge <Tor.Egge@online.no> - 5.30.1
+- Track upstream release of protobuf 30.1
