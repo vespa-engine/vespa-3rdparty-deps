@@ -13,7 +13,7 @@
 
 %if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
 %global _use_vespa_gtest 1
-%global _vespa_gtest_version 1.14.0
+%global _vespa_gtest_version 1.16.0
 %endif
 
 # Don't provide shared library or pkgconfig
@@ -34,9 +34,9 @@ BuildRequires: cmake
 %global _cmake_prog cmake
 %global _ctest_prog ctest
 %if 0%{?el8} || 0%{?el9}
-%global _devtoolset_enable /opt/rh/gcc-toolset-13/enable
-BuildRequires: gcc-toolset-13-gcc-c++
-BuildRequires: gcc-toolset-13-annobin-plugin-gcc
+%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: gcc-toolset-14-gcc-c++
+BuildRequires: gcc-toolset-14-annobin-plugin-gcc
 BuildRequires: make
 %endif
 %if 0%{?el10} || 0%{?fedora}
@@ -102,6 +102,7 @@ mkdir build
     -DCMAKE_PREFIX_PATH=%{_prefix} \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3" \
     -DBUILD_SHARED_LIBS=ON \
     -DABSL_BUILD_TESTING=ON \
     -DABSL_ENABLE_INSTALL=ON \
@@ -170,3 +171,5 @@ cd build
 %license LICENSE
 
 %changelog
+* Tue Mar 18 2025 Tor Egge <Tor.Egge@online.no> - 20250127.1
+- Track upstream release of abseil-cpp 20250127.1
