@@ -33,8 +33,7 @@ Patch1:         patches.no-array-bounds.diff
 Patch2:         patches.use-gradle.diff
 Patch3:         patches.apply-cpuinfo.diff
 Patch4:         patches.onnx-use-extra.diff
-Patch5:         patches.extra-includes.diff
-Patch6:         patches.eigen-moved.diff
+Patch5:         patches.eigen-moved.diff
 
 %if 0%{?fedora} && !0%{?amzn}
 BuildRequires: cmake
@@ -51,16 +50,15 @@ BuildRequires: which
 %define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
 BuildRequires: vespa-toolset-12-meta
 BuildRequires: gcc-toolset-12-dwz
-BuildRequires: vespa-gtest
+BuildRequires: gtest-devel
 BuildRequires: make
 BuildRequires: glibc-langpack-en
 BuildRequires: wget
-BuildRequires: python39
-BuildRequires: python39-devel
-BuildRequires: python39-numpy
-BuildRequires: python39-setuptools
+BuildRequires: python3.11
+BuildRequires: python3.11-devel
+BuildRequires: python3.11-numpy
+BuildRequires: python3.11-setuptools
 %global _enable_cuda 1
-%define _cudnn_version 8.9.4.25-1.cuda12.2
 %endif
 %if 0%{?el9}
 %define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
@@ -74,7 +72,6 @@ BuildRequires: python3-devel
 BuildRequires: python3-numpy
 BuildRequires: python3-setuptools
 %global _enable_cuda 1
-%define _cudnn_version 8.9.6.50-1.cuda12.2
 %endif
 %if 0%{?el10}
 BuildRequires: gcc-c++
@@ -99,11 +96,18 @@ BuildRequires: libcurl-devel
 BuildRequires: libunwind
 %endif
 BuildRequires: bzip2
+
 %if 0%{?_enable_cuda:1}
-BuildRequires: cuda-libraries-devel-12-2
-BuildRequires: cuda-compiler-12-2
-BuildRequires: cuda-cudart-devel-12-2
-BuildRequires: cuda-command-line-tools-12-2
+%define _cuda_version_major 12.2
+%define _cuda_version_num 12.2.140
+%define _cuda_version_name 12-2
+%define _cudnn_version 8.9.4.25-1.cuda12.2
+BuildRequires: cuda-toolkit-12-config-common = %{_cuda_version_num}
+BuildRequires: cuda-toolkit-config-common = %{_cuda_version_num}
+BuildRequires: cuda-libraries-devel-%{_cuda_version_name}
+BuildRequires: cuda-compiler-%{_cuda_version_name}
+BuildRequires: cuda-cudart-devel-%{_cuda_version_name}
+BuildRequires: cuda-command-line-tools-%{_cuda_version_name}
 BuildRequires: libcudnn8-devel = %{_cudnn_version}
 %endif
 
@@ -130,7 +134,6 @@ about packaging.
 %patch -P 3 -p1
 %patch -P 4 -p1
 %patch -P 5 -p1
-%patch -P 6 -p1
 
 mkdir cmake/patches/pytorch_cpuinfo
 cp -a %{SOURCE1} cmake/patches/pytorch_cpuinfo/arm-linux-init.diff
@@ -143,15 +146,15 @@ source %{_devtoolset_enable}
 
 PATH=%{_prefix}/bin:$PATH
 %if 0%{?_enable_cuda:1}
-%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-12.2 --cudnn_home=/usr
+%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-%{_cuda_version_major} --cudnn_home=/usr
 # 75: Tesla T4
 # 80: Ampere A100
 # 89: Ada Lovelace L40 / L40S
 %global _enable_cuda_extra_defines CMAKE_CUDA_ARCHITECTURES="75;80;89"
 %endif
 
-if [ -f /usr/bin/python3.9 ]; then
-    sed -i 's=^python3 =python3.9 =' build.sh
+if [ -f /usr/bin/python3.11 ]; then
+    sed -i 's=^python3 =python3.11 =' build.sh
 fi
 
 ./build.sh \
@@ -161,15 +164,15 @@ fi
     --skip_tests \
     --build_java \
     --build_shared_lib \
-    --parallel 6 \
+    --parallel 3 \
     --cmake_path %{_cmake_prog} \
     --ctest_path %{_ctest_prog} \
     --skip_submodule_sync \
     --cmake_extra_defines \
             CMAKE_INSTALL_PREFIX=%{_prefix} \
             CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            CMAKE_CUDA_COMPILER_LAUNCHER=ccache \
             %{?_enable_cuda_extra_defines:%{_enable_cuda_extra_defines}} \
-            onnxruntime_USE_OPENMP=OFF \
             %{?_toolset_compiler_cmake_args}
 
 %install
@@ -216,11 +219,11 @@ about packaging.
 %package cuda
 Summary:        ONNX provider for CUDA (for Vespa).
 Requires:       %{name} = %{version}-%{release}
-Requires:       cuda-cudart-12-2
-Requires:       libcufft-12-2
-Requires:       libcublas-12-2
-Requires:       libcurand-12-2
-Requires:       libnvjitlink-12-2
+Requires:       cuda-cudart-%{_cuda_version_name}
+Requires:       libcufft-%{_cuda_version_name}
+Requires:       libcublas-%{_cuda_version_name}
+Requires:       libcurand-%{_cuda_version_name}
+Requires:       libnvjitlink-%{_cuda_version_name}
 Requires:       libcudnn8 = %{_cudnn_version}
 
 %description cuda
