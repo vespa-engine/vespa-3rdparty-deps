@@ -17,6 +17,12 @@
 # Only strip debug info
 %global _find_debuginfo_opts -g
 
+# Don't enable LTO
+%global _lto_cflags %{nil}
+
+# Libraries use shared libraries in /opt/vespa-deps/lib64
+%global __brp_check_rpaths %{nil}
+
 %if 0%{?el8} || 0%{?el9} || 0%{?amzn2023}
 %global _use_vespa_gtest 1
 %global _vespa_gtest_version 1.16.0
@@ -111,8 +117,6 @@ mkdir build
    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3" \
    -DBUILD_SHARED_LIBS=ON \
    -DCMAKE_CXX_STANDARD=23 \
-   -Dprotobuf_USE_EXTERNAL_GTEST=ON \
-   -Dprotobuf_ABSL_PROVIDER=package \
    -Dprotobuf_BUILD_LIBUPB=OFF \
    -S . \
    -B build
