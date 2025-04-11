@@ -33,6 +33,7 @@ Patch1:         patches.no-array-bounds.diff
 Patch2:         patches.use-gradle.diff
 Patch3:         patches.apply-cpuinfo.diff
 Patch4:         patches.onnx-use-extra.diff
+Patch5:         patches.extra-includes.diff
 
 %if 0%{?fedora} && !0%{?amzn}
 BuildRequires: cmake
@@ -126,6 +127,7 @@ about packaging.
 %patch -P 2 -p0
 %patch -P 3 -p1
 %patch -P 4 -p1
+%patch -P 5 -p1
 
 mkdir cmake/patches/pytorch_cpuinfo
 cp -a %{SOURCE1} cmake/patches/pytorch_cpuinfo/arm-linux-init.diff
@@ -230,3 +232,6 @@ about packaging.
 %endif
 
 %changelog
+* Sun Apr 06 2025 Tor Egge <Tor.Egge@online.no> - 1.20.1-4
+- Suppress gcc 15 range-loop-construct warning
+- Include cstdint to get fixed width integer types
