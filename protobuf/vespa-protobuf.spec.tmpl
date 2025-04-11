@@ -117,6 +117,7 @@ mkdir build
    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3" \
    -DBUILD_SHARED_LIBS=ON \
    -DCMAKE_CXX_STANDARD=23 \
+   -Dprotobuf_LOCAL_DEPENDENCIES_ONLY=ON \
    -Dprotobuf_BUILD_LIBUPB=OFF \
    -S . \
    -B build
