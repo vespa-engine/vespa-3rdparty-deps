@@ -117,7 +117,11 @@ Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 %if 0%{?fedora}
 Requires: boost-devel
 Requires: cmake >= 3.9.1
+%if 0%{?amzn2023}
+Requires: gcc14-c++
+%else
 Requires: gcc-c++
+%endif
 Requires: glibc-langpack-en
 %if 0%{?amzn2023}
 Requires: vespa-gmock-devel = %{_vespa_gtest_version}
