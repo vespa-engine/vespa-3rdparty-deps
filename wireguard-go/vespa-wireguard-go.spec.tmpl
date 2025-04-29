@@ -16,6 +16,8 @@
 %define ver_release _TMPL_VER_RELEASE
 %define gitref _TMPL_GITREF
 
+%define go_version 1.24.2
+
 Summary:        Wireguard-go
 Name:           vespa-wireguard-go
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
@@ -26,7 +28,6 @@ BuildRequires:  make
 BuildRequires:  golang >= 1.12.9
 # The source is set to a fixed commit here becase wireguard-go is not released frequently. We can switch back after 
 # they have tagged a new release
-#Source0:        https://github.com/WireGuard/wireguard-go/archive/refs/tags/%{ver_major}.%{ver_minor}.%{ver_patch}.zip
 Source0:        https://github.com/WireGuard/wireguard-go/archive/%{gitref}.zip
 
 %description
@@ -40,6 +41,11 @@ Wireguard-go built for Vespa.
 %setup -T -b 0 -q -n wireguard-go-%{gitref}
 
 %build
+PATH=$HOME/go/bin:$PATH
+go install golang.org/dl/go%{go_version}@latest
+go%{go_version} download
+PATH=$HOME/sdk/go%{go_version}/bin/:$PATH
+go version
 go env -w GOPROXY="https://proxy.golang.org,direct"
 make
 

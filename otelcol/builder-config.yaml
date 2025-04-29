@@ -3,8 +3,8 @@ dist:
   description: Basic OTel Collector distribution for Vespa
   output_path: ./vespa-otelcol
   otelcol_version: "VERSION"
-  version: "1.0.1"
-  go: "go1.21.0"
+  version: "1.0.2"
+  go: "go1.24.2"
 
 exporters:
   - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter vVERSION"
