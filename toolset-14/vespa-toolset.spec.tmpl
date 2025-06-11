@@ -22,6 +22,7 @@ Patch1:         patch.stl_vector.h.diff
 %if 0%{?el8}%{?el9}
 Requires: gcc-toolset-%{ver_major}-gcc-c++
 Requires: gcc-toolset-%{ver_major}-annobin-plugin-gcc
+Requires: gcc-toolset-%{ver_major}-dwz
 %define _devtoolset_enable /opt/rh/gcc-toolset-%{ver_major}/enable
 %endif
 
