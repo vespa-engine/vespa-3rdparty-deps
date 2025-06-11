@@ -55,14 +55,18 @@ BuildRequires: maven
 %endif
 
 %if 0%{?el8}%{?el9}
-BuildRequires: vespa-toolset-13-meta
-BuildRequires: gcc-toolset-13-gcc-c++
-%define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
+BuildRequires: vespa-toolset-12-meta
+BuildRequires: gcc-toolset-12-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+BuildRequires: vespa-ccache
+BuildRequires: vespa-cmake
+%else
+BuildRequires: cmake
 %endif
+
 %if 0%{?el10} || 0%{?fedora}
 BuildRequires: gcc-c++
 %endif
-BuildRequires: vespa-cmake
 BuildRequires: make
 BuildRequires: git
 
@@ -84,16 +88,19 @@ source %{_devtoolset_enable} || true
 PATH=%{_prefix}/bin:$PATH
 mvn compile
 mkdir build
-cd build
-cmake \
+
+cmake -B build \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
-    -DLLAMA_NATIVE=OFF -DGGML_NATIVE=OFF \
-    ..
-VERBOSE=1 cmake --build . -j 4
+    -DGGML_METAL=OFF \
+    -DGGML_OPENMP=OFF \
+    -DGGML_NATIVE=OFF \
+    -DLLAMA_NATIVE=OFF
+
+VERBOSE=1 cmake --build build --config RelWithDebInfo -j 4
 
 %install
 

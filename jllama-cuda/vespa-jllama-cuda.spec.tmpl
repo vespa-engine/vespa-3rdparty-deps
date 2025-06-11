@@ -34,14 +34,18 @@ BuildRequires: maven
 
 %if 0%{?el8}%{?el9}
 BuildRequires: vespa-toolset-12-meta
+BuildRequires: vespa-ccache
+BuildRequires: vespa-cmake
 %define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+%else
+BuildRequires: cmake
+%endif
+
 BuildRequires: cuda-libraries-devel-12-2
 BuildRequires: cuda-compiler-12-2
 BuildRequires: cuda-cudart-devel-12-2
 BuildRequires: cuda-command-line-tools-12-2
-%endif
 
-BuildRequires: vespa-cmake
 BuildRequires: make
 BuildRequires: git
 
@@ -66,22 +70,25 @@ source %{_devtoolset_enable} || true
 PATH=%{_prefix}/bin:/usr/local/cuda-12.2/bin:$PATH
 mvn compile
 mkdir build
-cd build
-cmake \
+
+cmake -B build \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
-    -DLLAMA_NATIVE=OFF -DGGML_NATIVE=OFF \
+    -DGGML_METAL=OFF \
+    -DGGML_OPENMP=OFF \
+    -DGGML_NATIVE=OFF \
     -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES="60;70;75" \
-    ..
-VERBOSE=1 cmake --build . -j 4
+    -DLLAMA_NATIVE=OFF
+
+VERBOSE=1 cmake --build build --config RelWithDebInfo -j 4
 
 %install
 
 mkdir -p %{buildroot}%{_libdir}/cuda
-cp -p src/main/resources/de/kherud/llama/Linux/*/lib*.so %{buildroot}%{_libdir}/cuda
+cp -p src/main/resources_linux_cuda/de/kherud/llama/Linux/*/lib*.so %{buildroot}%{_libdir}/cuda
 
 %files
 %license LICENSE.md
