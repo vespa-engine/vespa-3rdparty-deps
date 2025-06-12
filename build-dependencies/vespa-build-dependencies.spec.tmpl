@@ -52,7 +52,7 @@ Requires: zlib-devel
 
 %if 0%{?el8}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
-Requires: cmake >= 3.11.4-3
+Requires: vespa-cmake >= 3.29.1
 Requires: gcc-toolset-14-gcc-c++
 Requires: gcc-toolset-14-binutils
 Requires: gcc-toolset-14-libatomic-devel
@@ -76,7 +76,7 @@ Requires: vespa-toolset-14-meta >= %{_vespa_toolset_version}
 %if 0%{?el9}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
 Requires: boost-devel >= 1.75
-Requires: cmake >= 3.20.2
+Requires: vespa-cmake >= 3.29.1
 Requires: gcc-toolset-14-gcc-c++
 Requires: gcc-toolset-14-binutils
 Requires: gcc-toolset-14-libatomic-devel
