@@ -5,12 +5,14 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=1
 MINOR=76
 PATCH=0
-RELEASE=4
+RELEASE=5
 
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES
 SPECDIR=$(RPMTOPDIR)/SPECS
 SPECFILE=$(SPECDIR)/vespa-boost.spec
+
+outdir ?= $(TOP)
 
 srpm:
 	rpm -q rpmdevtools || dnf install -y rpmdevtools
@@ -19,6 +21,7 @@ srpm:
 	spectool -g -C $(SOURCEDIR) $(SPECFILE)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
 	cp -a $(RPMTOPDIR)/SRPMS/* $(outdir)
+
 clean:
 	-rm -rf $(RPMTOPDIR)
 

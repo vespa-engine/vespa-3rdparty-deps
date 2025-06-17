@@ -26,13 +26,12 @@ Group:          System Environment/Libraries
 
 License: Boost and MIT and Python
 
-Source: https://boostorg.jfrog.io/artifactory/main/release/%{dotted_version}/source/boost_%{underscore_version}.tar.bz2
+Source: https://archives.boost.io/release/%{dotted_version}/source/boost_%{underscore_version}.tar.bz2
 
 BuildRequires: m4
 %if 0%{?el8}
-BuildRequires: gcc-toolset-13-gcc-c++
-BuildRequires: gcc-toolset-13-binutils
-%define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
+BuildRequires: vespa-toolset-14-meta
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: make
 %endif
 
@@ -69,7 +68,16 @@ source %{_devtoolset_enable} || true
 export BOOST_LIBS="system"
 export CXXFLAGS="-std=c++2a"
 ./bootstrap.sh --with-libraries=$BOOST_LIBS --prefix=%{buildroot}/%{_prefix} --libdir=%{buildroot}/%{_prefix}/lib64
-./b2 -d+2 %{_smp_mflags} variant=release debug-symbols=on threading=multi link=shared runtime-link=shared dll-path=%{_prefix}/lib64 cxxflags=%{_cxxflags} --layout=versioned --prefix=%{buildroot}/%{_prefix} --libdir=%{buildroot}/%{_prefix}/lib64
+./b2 -d+2 %{_smp_mflags} \
+	variant=release \
+	debug-symbols=on \
+	threading=multi \
+	link=shared \
+	runtime-link=shared \
+	cxxflags=%{_cxxflags} \
+	--layout=versioned \
+	--prefix=%{buildroot}/%{_prefix} \
+	--libdir=%{buildroot}/%{_prefix}/lib64
 
 %install
 
@@ -77,7 +85,18 @@ rm -rf $RPM_BUILD_ROOT
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-./b2 -d+2 %{_smp_mflags} variant=release debug-symbols=on threading=multi link=shared runtime-link=shared dll-path=%{_prefix}/lib64 cxxflags=%{_cxxflags} install --layout=versioned --prefix=%{buildroot}/%{_prefix} --libdir=%{buildroot}/%{_prefix}/lib64 --no-cmake-config
+./b2 -d+2 %{_smp_mflags} \
+	variant=release \
+	debug-symbols=on \
+	threading=multi \
+	link=shared \
+	runtime-link=shared \
+	cxxflags=%{_cxxflags} \
+	install \
+	--layout=versioned \
+	--prefix=%{buildroot}/%{_prefix} \
+	--libdir=%{buildroot}/%{_prefix}/lib64 \
+	--no-cmake-config
 
 cd %{buildroot}/%{_includedir}
 mv boost-%{ver_major}_%{ver_minor}/boost .
@@ -103,3 +122,5 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/boost
 
 %changelog
+* Tue Apr 13 2021 - 1.76.0-5
+  Updated download location.
