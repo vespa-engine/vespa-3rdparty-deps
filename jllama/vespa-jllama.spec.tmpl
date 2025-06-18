@@ -37,7 +37,7 @@ Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        MIT
 URL:            https://github.com/kherud/
-Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
+Source0:        https://github.com/arnej27959/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
 
 %if 0%{?amzn2023}
 BuildRequires: java-17-amazon-corretto-devel
@@ -55,9 +55,9 @@ BuildRequires: maven
 %endif
 
 %if 0%{?el8}%{?el9}
-BuildRequires: vespa-toolset-12-meta
-BuildRequires: gcc-toolset-12-gcc-c++
-%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+BuildRequires: vespa-toolset-14-meta
+BuildRequires: gcc-toolset-14-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: vespa-ccache
 BuildRequires: vespa-cmake
 %else
@@ -96,8 +96,10 @@ cmake -B build \
     -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DGGML_METAL=OFF \
-    -DGGML_OPENMP=OFF \
+    -DGGML_OPENMP=ON \
     -DGGML_NATIVE=OFF \
+    -DLLAMA_CURL=OFF \
+    -DLLAMA_BUILD_TOOLS=ON \
     -DLLAMA_NATIVE=OFF
 
 VERBOSE=1 cmake --build build --config RelWithDebInfo -j 4
