@@ -63,6 +63,7 @@ source %{_devtoolset_enable} || true
 
 %make_install
 ln -s cmake %{buildroot}%{_bindir}/cmake3
+ln -s ctest %{buildroot}%{_bindir}/ctest3
 
 %files
 %license Licenses/README.rst
