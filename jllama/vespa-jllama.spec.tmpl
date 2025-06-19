@@ -55,9 +55,9 @@ BuildRequires: maven
 %endif
 
 %if 0%{?el8}%{?el9}
-BuildRequires: vespa-toolset-12-meta
-BuildRequires: gcc-toolset-12-gcc-c++
-%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
+BuildRequires: vespa-toolset-14-meta
+BuildRequires: gcc-toolset-14-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: vespa-ccache
 BuildRequires: vespa-cmake
 %else
@@ -96,7 +96,7 @@ cmake -B build \
     -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DGGML_METAL=OFF \
-    -DGGML_OPENMP=OFF \
+    -DGGML_OPENMP=ON \
     -DGGML_NATIVE=OFF \
     -DLLAMA_NATIVE=OFF
 
