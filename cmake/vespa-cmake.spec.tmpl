@@ -53,6 +53,8 @@ about packaging.
 source %{_devtoolset_enable} || true
 %endif
 
+PATH=%{_prefix}/bin:$PATH
+
 ./bootstrap --enable-ccache --prefix=/opt/vespa-deps --parallel=8
 make %{?_smp_mflags}
 
