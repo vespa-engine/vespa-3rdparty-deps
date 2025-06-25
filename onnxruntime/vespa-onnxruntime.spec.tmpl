@@ -68,10 +68,10 @@ BuildRequires: gcc-toolset-12-dwz
 BuildRequires: gtest-devel
 BuildRequires: make
 BuildRequires: glibc-langpack-en
-BuildRequires: python3
-BuildRequires: python3-devel
-BuildRequires: python3-numpy
-BuildRequires: python3-setuptools
+BuildRequires: python3.11
+BuildRequires: python3.11-devel
+BuildRequires: python3.11-numpy
+BuildRequires: python3.11-setuptools
 %global _enable_cuda 1
 %endif
 %if 0%{?el10}
@@ -157,8 +157,6 @@ PATH=%{_prefix}/bin:$PATH
 
 if [ -f /usr/bin/python3.11 ]; then
     sed -i 's=^python3 =python3.11 =' build.sh
-elif [ -f /usr/bin/python3.9 ]; then
-    sed -i 's=^python3 =python3.9 =' build.sh
 fi
 
 ./build.sh \
