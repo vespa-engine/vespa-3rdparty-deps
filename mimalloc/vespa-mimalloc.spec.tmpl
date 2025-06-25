@@ -1,0 +1,110 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+%global version_suffix %{ver_major}.%{ver_minor}.%{ver_patch}
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+# Exclude automated requires for libraries in /opt/vespa-deps/lib64.
+%global __requires_exclude ^(libmimalloc\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+Summary:        mimalloc runtime
+Name:           vespa-mimalloc
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        MIT
+URL:            https://github.com/microsoft/mimalloc
+Source0:        https://github.com/microsoft/mimalloc/archive/refs/tags/v%{version}.tar.gz
+
+%if 0%{?el8} || 0%{?el9}
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: gcc-toolset-14-gcc-c++
+BuildRequires: make
+%endif
+%if 0%{?el10} || 0%{?fedora}
+BuildRequires: gcc-c++
+BuildRequires: make
+%endif
+BuildRequires: cmake
+%global _cmake_prog cmake
+%global _ctest_prog ctest
+BuildRequires: which
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+mimalloc is a general purpose allocator with excellent performance characteristics.
+
+This package contains mimalloc runtime library.
+%{_vespa_3rdparty_deps_packaging_notice}
+%package devel
+Summary:        mimalloc runtime
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+
+%description devel
+This package contains the mimalloc allocator with headers and libraries.
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q -n mimalloc-%{version}
+
+%build
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+mkdir build
+%{_cmake_prog} \
+   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+   -DCMAKE_INSTALL_RPATH=%{_libdir} \
+   -DCMAKE_PREFIX_PATH=%{_prefix} \
+   -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
+   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+   -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -pthread" \
+   -DBUILD_SHARED_LIBS=ON \
+   -DMI_INSTALL_TOPLEVEL=ON \
+   -S . \
+   -B build
+make -C build %{?_smp_mflags}
+
+%check
+%{_ctest_prog} --test-dir build %{?_smp_mflags}
+
+%install
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+cd build
+%make_install
+
+%files
+%license LICENSE
+%{_libdir}
+%exclude %{_libdir}/*.so
+%exclude %{_libdir}/*.o
+%exclude %{_libdir}/*.a
+
+%files devel
+%license LICENSE
+%{_includedir}
+%{_libdir}/*.so
+
+%changelog
+* Wed Jun 25 2025 Tor Brede Vekterli <vekterli@vespa.ai> - 2.2.4
+- Initial version of mimalloc RPM
