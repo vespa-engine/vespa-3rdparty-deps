@@ -157,6 +157,8 @@ PATH=%{_prefix}/bin:$PATH
 
 if [ -f /usr/bin/python3.11 ]; then
     sed -i 's=^python3 =python3.11 =' build.sh
+elif [ -f /usr/bin/python3.9 ]; then
+    sed -i 's=^python3 =python3.9 =' build.sh
 fi
 
 ./build.sh \
