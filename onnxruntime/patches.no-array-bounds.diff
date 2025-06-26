@@ -1,8 +1,8 @@
 diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
-index d90a2a3550..1aaadf9522 100644
+index 5e689908f4..f72888fcf0 100644
 --- a/cmake/CMakeLists.txt
 +++ b/cmake/CMakeLists.txt
-@@ -676,6 +676,13 @@ else()
+@@ -764,6 +764,13 @@ else()
    check_cxx_compiler_flag(-Wstrict-aliasing HAS_STRICT_ALIASING)
    check_nvcc_compiler_flag(-Wstrict-aliasing NVCC_HAS_STRICT_ALIASING)
    check_cxx_compiler_flag(-Wstringop-overflow HAS_STRINGOP_OVERFLOW)
@@ -16,9 +16,9 @@ index d90a2a3550..1aaadf9522 100644
    check_cxx_compiler_flag(-Wtautological-pointer-compare HAS_TAUTOLOGICAL_POINTER_COMPARE)
    check_cxx_compiler_flag(-Wundefined-var-template HAS_UNDEFINED_VAR_TEMPLATE)
    check_cxx_compiler_flag(-Wunused-but-set-parameter HAS_UNUSED_BUT_SET_PARAMETER)
-@@ -720,6 +727,39 @@ else()
-   if (HAS_DEPRECATED_BUILTINS)
-     list(APPEND ORT_WARNING_FLAGS -Wno-deprecated-builtins)
+@@ -812,6 +819,39 @@ else()
+   if (HAS_DEPRECATED_LITERAL_OPERATOR)
+     list(APPEND ORT_WARNING_FLAGS -Wno-deprecated-literal-operator)
    endif()
 +  if (HAS_MAYBE_UNINITIALIZED)
 +    list(APPEND ORT_WARNING_FLAGS -Wno-error=maybe-uninitialized)

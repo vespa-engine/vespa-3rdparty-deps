@@ -3,9 +3,9 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=1
-MINOR=20
-PATCH=1
-RELEASE=5
+MINOR=22
+PATCH=0
+RELEASE=1
 PKGNAME=vespa-onnxruntime
 
 RPMTOPDIR=$(TOP)/rpmbuild
