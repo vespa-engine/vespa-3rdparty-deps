@@ -26,7 +26,6 @@ Source0:        https://github.com/ccache/ccache/releases/download/v%{version}/c
 BuildRequires: gcc-toolset-12-gcc-c++
 BuildRequires: vespa-toolset-12-meta
 BuildRequires: vespa-cmake
-BuildRequires: perl
 %define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
 %endif
 %if 0%{?el10} || 0%{?fedora}
@@ -36,6 +35,7 @@ BuildRequires: cmake
 BuildRequires: make
 BuildRequires: libzstd-devel
 BuildRequires: asciidoctor
+BuildRequires: perl
 
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
