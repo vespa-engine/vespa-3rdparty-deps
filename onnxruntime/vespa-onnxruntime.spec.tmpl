@@ -86,6 +86,11 @@ BuildRequires: python3-devel
 BuildRequires: python3-numpy
 BuildRequires: python3-setuptools
 %endif
+%if 0%{?amzn2023}
+BuildRequires: python3.11
+BuildRequires: python3.11-devel
+BuildRequires: python3.11-setuptools
+%endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: make
