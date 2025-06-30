@@ -49,9 +49,9 @@ BuildRequires: vespa-ccache
 BuildRequires: vespa-gradle
 BuildRequires: which
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
-BuildRequires: vespa-toolset-12-meta
-BuildRequires: gcc-toolset-12-dwz
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: vespa-toolset-14-meta
+BuildRequires: gcc-toolset-14-dwz
 BuildRequires: gtest-devel
 BuildRequires: make
 BuildRequires: glibc-langpack-en
@@ -63,9 +63,9 @@ BuildRequires: python3.11-setuptools
 %global _enable_cuda 1
 %endif
 %if 0%{?el9}
-%define _devtoolset_enable /opt/rh/gcc-toolset-12/enable
-BuildRequires: vespa-toolset-12-meta
-BuildRequires: gcc-toolset-12-dwz
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: vespa-toolset-14-meta
+BuildRequires: gcc-toolset-14-dwz
 BuildRequires: gtest-devel
 BuildRequires: make
 BuildRequires: glibc-langpack-en
@@ -105,17 +105,17 @@ BuildRequires: libunwind
 BuildRequires: bzip2
 
 %if 0%{?_enable_cuda:1}
-%define _cuda_version_major 12.2
-%define _cuda_version_num 12.2.140
-%define _cuda_version_name 12-2
-%define _cudnn_version 8.9.6.50-1.cuda12.2
+%define _cuda_version_major 12.8
+%define _cuda_version_num 12.8.90
+%define _cuda_version_name 12-8
+%define _cudnn_version 9.8.0.87
 BuildRequires: cuda-toolkit-12-config-common = %{_cuda_version_num}
 BuildRequires: cuda-toolkit-config-common = %{_cuda_version_num}
 BuildRequires: cuda-libraries-devel-%{_cuda_version_name}
 BuildRequires: cuda-compiler-%{_cuda_version_name}
 BuildRequires: cuda-cudart-devel-%{_cuda_version_name}
 BuildRequires: cuda-command-line-tools-%{_cuda_version_name}
-BuildRequires: libcudnn8-devel = %{_cudnn_version}
+BuildRequires: libcudnn9-devel-cuda-12 = %{_cudnn_version}
 %endif
 
 %description
@@ -233,7 +233,7 @@ Requires:       libcufft-%{_cuda_version_name}
 Requires:       libcublas-%{_cuda_version_name}
 Requires:       libcurand-%{_cuda_version_name}
 Requires:       libnvjitlink-%{_cuda_version_name}
-Requires:       libcudnn8 = %{_cudnn_version}
+Requires:       libcudnn9-cuda-12 = %{_cudnn_version}
 
 %description cuda
 CUDA support package for Vespa.
