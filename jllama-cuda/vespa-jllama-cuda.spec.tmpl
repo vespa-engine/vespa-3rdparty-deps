@@ -34,7 +34,7 @@ BuildRequires: maven
 
 %if 0%{?el8}%{?el9}
 BuildRequires: vespa-toolset-14-meta
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: vespa-ccache
 BuildRequires: vespa-cmake
 %global _enable_cuda 1
@@ -45,12 +45,12 @@ BuildRequires: make
 BuildRequires: git
 
 %if 0%{?_enable_cuda}
-%define _cuda_version_major 12
-%define _cuda_version_minor 8
-%define _cuda_version_micro 90
-%define _cuda_version_pkg_name %{_cuda_version_major}-%{_cuda_version_minor}
-%define _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
-%define _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
+%global _cuda_version_major 12
+%global _cuda_version_minor 8
+%global _cuda_version_micro 90
+%global _cuda_version_pkg_name %{_cuda_version_major}-%{_cuda_version_minor}
+%global _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
+%global _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
 BuildRequires: cuda-toolkit-12-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-toolkit-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-cudart-devel-%{_cuda_version_pkg_name} = %{_cuda_version_full_num}
@@ -76,9 +76,8 @@ source %{_devtoolset_enable} || true
 
 PATH=%{_prefix}/bin:/usr/local/cuda-%{_cuda_version_norm_num}/bin:$PATH
 mvn compile
-mkdir build
 
-cmake -B build \
+%define _common_cmake_options \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -88,22 +87,17 @@ cmake -B build \
     -DGGML_OPENMP=ON \
     -DGGML_NATIVE=OFF \
     -DLLAMA_NATIVE=OFF
+
+cmake -S . -B build %{shrink:%{_common_cmake_options}} \
+    -DGGML_CUDA=OFF
 
 VERBOSE=1 cmake --build build --config RelWithDebInfo -j 4
 
 %if 0%{?_enable_cuda}
 
-cmake -S . -B build-cuda \
-    -DCMAKE_INSTALL_RPATH=\$ORIGIN \
-    -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
-    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
-    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
-    -DGGML_METAL=OFF \
-    -DGGML_OPENMP=ON \
-    -DGGML_NATIVE=OFF \
-    -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES="75;80;89" \
-    -DLLAMA_NATIVE=OFF
+cmake -S . -B build-cuda %{shrink:%{_common_cmake_options}} \
+    -DGGML_CUDA=ON \
+    -DCMAKE_CUDA_ARCHITECTURES="75;80;89"
 
 VERBOSE=1 cmake --build build-cuda -j 4
 %endif
