@@ -1,0 +1,11 @@
+--- cmake/arch.cmake.orig	2025-06-19 09:45:39.000000000 +0000
++++ cmake/arch.cmake	2025-06-20 10:40:44.496357562 +0000
+@@ -38,7 +38,7 @@
+       if (${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 10) # SVE ACLE supported in GCC >= 10
+         set(DYNAMIC_CORE ${DYNAMIC_CORE} NEOVERSEV1 NEOVERSEN2 ARMV8SVE A64FX)
+       endif ()
+-      if (${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 14) # SME ACLE supported in GCC >= 14
++      if (${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 42) # SME ACLE supported in GCC >= 14
+         set(DYNAMIC_CORE ${DYNAMIC_CORE} ARMV9SME)
+       endif()
+     elseif (${CMAKE_C_COMPILER_ID} MATCHES "Clang")

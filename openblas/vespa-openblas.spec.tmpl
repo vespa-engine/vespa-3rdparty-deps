@@ -28,15 +28,20 @@ License:        BSD
 URL:            https://github.com/OpenMathLib/OpenBLAS/
 Source0:        https://github.com/OpenMathLib/OpenBLAS/archive/v%{version}/openblas-%{version}.tar.gz
 Patch0:         patches.driver-others-dynamic-arm64.diff
+Patch1:         patches.avoid-armv9sme.diff
+
 
 %if 0%{?el8}
 %define _devtoolset_enable /opt/rh/gcc-toolset/enable
-BuildRequires: vespa-toolset-13-meta
+BuildRequires: vespa-toolset-14-meta
 BuildRequires: perl-devel
+BuildRequires: vespa-cmake
+%else
+BuildRequires: cmake
 %endif
 %if 0%{?el9}
 %define _devtoolset_enable /opt/rh/gcc-toolset/enable
-BuildRequires: vespa-toolset-13-meta
+BuildRequires: vespa-toolset-14-meta
 BuildRequires: perl-devel
 %endif
 %if 0%{?el10} || 0%{?fedora}
@@ -45,7 +50,6 @@ BuildRequires: gcc-c++
 BuildRequires: perl-devel
 %endif
 BuildRequires: make
-BuildRequires: vespa-cmake
 
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
@@ -64,6 +68,7 @@ openblas compiled for vespa -- devel
 %prep
 %setup -n OpenBLAS-%{version}
 %patch -P 0 -p0
+%patch -P 1 -p0
 
 %build
 PATH=%{_prefix}/bin:$PATH
@@ -100,9 +105,7 @@ ln -s openblas/openblas_config.h %{buildroot}%{_prefix}/include/openblas_config.
 %{_libdir}
 %exclude %{_libdir}/cmake
 %exclude %{_libdir}/libopenblas.so
-%exclude %{_libdir}/libopenblas.a
 %exclude %{_libdir}/libopenblasp.so
-%exclude %{_libdir}/libopenblasp.a
 %exclude %{_libdir}/pkgconfig
 
 %files devel
@@ -114,3 +117,5 @@ ln -s openblas/openblas_config.h %{buildroot}%{_prefix}/include/openblas_config.
 %{_libdir}/pkgconfig
 
 %changelog
+* Thu Jul  3 12:31:41 UTC 2025 - arnej
+- update to openblas 0.3.30
