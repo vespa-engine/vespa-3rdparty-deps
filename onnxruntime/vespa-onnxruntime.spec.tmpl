@@ -4,7 +4,7 @@
 %undefine _missing_build_ids_terminate_build
 
 # Force special prefix for Vespa
-%define _prefix /opt/vespa-deps
+%global _prefix /opt/vespa-deps
 
 # Only strip debug info
 %global _find_debuginfo_opts -g
@@ -15,10 +15,10 @@
 %global __requires_exclude ^libonnxruntime\\.so\\.[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
 
 # Version
-%define ver_major _TMPL_VER_MAJOR
-%define ver_minor _TMPL_VER_MINOR
-%define ver_patch _TMPL_VER_PATCH
-%define ver_release _TMPL_VER_RELEASE
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
 
 Summary:        ONNX Runtime package for Vespa
 Name:           vespa-onnxruntime
@@ -44,12 +44,12 @@ BuildRequires: ccache
 BuildRequires: vespa-cmake
 BuildRequires: vespa-ccache
 %endif
-%define _cmake_prog cmake
-%define _ctest_prog ctest
+%global _cmake_prog cmake
+%global _ctest_prog ctest
 BuildRequires: vespa-gradle
 BuildRequires: which
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: vespa-toolset-14-meta
 BuildRequires: gcc-toolset-14-dwz
 BuildRequires: gtest-devel
@@ -63,7 +63,7 @@ BuildRequires: python3.11-setuptools
 %global _enable_cuda 1
 %endif
 %if 0%{?el9}
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: vespa-toolset-14-meta
 BuildRequires: gcc-toolset-14-dwz
 BuildRequires: gtest-devel
@@ -105,16 +105,21 @@ BuildRequires: libunwind
 BuildRequires: bzip2
 
 %if 0%{?_enable_cuda:1}
-%define _cuda_version_major 12.8
-%define _cuda_version_num 12.8.90
-%define _cuda_version_name 12-8
-%define _cudnn_version 9.8.0.87
-BuildRequires: cuda-toolkit-12-config-common = %{_cuda_version_num}
-BuildRequires: cuda-toolkit-config-common = %{_cuda_version_num}
-BuildRequires: cuda-libraries-devel-%{_cuda_version_name}
-BuildRequires: cuda-compiler-%{_cuda_version_name}
-BuildRequires: cuda-cudart-devel-%{_cuda_version_name}
-BuildRequires: cuda-command-line-tools-%{_cuda_version_name}
+%global _cuda_version_major 12
+%global _cuda_version_minor 8
+%global _cuda_version_micro 90
+%global _cuda_version_pkg_name %{_cuda_version_major}-%{_cuda_version_minor}
+%global _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
+%global _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
+
+%global _cudnn_version 9.8.0.87
+
+BuildRequires: cuda-toolkit-12-config-common = %{_cuda_version_full_num}
+BuildRequires: cuda-toolkit-config-common = %{_cuda_version_full_num}
+BuildRequires: cuda-libraries-devel-%{_cuda_version_pkg_name}
+BuildRequires: cuda-compiler-%{_cuda_version_pkg_name}
+BuildRequires: cuda-cudart-devel-%{_cuda_version_pkg_name}
+BuildRequires: cuda-command-line-tools-%{_cuda_version_pkg_name}
 BuildRequires: libcudnn9-devel-cuda-12 = %{_cudnn_version}
 %endif
 
@@ -155,7 +160,7 @@ source %{_devtoolset_enable}
 
 PATH=%{_prefix}/bin:$PATH
 %if 0%{?_enable_cuda:1}
-%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-%{_cuda_version_major} --cudnn_home=/usr
+%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-%{_cuda_version_norm_num} --cudnn_home=/usr
 # 75: Tesla T4
 # 80: Ampere A100
 # 89: Ada Lovelace L40 / L40S
@@ -228,11 +233,11 @@ about packaging.
 %package cuda
 Summary:        ONNX provider for CUDA (for Vespa).
 Requires:       %{name} = %{version}-%{release}
-Requires:       cuda-cudart-%{_cuda_version_name}
-Requires:       libcufft-%{_cuda_version_name}
-Requires:       libcublas-%{_cuda_version_name}
-Requires:       libcurand-%{_cuda_version_name}
-Requires:       libnvjitlink-%{_cuda_version_name}
+Requires:       cuda-cudart-%{_cuda_version_pkg_name} = %{_cuda_version_full_num}
+Requires:       libcufft-%{_cuda_version_pkg_name}
+Requires:       libcublas-%{_cuda_version_pkg_name}
+Requires:       libcurand-%{_cuda_version_pkg_name}
+Requires:       libnvjitlink-%{_cuda_version_pkg_name}
 Requires:       libcudnn9-cuda-12 = %{_cudnn_version}
 
 %description cuda
@@ -242,7 +247,7 @@ See https://github.com/vespa-engine/vespa-3rdparty-deps for details
 about packaging.
 
 %files cuda
-%{_prefix}/lib64/*cuda*
+%{_libdir}/*cuda*
 %license LICENSE
 %endif
 
