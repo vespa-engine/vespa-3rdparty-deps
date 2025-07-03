@@ -56,8 +56,8 @@ BuildRequires: cuda-compiler-%{_cuda_version_pkg_name}
 BuildRequires: cuda-cudart-devel-%{_cuda_version_pkg_name}
 BuildRequires: cuda-command-line-tools-%{_cuda_version_pkg_name}
 
-Requires:       cuda-cudart-%{_cuda_version_name}
-Requires:       libcublas-%{_cuda_version_name}
+Requires:       cuda-cudart-%{_cuda_version_pkg_name}
+Requires:       libcublas-%{_cuda_version_pkg_name}
 
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
