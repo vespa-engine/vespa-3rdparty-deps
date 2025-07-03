@@ -57,9 +57,10 @@ BuildRequires: maven
 %if 0%{?el8}%{?el9}
 BuildRequires: vespa-toolset-14-meta
 BuildRequires: gcc-toolset-14-gcc-c++
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: vespa-ccache
 BuildRequires: vespa-cmake
+%global _enable_cuda 1
 %else
 BuildRequires: cmake
 %endif
@@ -67,8 +68,24 @@ BuildRequires: cmake
 %if 0%{?el10} || 0%{?fedora}
 BuildRequires: gcc-c++
 %endif
+
 BuildRequires: make
 BuildRequires: git
+
+%if 0%{?_enable_cuda}
+%global _cuda_version_major 12
+%global _cuda_version_minor 8
+%global _cuda_version_micro 90
+%global _cuda_version_pkg_name %{_cuda_version_major}-%{_cuda_version_minor}
+%global _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
+%global _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
+BuildRequires: cuda-toolkit-12-config-common = %{_cuda_version_full_num}
+BuildRequires: cuda-toolkit-config-common = %{_cuda_version_full_num}
+BuildRequires: cuda-cudart-devel-%{_cuda_version_pkg_name} = %{_cuda_version_full_num}
+BuildRequires: cuda-compiler-%{_cuda_version_pkg_name}
+BuildRequires: cuda-command-line-tools-%{_cuda_version_pkg_name}
+BuildRequires: cuda-libraries-devel-%{_cuda_version_pkg_name}
+%endif
 
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
@@ -85,11 +102,10 @@ about packaging.
 source %{_devtoolset_enable} || true
 %endif
 
-PATH=%{_prefix}/bin:$PATH
+PATH=%{_prefix}/bin:/usr/local/cuda-%{_cuda_version_norm_num}/bin:$PATH
 mvn compile
-mkdir build
 
-cmake -B build \
+%define _common_cmake_options \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -100,15 +116,55 @@ cmake -B build \
     -DGGML_NATIVE=OFF \
     -DLLAMA_NATIVE=OFF
 
+cmake -S . -B build %{shrink:%{_common_cmake_options}} \
+    -DGGML_CUDA=OFF
+
 VERBOSE=1 cmake --build build --config RelWithDebInfo -j 4
+
+%if 0%{?_enable_cuda}
+
+cmake -S . -B build-cuda %{shrink:%{_common_cmake_options}} \
+    -DGGML_CUDA=ON \
+    -DCMAKE_CUDA_ARCHITECTURES="75;80;89"
+
+VERBOSE=1 cmake --build build-cuda -j 4
+%endif
 
 %install
 
 mkdir -p %{buildroot}%{_libdir}
 cp -p src/main/resources/de/kherud/llama/Linux/*/lib*.so %{buildroot}%{_libdir}
 
+%if 0%{?_enable_cuda}
+mkdir -p %{buildroot}%{_libdir}/cuda
+cp -p src/main/resources_linux_cuda/de/kherud/llama/Linux/*/lib*.so %{buildroot}%{_libdir}/cuda
+%endif
+
 %files
 %license LICENSE.md
 %{_libdir}
+%if 0%{?_enable_cuda}
+%exclude %{_libdir}/*cuda*
+%endif
+
+%if 0%{?_enable_cuda}
+%package cuda
+
+Requires:       cuda-cudart-%{_cuda_version_pkg_name} = %{_cuda_version_full_num}
+Requires:       libcublas-%{_cuda_version_pkg_name}
+
+Summary:        Native part of Java Bindings for llama.cpp (using CUDA)
+Requires:       %{name} = %{version}-%{release}
+
+%description cuda
+CUDA support package for Vespa.
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%files cuda
+%license LICENSE.md
+%{_libdir}/cuda
+%endif
 
 %changelog
+* Thu Jul  3 2025 Arne Juul - 4.1.0.6
+- build both CUDA and non-CUDA from same source
