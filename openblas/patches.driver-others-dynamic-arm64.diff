@@ -1,14 +1,14 @@
---- driver/others/dynamic_arm64.c.FCS	2023-04-01 22:18:01.000000000 +0200
-+++ driver/others/dynamic_arm64.c	2023-06-29 19:02:46.402670342 +0200
-@@ -242,7 +242,10 @@
-         p = (char *) NULL ;
- 	infile = fopen("/sys/devices/system/cpu/cpu0/regs/identification/midr_el1","r");
- 	if (!infile) return NULL;
--	(void)fgets(buffer, sizeof(buffer), infile);
-+	if (fgets(buffer, sizeof(buffer), infile) == NULL) {
-+            fclose(infile);
-+            return NULL;
-+        }
- 	midr_el1=strtoul(buffer,NULL,16);
- 	fclose(infile);
- #else
+--- driver/others/dynamic_arm64.c.orig	2025-06-19 09:45:39.000000000 +0000
++++ driver/others/dynamic_arm64.c	2025-07-03 12:36:53.651754969 +0000
+@@ -325,7 +325,10 @@
+ 		sprintf(buffer,"/sys/devices/system/cpu/cpu%d/regs/identification/midr_el1",i);
+ 		infile = fopen(buffer,"r");
+ 		if (!infile) return NULL;
+-		(void)fgets(buffer, sizeof(buffer), infile);
++		if (fgets(buffer, sizeof(buffer), infile) == NULL) {
++			fclose(infile);
++			return NULL;
++		}
+ 		midr_el1=strtoul(buffer,NULL,16);
+   		implementer = (midr_el1 >> 24) & 0xFF;
+   		prt        = (midr_el1 >> 4)  & 0xFFF;
