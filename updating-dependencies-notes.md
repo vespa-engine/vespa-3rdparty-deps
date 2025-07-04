@@ -15,7 +15,7 @@ The following fragment from [vespa-zstd.spec.tmpl](zstd/vespa-zstd.spec.tmpl) is
     # Don't provide shared library or pkgconfig
     %global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\(\\)\\(64bit\\)|pkgconfig\\(.*)$
 
-Similarly, vespa and the 3rd party packages must also require the 3rdparty packages but not the shared libraries they contains:
+Similarly, vespa and the 3rd party packages must also require the 3rdparty packages but not the shared libraries they contain:
 
     # Exclude automated requires for libraries in /opt/vespa-deps/lib64.
     %global __requires_exclude ^libzstd\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)$
@@ -45,7 +45,7 @@ We also define a version macro in the specs file for each relevant package:
 
 A specific version macros should be defined to the same value in all spec files and be in sync with the values in the corresponding <code>.copr/Makefile</code>.
 
-When building a new version of a package, all packages that depend on a pinned version of the package it must also be rebuilt. If version number is not increased then the <code>RELEASE</code> value should be increased instead. This might imply more strict version pinning that also includes the release, e.g. <code>1.16.0-1%{?dist}</code>. Since the build-dependencies package has no upstream, we always bump the version.
+When building a new version of a package, all packages that depend on a pinned version of the package must also be rebuilt. If the version number is not increased then the <code>RELEASE</code> value should be increased instead. This might imply more strict version pinning that also includes the release, e.g. <code>1.16.0-1%{?dist}</code>. Since the build-dependencies package has no upstream, we always bump the version.
 
 ## Changing vespa rpm spec to use new 3rd party dependencies
 
@@ -53,4 +53,4 @@ The <code>[dist/vespa.spec](https://github.com/vespa-engine/vespa/blob/master/di
 
 ## Changing references to vespa rpm spec in <code>docker-image-dev</code> repo
 
-Various files in the <code>[docker-image-dev](https://github.com/vespa-engine/docker-image-dev)</code> repo contains VESPA_SRC_REF with a checksum for a specific git commit in the <code>[vespa](https://github.com/vespa-engine/vespa)</code> repo. The value is used when building vespa build images to download a specific version of <code>vespa.spec</code> and use it to get the proper dependencies pre-installed.
+Various files in the <code>[docker-image-dev](https://github.com/vespa-engine/docker-image-dev)</code> repo contain `VESPA_SRC_REF` with a checksum for a specific git commit in the <code>[vespa](https://github.com/vespa-engine/vespa)</code> repo. The value is used when building vespa build images to download a specific version of <code>vespa.spec</code> and use it to get the proper dependencies pre-installed.
