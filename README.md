@@ -1,9 +1,7 @@
 # vespa-3rdparty-deps
-Patched version of software distributions used in Vespa:
+Setup for building third party dependencies used in Vespa,
+where there isn't any suitable RPM available.
 
-   * boost
-   * gtest
-   * openssl
-   * protobuf
-   
+See updating-dependencies-notes.md for more details.
+
 These packages are currently built and distributed on [Copr](https://copr.fedorainfracloud.org/coprs/g/vespa/vespa/packages)
