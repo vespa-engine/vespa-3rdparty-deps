@@ -1,0 +1,95 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# use one of these two alternatives:
+# Don't create separate debug package
+%global debug_package %{nil}
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so[0-9.]*\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
+
+# CHANGE NEXT LINE: This may be useful to avoid picking up requires from libraries.
+%global __requires_exclude ^lib(notthis|notthat)\.so[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+%if 0%{?el8}
+# stuff needed just for EPEL8 build
+%endif
+
+Summary:        This text describes xxx
+Name:           vespa-xxx
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        MIT
+URL:            https://the.home.of.xxx/
+Source0:        https://github.com/whatever/xxx/archive/refs/tags/v%{version}.tar.gz
+
+%if 0%{?el8}%{?el9}
+BuildRequires: vespa-toolset-14-meta
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: vespa-cmake
+%else
+BuildRequires: cmake
+%endif
+BuildRequires: make
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q -n xxx-%{version}
+
+%build
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable}
+%endif
+
+PATH=%{_prefix}/bin:$PATH
+
+cmake -S . -B build \
+    -DCMAKE_INSTALL_RPATH=\$ORIGIN \
+    -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+VERBOSE=1 cmake --build build %{?_smp_mflags}
+
+%install
+
+%files
+%license LICENSE.md
+%{_libdir}
+
+# below is for packages split, runtime (base package) / compile time (-devel package)
+
+%package devel
+Summary: What is xxx but for development
+Requires: %{name}%{?_isa} = %{version}-%{release}
+
+%description devel
+maybe some more description
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%files devel
+%license LICENSE
+%{_includedir}
+
+
+%changelog
+* Thu Jan  1 1970 - person
+- description
