@@ -6,7 +6,11 @@
 # Force special prefix for Vespa
 %define _prefix /opt/vespa-deps
 
+# use one of these two alternatives:
+# Don't create separate debug package
 %global debug_package %{nil}
+# Only strip debug info
+%global _find_debuginfo_opts -g
 
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so[0-9.]*\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
