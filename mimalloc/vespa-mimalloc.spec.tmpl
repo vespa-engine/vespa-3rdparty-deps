@@ -17,6 +17,9 @@
 # Only strip debug info
 %global _find_debuginfo_opts -g
 
+# Libraries use shared libraries in /opt/vespa-deps/lib64
+%global __brp_check_rpaths %{nil}
+
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
 
@@ -35,10 +38,8 @@ Source0:        https://github.com/microsoft/mimalloc/archive/refs/tags/v%{versi
 %define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: gcc-toolset-14-gcc-c++
 BuildRequires: make
-BuildRequires: vespa-cmake
-%else
-BuildRequires: cmake
 %endif
+BuildRequires: cmake
 %if 0%{?el10} || 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: make
@@ -108,5 +109,8 @@ cd build
 %{_libdir}/*.so
 
 %changelog
+* Thu Jul 17 2025 Tor Brede Vekterli <vekterli@vespa.ai> - 2.2.4-2
+- Remove transitive dependency on vespa-cmake and allow custom RPATH
+
 * Wed Jun 25 2025 Tor Brede Vekterli <vekterli@vespa.ai> - 2.2.4
 - Initial version of mimalloc RPM
