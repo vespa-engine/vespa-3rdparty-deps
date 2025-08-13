@@ -29,6 +29,7 @@ BuildRequires: vespa-toolset-14-meta
 BuildRequires: vespa-cmake
 %else
 BuildRequires: cmake
+BuildRequires: gcc-c++
 %endif
 BuildRequires: make
 BuildRequires: git
@@ -59,12 +60,15 @@ cmake -S . -B build \
 VERBOSE=1 cmake --build build %{?_smp_mflags}
 
 %install
-
-DESTDIR="%{buildroot}" VERBOSE=1 cmake --build build -t install
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+cd build
+%make_install
 mv %{buildroot}/%{_prefix}/lib %{buildroot}/%{_libdir}
 
-# note: headers-only library
 %files
+# note: headers-only library
 %license LICENSE
 %{_libdir}
 %{_includedir}
