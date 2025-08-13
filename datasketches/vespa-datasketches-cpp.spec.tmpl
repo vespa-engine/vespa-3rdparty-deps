@@ -1,0 +1,74 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Don't create separate debug package
+%global debug_package %{nil}
+
+# Version
+%define ver_major _TMPL_VER_MAJOR
+%define ver_minor _TMPL_VER_MINOR
+%define ver_patch _TMPL_VER_PATCH
+%define ver_release _TMPL_VER_RELEASE
+
+Summary:        Apache DataSketches Core C++ Library Component
+Name:           vespa-datasketches-cpp
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        Apache
+URL:            https://github.com/apache/datasketches-cpp
+Source0:        https://github.com/apache/datasketches-cpp/archive/refs/tags/%{version}.tar.gz
+
+%if 0%{?el8}%{?el9}
+BuildRequires: vespa-toolset-14-meta
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: vespa-cmake
+%else
+BuildRequires: cmake
+%endif
+BuildRequires: make
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q -n datasketches-cpp-%{version}
+
+%build
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable}
+%endif
+
+PATH=%{_prefix}/bin:$PATH
+
+cmake -S . -B build \
+    -DCMAKE_INSTALL_PREFIX=%{_prefix}     \
+    -DCMAKE_INSTALL_RPATH=\$ORIGIN        \
+-DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+VERBOSE=1 cmake --build build %{?_smp_mflags}
+
+%install
+
+DESTDIR="%{buildroot}" VERBOSE=1 cmake --build build -t install
+mv %{buildroot}/%{_prefix}/lib %{buildroot}/%{_libdir}
+
+# note: headers-only library
+%files
+%license LICENSE
+%{_libdir}
+%{_includedir}
+
+%changelog
+* Wed Jan 15 2025 - Alexander Saydakov
+- released 5.2.0
