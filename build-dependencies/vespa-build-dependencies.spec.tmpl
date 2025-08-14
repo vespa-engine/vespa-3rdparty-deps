@@ -14,6 +14,7 @@
 %global _vespa_lz4_version 1.9.4-2
 %global _vespa_toolset_version 14.2.1
 %global _vespa_openblas_version 0.3.27
+%global _vespa_jllama_version 4.1.0
 %global _vespa_datasketches_version 5.2.0
 %if 0%{?fedora}
 %if %{fedora} > 39
@@ -51,6 +52,11 @@ Requires: systemd
 Requires: valgrind
 Requires: zlib-devel
 
+# Common 3rdparty deps that do not exist as RPMs elsewhere:
+Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
+Requires: vespa-datasketches-cpp = %{_vespa_datasketches_version}
+Requires: vespa-jllama = %{_vespa_jllama_version}
+
 %if 0%{?el8}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
 Requires: vespa-cmake >= 3.29.1
@@ -68,10 +74,8 @@ Requires: vespa-openssl-devel >= 3.1.7
 Requires: vespa-gmock-devel = %{_vespa_gtest_version}
 Requires: vespa-gtest-devel = %{_vespa_gtest_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
-Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
-Requires: vespa-datasketches-cpp = %{_vespa_datasketches_version}
 Requires: vespa-toolset-14-meta >= %{_vespa_toolset_version}
 %endif
 
@@ -92,10 +96,8 @@ Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
 Requires: openssl-devel
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
-Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
-Requires: vespa-datasketches-cpp = %{_vespa_datasketches_version}
 Requires: vespa-toolset-14-meta >= %{_vespa_toolset_version}
 %endif
 
@@ -114,10 +116,8 @@ Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
 Requires: openssl-devel
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
-Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
 Requires: abseil-cpp-devel
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
-Requires: vespa-datasketches-cpp = %{_vespa_datasketches_version}
 %endif
 
 %if 0%{?fedora}
@@ -148,9 +148,7 @@ Requires: abseil-cpp-devel
 %endif
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
-Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
-Requires: vespa-datasketches-cpp = %{_vespa_datasketches_version}
 %endif
 
 # For Amazon Linux 2023 fedora is also defined
