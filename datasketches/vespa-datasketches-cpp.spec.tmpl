@@ -10,18 +10,20 @@
 %global debug_package %{nil}
 
 # Version
-%define ver_major _TMPL_VER_MAJOR
-%define ver_minor _TMPL_VER_MINOR
-%define ver_patch _TMPL_VER_PATCH
-%define ver_release _TMPL_VER_RELEASE
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+%global orig_name datasketches-cpp
 
 Summary:        Apache DataSketches Core C++ Library Component
-Name:           vespa-datasketches-cpp
+Name:           vespa-%{orig_name}
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        Apache
-URL:            https://github.com/apache/datasketches-cpp
-Source0:        https://github.com/apache/datasketches-cpp/archive/refs/tags/%{version}.tar.gz
+URL:            https://github.com/apache/%{orig_name}
+Source0:        https://github.com/apache/%{orig_name}/archive/refs/tags/%{version}.tar.gz
 
 %if 0%{?el8}%{?el9}
 BuildRequires: vespa-toolset-14-meta
@@ -42,7 +44,7 @@ about packaging.
 %{_vespa_3rdparty_deps_packaging_notice}
 
 %prep
-%setup -q -n datasketches-cpp-%{version}
+%setup -q -n %{orig_name}-%{version}
 
 %build
 %if 0%{?_devtoolset_enable:1}
@@ -74,5 +76,7 @@ mv %{buildroot}/%{_prefix}/lib %{buildroot}/%{_libdir}
 %{_includedir}
 
 %changelog
+* Wed Aug 13 2025 - arnej
+- Packaged for vespa
 * Wed Jan 15 2025 - Alexander Saydakov
 - released 5.2.0
