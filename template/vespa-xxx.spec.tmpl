@@ -16,31 +16,34 @@
 %global __provides_exclude ^(lib.*\\.so[0-9.]*\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
 
 # CHANGE NEXT LINE: This may be useful to avoid picking up requires from libraries.
-%global __requires_exclude ^lib(notthis|notthat)\.so[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
+%global __requires_exclude ^lib(notthis|xxx|notthat)\.so[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
 
 # Version
-%define ver_major _TMPL_VER_MAJOR
-%define ver_minor _TMPL_VER_MINOR
-%define ver_patch _TMPL_VER_PATCH
-%define ver_release _TMPL_VER_RELEASE
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
 
-%if 0%{?el8}
-# stuff needed just for EPEL8 build
-%endif
+%global orig_name xxx
 
 Summary:        This text describes xxx
-Name:           vespa-xxx
+Name:           vespa-%{orig_name}
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        MIT
 URL:            https://the.home.of.xxx/
-Source0:        https://github.com/whatever/xxx/archive/refs/tags/v%{version}.tar.gz
+Source0:        https://github.com/xxx-home/%{orig_name}/archive/refs/tags/v%{version}.tar.gz
 
+%if 0%{?el8}
+# stuff needed just for EPEL8 build
+%endif
+# Some common things, may need to change
 %if 0%{?el8}%{?el9}
 BuildRequires: vespa-toolset-14-meta
 %define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: vespa-cmake
 %else
+BuildRequires: gcc-c++
 BuildRequires: cmake
 %endif
 BuildRequires: make
@@ -53,23 +56,27 @@ about packaging.
 %{_vespa_3rdparty_deps_packaging_notice}
 
 %prep
-%setup -q -n xxx-%{version}
+%setup -q -n %{orig_name}-%{version}
 
 %build
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable}
 %endif
 
+# PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:$PATH
 
 cmake -S . -B build \
-    -DCMAKE_INSTALL_RPATH=\$ORIGIN \
+    -DCMAKE_INSTALL_PREFIX=%{_prefix}     \
+    -DCMAKE_INSTALL_RPATH=\$ORIGIN        \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
 VERBOSE=1 cmake --build build %{?_smp_mflags}
 
 %install
+cd build
+%make_install
 
 %files
 %license LICENSE.md
@@ -82,13 +89,12 @@ Summary: What is xxx but for development
 Requires: %{name}%{?_isa} = %{version}-%{release}
 
 %description devel
-maybe some more description
+maybe some more description of xxx
 %{_vespa_3rdparty_deps_packaging_notice}
 
 %files devel
-%license LICENSE
+%license LICENSE.md
 %{_includedir}
-
 
 %changelog
 * Thu Jan  1 1970 - person

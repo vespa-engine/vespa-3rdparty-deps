@@ -62,9 +62,6 @@ cmake -S . -B build \
 VERBOSE=1 cmake --build build %{?_smp_mflags}
 
 %install
-%if 0%{?_devtoolset_enable:1}
-source %{_devtoolset_enable} || true
-%endif
 cd build
 %make_install
 mv %{buildroot}/%{_prefix}/lib %{buildroot}/%{_libdir}
