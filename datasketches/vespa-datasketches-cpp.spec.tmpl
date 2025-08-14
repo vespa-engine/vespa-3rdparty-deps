@@ -6,17 +6,8 @@
 # Force special prefix for Vespa
 %define _prefix /opt/vespa-deps
 
-# use one of these two alternatives:
 # Don't create separate debug package
 %global debug_package %{nil}
-# Only strip debug info
-%global _find_debuginfo_opts -g
-
-# Don't provide shared library or pkgconfig
-%global __provides_exclude ^(lib.*\\.so[0-9.]*\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
-
-# CHANGE NEXT LINE: This may be useful to avoid picking up requires from libraries.
-%global __requires_exclude ^lib(notthis|xxx|notthat)\.so[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)$
 
 # Version
 %global ver_major _TMPL_VER_MAJOR
@@ -24,29 +15,26 @@
 %global ver_patch _TMPL_VER_PATCH
 %global ver_release _TMPL_VER_RELEASE
 
-%global orig_name xxx
+%global orig_name datasketches-cpp
 
-Summary:        This text describes xxx
+Summary:        Apache DataSketches Core C++ Library Component
 Name:           vespa-%{orig_name}
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
-License:        MIT
-URL:            https://the.home.of.xxx/
-Source0:        https://github.com/xxx-home/%{orig_name}/archive/refs/tags/v%{version}.tar.gz
+License:        Apache
+URL:            https://github.com/apache/%{orig_name}
+Source0:        https://github.com/apache/%{orig_name}/archive/refs/tags/%{version}.tar.gz
 
-%if 0%{?el8}
-# stuff needed just for EPEL8 build
-%endif
-# Some common things, may need to change
 %if 0%{?el8}%{?el9}
 BuildRequires: vespa-toolset-14-meta
 %define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: vespa-cmake
 %else
-BuildRequires: gcc-c++
 BuildRequires: cmake
+BuildRequires: gcc-c++
 %endif
 BuildRequires: make
+BuildRequires: git
 
 %global _vespa_3rdparty_deps_packaging_notice \
 See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
@@ -63,7 +51,6 @@ about packaging.
 source %{_devtoolset_enable}
 %endif
 
-# PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:$PATH
 
 cmake -S . -B build \
@@ -77,25 +64,16 @@ VERBOSE=1 cmake --build build %{?_smp_mflags}
 %install
 cd build
 %make_install
+mv %{buildroot}/%{_prefix}/lib %{buildroot}/%{_libdir}
 
 %files
-%license LICENSE.md
+# note: headers-only library
+%license LICENSE
 %{_libdir}
-
-# below is for packages split, runtime (base package) / compile time (-devel package)
-
-%package devel
-Summary: What is xxx but for development
-Requires: %{name}%{?_isa} = %{version}-%{release}
-
-%description devel
-maybe some more description of xxx
-%{_vespa_3rdparty_deps_packaging_notice}
-
-%files devel
-%license LICENSE.md
 %{_includedir}
 
 %changelog
-* Thu Jan  1 1970 - person
-- description
+* Wed Aug 13 2025 - arnej
+- Packaged for vespa
+* Wed Jan 15 2025 - Alexander Saydakov
+- released 5.2.0
