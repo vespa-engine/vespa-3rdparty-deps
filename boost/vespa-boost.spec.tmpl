@@ -29,11 +29,14 @@ License: Boost and MIT and Python
 Source: https://archives.boost.io/release/%{dotted_version}/source/boost_%{underscore_version}.tar.bz2
 
 BuildRequires: m4
-%if 0%{?el8}
+%if 0%{?el8}%{?el9}
 BuildRequires: vespa-toolset-14-meta
 %define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
-BuildRequires: make
 %endif
+%if 0%{?el10} || 0%{?fedora}
+BuildRequires: gcc-c++
+%endif
+BuildRequires: make
 
 %description
 Boost provides free peer-reviewed portable C++ source libraries.  The
