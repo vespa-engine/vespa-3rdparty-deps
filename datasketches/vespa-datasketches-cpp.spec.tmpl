@@ -24,6 +24,7 @@ Release:        %{ver_release}%{?dist}
 License:        Apache
 URL:            https://github.com/apache/%{orig_name}
 Source0:        https://github.com/apache/%{orig_name}/archive/refs/tags/%{version}.tar.gz
+Patch0:         patches.extra-includes.diff
 
 %if 0%{?el8}%{?el9}
 BuildRequires: vespa-toolset-14-meta
@@ -45,6 +46,7 @@ about packaging.
 
 %prep
 %setup -q -n %{orig_name}-%{version}
+%patch -P 0 -p0
 
 %build
 %if 0%{?_devtoolset_enable:1}
@@ -73,6 +75,8 @@ mv %{buildroot}/%{_prefix}/lib %{buildroot}/%{_libdir}
 %{_includedir}
 
 %changelog
+* Mon Aug 18 2025 - Tor Egge <Tor.Egge@online.no> - 5.2.0-2
+- Include cstdint to get declaration of uint32_t when using libstdc++ 15.
 * Wed Aug 13 2025 - arnej
 - Packaged for vespa
 * Wed Jan 15 2025 - Alexander Saydakov
