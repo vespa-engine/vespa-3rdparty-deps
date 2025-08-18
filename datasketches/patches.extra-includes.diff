@@ -1,0 +1,10 @@
+--- common/include/serde.hpp.FCS	2025-01-10 18:59:22.000000000 +0000
++++ common/include/serde.hpp	2025-08-18 12:35:52.219063245 +0000
+@@ -20,6 +20,7 @@
+ #ifndef DATASKETCHES_SERDE_HPP_
+ #define DATASKETCHES_SERDE_HPP_
+ 
++#include <cstdint>
+ #include <cstring>
+ #include <iostream>
+ #include <memory>
