@@ -22,6 +22,30 @@
 %global _vespa_gtest_version 1.16.0
 %endif
 
+# Ideally we'd build and run all Highway unit tests across all platforms.
+# Unfortunately, the test suite is an absolute beast to compile and ends
+# up timing out on EPEL 10 after 5 hours... There is also the case of a
+# small set of tests reliably failing on Fedora Copr's Aarch64 SVE/SVE256
+# build nodes:
+#
+#  - HwyBlockwiseShiftTestGroup/HwyBlockwiseShiftTest.TestAllShiftRightLanes/SVE
+#  - UnrollerTestGroup/UnrollerTest.TestAllConvert/SVE_256
+#
+# The first failure appears to be a possible GCC miscompilation, see
+# https://github.com/google/highway/issues/1938. The second failure is from
+# a component we don't use (we have our own unrolling primitives).
+#
+# The unfortunate consequence is that we disable building and running of
+# the unit test suite on EPEL 10. We have to trust that Google's build farm
+# has caught any particularly funky business.
+# TODO: reenable tests on EPEL 10 once we can get the build to reliably work.
+
+%if 0%{?el10}
+%global _vespa_hwy_enable_tests OFF
+%else
+%global _vespa_hwy_enable_tests ON
+%endif
+
 # Libraries use shared libraries in /opt/vespa-deps/lib64
 %global __brp_check_rpaths %{nil}
 
@@ -93,14 +117,17 @@ mkdir build
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
    -DBUILD_SHARED_LIBS=ON \
    -DCMAKE_CXX_STANDARD=23 \
-   -DHWY_ENABLE_TESTS=ON \
+   -DHWY_ENABLE_EXAMPLES=OFF \
+   -DHWY_ENABLE_TESTS=%{_vespa_hwy_enable_tests} \
    -DHWY_SYSTEM_GTEST=ON \
    -S . \
    -B build
 make -C build %{?_smp_mflags}
 
 %check
-%{_ctest_prog} --test-dir build %{?_smp_mflags}
+# Exclude tests that are broken on Aarch64 SVE(_256) (no-op if HWY_ENABLE_TESTS=OFF)
+%{_ctest_prog} --test-dir build %{?_smp_mflags} \
+   -E 'HwyBlockwiseShiftTestGroup/HwyBlockwiseShiftTest.TestAllShiftRightLanes/SVE|UnrollerTestGroup/UnrollerTest.TestAllConvert/SVE_256'
 
 %install
 %if 0%{?_devtoolset_enable:1}
