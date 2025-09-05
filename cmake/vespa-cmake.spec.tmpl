@@ -31,6 +31,7 @@ BuildRequires: gcc-c++
 %endif
 BuildRequires: make
 BuildRequires: ccache
+BuildRequires: ncurses-devel
 BuildRequires: openssl-devel
 %if 0%{?fedora}
 %if %{fedora} > 40
@@ -70,3 +71,5 @@ source %{_devtoolset_enable} || true
 %{_prefix}/doc/
 
 %changelog
+* Fri Sep 5 2025 Tor Egge <Tor.Egge@online.no> - 3.30.2-2
+- Add build dependency for ncurses-devel to build ccmake
