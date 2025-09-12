@@ -99,16 +99,18 @@ cd build
 %files
 %license LICENSE
 %{_libdir}
-%exclude %{_libdir}/*.so
 %exclude %{_libdir}/*.o
 %exclude %{_libdir}/*.a
 
 %files devel
 %license LICENSE
 %{_includedir}
-%{_libdir}/*.so
+%exclude %{_libdir}/*.so
 
 %changelog
+* Fri Sep 12 2025 Tor Brede Vekterli <vekterli@vespa.ai> - 2.2.4-3
+- Let symlinked .so be part of non-devel package
+
 * Thu Jul 17 2025 Tor Brede Vekterli <vekterli@vespa.ai> - 2.2.4-2
 - Remove transitive dependency on vespa-cmake and allow custom RPATH
 

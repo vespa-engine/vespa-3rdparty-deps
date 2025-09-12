@@ -5,7 +5,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=2
 MINOR=2
 PATCH=4
-RELEASE=2
+RELEASE=3
 
 # Note:
 #
