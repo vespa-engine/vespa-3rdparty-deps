@@ -3,27 +3,24 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=1
-MINOR=16
-PATCH=0
+MINOR=9
+PATCH=4
 RELEASE=1
 
 # Note:
 #
-# Version above must be kept in sync with _vespa_gtest_version in rpm
-# spec files for vespa-abseil-cpp, vespa-protobuf, vespa-highway,
-# vespa-gbenchmark, vespa-build-dependencies and vespa.
+# Version above must be kept in sync with _vespa_gbenchmark_version in
+# rpm spec files for vespa-build-dependencies and vespa.
 
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES
 SPECDIR=$(RPMTOPDIR)/SPECS
-SPECFILE=$(SPECDIR)/vespa-gtest.spec
-
-outdir ?= $(TOP)
+SPECFILE=$(SPECDIR)/vespa-gbenchmark.spec
 
 srpm:
-	rpm -q rpmdevtools || dnf install -y rpmdevtools
+	dnf install -y rpmdevtools
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
-	cat vespa-gtest.spec.tmpl | sed "s/_TMPL_VER_MAJOR/$(MAJOR)/" | sed "s/_TMPL_VER_MINOR/$(MINOR)/" | sed "s/_TMPL_VER_PATCH/$(PATCH)/" | sed "s/_TMPL_VER_RELEASE/$(RELEASE)/" > $(SPECFILE)
+	cat vespa-gbenchmark.spec.tmpl | sed "s/_TMPL_VER_MAJOR/$(MAJOR)/" | sed "s/_TMPL_VER_MINOR/$(MINOR)/" | sed "s/_TMPL_VER_PATCH/$(PATCH)/" | sed "s/_TMPL_VER_RELEASE/$(RELEASE)/" > $(SPECFILE)
 	spectool -g -C $(SOURCEDIR) $(SPECFILE)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
 	cp -a $(RPMTOPDIR)/SRPMS/* $(outdir)
