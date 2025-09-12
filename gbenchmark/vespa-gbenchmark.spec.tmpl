@@ -55,13 +55,9 @@ BuildRequires: which
 %if 0%{?_use_vespa_gtest}
 BuildRequires: vespa-gtest-devel%{?_isa} = %{_vespa_gtest_version}
 BuildRequires: vespa-gmock-devel%{?_isa} = %{_vespa_gtest_version}
-Requires: vespa-gtest%{?_isa} = %{_vespa_gtest_version}
-Requires: vespa-gmock%{?_isa} = %{_vespa_gtest_version}
 %else
 BuildRequires: gtest-devel
 BuildRequires: gmock-devel
-Requires: gtest
-Requires: gmock
 %endif
 
 %global _vespa_3rdparty_deps_packaging_notice \
