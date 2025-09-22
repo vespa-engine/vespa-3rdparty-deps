@@ -107,6 +107,9 @@ This package contains protobuf compiler for C++ and C++ headers and libraries.
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
+
 mkdir build
 %{_cmake_prog} \
    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
@@ -121,17 +124,22 @@ mkdir build
    -Dprotobuf_BUILD_LIBUPB=OFF \
    -S . \
    -B build
-make -C build %{?_smp_mflags}
+
+%{_cmake_prog} --build build %{?_smp_mflags}
 
 %check
-%{_ctest_prog} --test-dir build %{?_smp_mflags}
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
+ulimit -c 0
+%{_ctest_prog} --test-dir build
 
 %install
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-cd build
-%make_install
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
+DESTDIR="%{buildroot}" %{_cmake_prog} --install build
 
 %files
 %{_libdir}/libprotobuf.so.%{version_suffix}
