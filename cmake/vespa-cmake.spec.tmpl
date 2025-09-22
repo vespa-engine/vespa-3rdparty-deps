@@ -63,7 +63,7 @@ about packaging.
 source %{_devtoolset_enable} || true
 %endif
 
-# PATH to vespa-cmake etc
+# PATH to vespa-ccache
 PATH=%{_prefix}/bin:$PATH
 
 ./bootstrap --enable-ccache --prefix=/opt/vespa-deps --parallel=8
