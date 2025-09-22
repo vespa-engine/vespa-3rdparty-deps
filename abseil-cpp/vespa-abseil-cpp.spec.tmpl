@@ -113,7 +113,7 @@ mkdir build
     -DCMAKE_CXX_STANDARD=20 \
     -S . \
     -B build
-make -C build %{?_smp_mflags}
+cmake --build build %{?_smp_mflags}
 
 %check
 PATH=%{_prefix}/bin:$PATH
@@ -124,8 +124,7 @@ PATH=%{_prefix}/bin:$PATH
 source %{_devtoolset_enable} || true
 %endif
 PATH=%{_prefix}/bin:$PATH
-cd build
-%make_install
+env DESTDIR="%{buildroot}" cmake --install build
 
 %files
 %dir %{_libdir}
