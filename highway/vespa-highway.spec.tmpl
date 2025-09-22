@@ -67,12 +67,14 @@ Source0:        https://github.com/google/highway/releases/download/%{version}/h
 %define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: gcc-toolset-14-gcc-c++
 BuildRequires: make
+BuildRequires: vespa-cmake
+%else
+BuildRequires: cmake
 %endif
 %if 0%{?el10} || 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: make
 %endif
-BuildRequires: cmake
 %global _cmake_prog cmake
 %global _ctest_prog ctest
 BuildRequires: which
@@ -108,6 +110,8 @@ This package contains Highway for C++ with headers and libraries.
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
 mkdir build
 %{_cmake_prog} \
    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
@@ -122,9 +126,12 @@ mkdir build
    -DHWY_SYSTEM_GTEST=ON \
    -S . \
    -B build
+
 make -C build %{?_smp_mflags}
 
 %check
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
 # Exclude tests that are broken on Aarch64 SVE(_256) (no-op if HWY_ENABLE_TESTS=OFF)
 %{_ctest_prog} --test-dir build %{?_smp_mflags} \
    -E 'HwyBlockwiseShiftTestGroup/HwyBlockwiseShiftTest.TestAllShiftRightLanes/SVE|UnrollerTestGroup/UnrollerTest.TestAllConvert/SVE_256'
@@ -133,6 +140,8 @@ make -C build %{?_smp_mflags}
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
 cd build
 %make_install
 

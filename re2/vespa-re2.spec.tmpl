@@ -27,18 +27,16 @@ License:        BSD
 URL:            https://github.com/google/re2/
 Source0:        https://github.com/google/re2/archive/%{ver_major_long}.tar.gz
 
-%if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
-BuildRequires: gcc-toolset-13-gcc
-BuildRequires: gcc-toolset-13-gcc-c++
-%endif
-%if 0%{?el9}
-BuildRequires: gcc
-BuildRequires: gcc-c++
+%if 0%{?el8}%{?el9}
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: gcc-toolset-14-gcc
+BuildRequires: gcc-toolset-14-gcc-c++
+BuildRequires: vespa-cmake
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc
 BuildRequires: gcc-c++
+BuildRequires: cmake
 %endif
 BuildRequires: make
 
@@ -59,18 +57,32 @@ re2 compiled for vespa -- devel
 %prep
 %setup -n re2-%{ver_major_long}
 
-
 %build
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-%make_build libdir=%{_libdir} includedir=%{_includedir} PREFIX=%{_prefix} %{?_toolset_compiler_args}
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
+
+cmake -S . -B build \
+    -DCMAKE_PREFIX_PATH=%{_prefix} \
+    -DCMAKE_INSTALL_PREFIX=%{_prefix}     \
+    -DCMAKE_INSTALL_DO_STRIP=OFF \
+    -DCMAKE_INSTALL_RPATH=\$ORIGIN        \
+    -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
+    -DCMAKE_CXX_STANDARD=20 \
+    -DBUILD_SHARED_LIBS=ON \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+VERBOSE=1 cmake --build build %{?_smp_mflags}
 
 %install
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-%make_install libdir=%{_libdir} includedir=%{_includedir} INSTALL="install -p" PREFIX=%{_prefix} %{?_toolset_compiler_args}
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
+DESTDIR="%{buildroot}" cmake --install build
 
 %files
 %license LICENSE

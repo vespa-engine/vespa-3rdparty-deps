@@ -174,14 +174,13 @@ Requires: vespa-gbenchmark-devel = %{_vespa_gbenchmark_version}
 Requires: java-17-amazon-corretto-devel
 Requires: java-17-amazon-corretto
 Requires: maven-amazon-corretto17
-Requires: vespa-re2-devel = 20210801
 Requires: vespa-xxhash-devel >= 0.8.1
 %else
 Requires: java-%{_vespa_java_version}-openjdk-devel
 Requires: maven-openjdk%{_vespa_java_version}
-Requires: re2-devel
 Requires: xxhash-devel >= 0.8.1
 %endif
+Requires: re2-devel
 
 %description
 

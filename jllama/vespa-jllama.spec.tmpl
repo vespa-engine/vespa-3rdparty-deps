@@ -43,6 +43,7 @@ Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{ve
 BuildRequires: java-17-amazon-corretto-devel
 BuildRequires: java-17-amazon-corretto
 BuildRequires: maven-amazon-corretto17
+BuildRequires: vespa-ccache
 %else
 %if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?fedora}
 BuildRequires: java-%{_vespa_java_version}-openjdk-devel
@@ -54,11 +55,16 @@ BuildRequires: maven
 %endif
 %endif
 
-%if 0%{?el8}%{?el9}
+%if 0%{?el8} || 0%{?el9} || 0%{?amzn2023}
+BuildRequires: vespa-ccache
+%else
+BuildRequires: ccache
+%endif
+
+%if 0%{?el8} || 0%{?el9}
 BuildRequires: vespa-toolset-14-meta
 BuildRequires: gcc-toolset-14-gcc-c++
 %global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
-BuildRequires: vespa-ccache
 BuildRequires: vespa-cmake
 %global _enable_cuda 1
 %else
@@ -102,6 +108,7 @@ about packaging.
 source %{_devtoolset_enable} || true
 %endif
 
+# PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:/usr/local/cuda-%{_cuda_version_norm_num}/bin:$PATH
 mvn compile
 
