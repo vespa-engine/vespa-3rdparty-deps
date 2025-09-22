@@ -27,6 +27,7 @@ srpm:
 	spectool -g -C $(SOURCEDIR) $(SPECFILE)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
 	cp -a $(RPMTOPDIR)/SRPMS/* $(outdir)
+
 clean:
 	-rm -rf $(RPMTOPDIR)
 
