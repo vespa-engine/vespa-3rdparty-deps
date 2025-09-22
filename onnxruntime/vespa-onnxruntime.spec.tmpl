@@ -34,8 +34,7 @@ Patch2:         patches.use-gradle.diff
 Patch3:         patches.apply-cpuinfo.diff
 Patch4:         patches.onnx-use-extra.diff
 Patch5:         patches.extra-includes.diff
-Patch6:         patches.eigen-moved.diff
-Patch7:         patches.noexecstack.diff
+Patch6:         patches.noexecstack.diff
 
 %if 0%{?fedora} && !0%{?amzn}
 BuildRequires: cmake
@@ -147,7 +146,6 @@ about packaging.
 %patch -P 4 -p1
 %patch -P 5 -p1
 %patch -P 6 -p1
-%patch -P 7 -p1
 
 mkdir cmake/patches/pytorch_cpuinfo
 cp -a %{SOURCE1} cmake/patches/pytorch_cpuinfo/arm-linux-init.diff
@@ -252,6 +250,10 @@ about packaging.
 %endif
 
 %changelog
+* Mon Sep 22 2025 Arne Juul - 1.22.2
+- bump version to 1.22.2
+- remove temporary patch
+
 * Wed Jun 25 2025 Arne Juul - 1.22.0
 - bump version to 1.22.0
 - temporarily add patch for using github mirror for eigen
