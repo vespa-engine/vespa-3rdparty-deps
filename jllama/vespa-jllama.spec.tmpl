@@ -43,6 +43,7 @@ Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{ve
 BuildRequires: java-17-amazon-corretto-devel
 BuildRequires: java-17-amazon-corretto
 BuildRequires: maven-amazon-corretto17
+BuildRequires: vespa-ccache
 %else
 %if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?fedora}
 BuildRequires: java-%{_vespa_java_version}-openjdk-devel
