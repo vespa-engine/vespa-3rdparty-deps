@@ -108,6 +108,7 @@ about packaging.
 source %{_devtoolset_enable} || true
 %endif
 
+# PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:/usr/local/cuda-%{_cuda_version_norm_num}/bin:$PATH
 mvn compile
 

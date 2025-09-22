@@ -86,6 +86,8 @@ Google C++ testing framework -- gmock devel
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
 mkdir build
 %{?_cmake_prog}%{!?_cmake_prog:cmake} \
    -DBUILD_SHARED_LIBS=ON \
@@ -101,12 +103,16 @@ mkdir build
 make -C build %{?_smp_mflags}
 
 %check
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
 %{?_ctest_prog}%{!?_ctest_prog:ctest} --test-dir build %{?_smp_mflags}
 
 %install
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
+# PATH to vespa-cmake etc
+PATH=%{_prefix}/bin:$PATH
 cd build
 %make_install
 

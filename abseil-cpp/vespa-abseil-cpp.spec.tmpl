@@ -94,6 +94,7 @@ This package contains Abseil C++ headers and libraries.
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
+# PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:$PATH
 mkdir build
 %{_cmake_prog} \
@@ -117,6 +118,7 @@ mkdir build
 cmake --build build %{?_smp_mflags}
 
 %check
+# PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:$PATH
 %{_ctest_prog} --test-dir build %{?_smp_mflags}
 
@@ -124,6 +126,7 @@ PATH=%{_prefix}/bin:$PATH
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
+# PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:$PATH
 env DESTDIR="%{buildroot}" cmake --install build
 
