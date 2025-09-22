@@ -5,7 +5,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=0
 MINOR=8
 PATCH=1
-RELEASE=3
+RELEASE=4
 
 PKGNAME=vespa-xxhash
 RPMTOPDIR=$(TOP)/rpmbuild
