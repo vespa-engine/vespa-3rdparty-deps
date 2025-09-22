@@ -30,7 +30,6 @@ License:        Apache License, Version 2.0
 URL:            https://github.com/abseil/abseil-cpp
 Source0:        https://github.com/abseil/abseil-cpp/releases/download/%{version}/abseil-cpp-%{version}.tar.gz
 
-BuildRequires: cmake
 %global _cmake_prog cmake
 %global _ctest_prog ctest
 %if 0%{?el8} || 0%{?el9}
@@ -38,10 +37,12 @@ BuildRequires: cmake
 BuildRequires: gcc-toolset-14-gcc-c++
 BuildRequires: gcc-toolset-14-annobin-plugin-gcc
 BuildRequires: make
+BuildRequires: vespa-cmake
 %endif
 %if 0%{?el10} || 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: make
+BuildRequires: cmake
 %endif
 %if 0%{?_use_vespa_gtest}
 BuildRequires: vespa-gtest-devel%{?_isa} = %{_vespa_gtest_version}
@@ -97,7 +98,6 @@ PATH=%{_prefix}/bin:$PATH
 mkdir build
 %{_cmake_prog} \
     -DCMAKE_INSTALL_PREFIX=%{_prefix} \
-    -DCMAKE_INSTALL_DO_STRIP=OFF \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN \
     -DCMAKE_PREFIX_PATH=%{_prefix} \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
@@ -113,6 +113,7 @@ mkdir build
     -DCMAKE_CXX_STANDARD=20 \
     -S . \
     -B build
+
 cmake --build build %{?_smp_mflags}
 
 %check

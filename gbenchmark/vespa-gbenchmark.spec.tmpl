@@ -43,12 +43,14 @@ Source0:        https://github.com/google/benchmark/archive/refs/tags/v%{version
 %define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: gcc-toolset-14-gcc-c++
 BuildRequires: make
+BuildRequires: vespa-cmake
+%else
+BuildRequires: cmake
 %endif
 %if 0%{?el10} || 0%{?fedora}
 BuildRequires: gcc-c++
 BuildRequires: make
 %endif
-BuildRequires: cmake
 %global _cmake_prog cmake
 %global _ctest_prog ctest
 BuildRequires: which

@@ -48,6 +48,9 @@ Source0:        https://github.com/protocolbuffers/protobuf/releases/download/v%
 %define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: gcc-toolset-14-gcc-c++
 BuildRequires: make
+BuildRequires: vespa-cmake
+%else
+BuildRequires: cmake
 %endif
 %if 0%{?el10} || 0%{?fedora}
 BuildRequires: gcc-c++
@@ -58,7 +61,6 @@ BuildRequires: vespa-abseil-cpp-devel%{?_isa} = %{_vespa_abseil_cpp_version}
 %else
 BuildRequires: abseil-cpp-devel%{?_isa}
 %endif
-BuildRequires: cmake
 %global _cmake_prog cmake
 %global _ctest_prog ctest
 BuildRequires: which
