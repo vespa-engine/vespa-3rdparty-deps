@@ -30,8 +30,8 @@ URL:            https://github.com/facebook/zstd
 Source0:        https://github.com/facebook/zstd/archive/v%{version}.tar.gz#/zstd-%{version}.tar.gz
 
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset-13/enable
-BuildRequires: gcc-toolset-13-gcc
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: gcc-toolset-14-gcc
 %endif
 %if 0%{?el9} || 0%{?el10}
 BuildRequires: gcc

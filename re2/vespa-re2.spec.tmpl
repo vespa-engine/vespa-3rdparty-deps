@@ -33,11 +33,14 @@ BuildRequires: gcc-toolset-14-gcc
 BuildRequires: gcc-toolset-14-gcc-c++
 BuildRequires: vespa-cmake
 BuildRequires: vespa-abseil-cpp-devel
+%else
+BuildRequires: cmake
+BuildRequires: abseil-cpp-devel
 %endif
+
 %if 0%{?fedora}
 BuildRequires: gcc
 BuildRequires: gcc-c++
-BuildRequires: cmake
 %endif
 BuildRequires: make
 
@@ -89,7 +92,6 @@ DESTDIR="%{buildroot}" cmake --install build
 %license LICENSE
 %{_libdir}
 %exclude %{_libdir}/*.so
-%exclude %{_libdir}/libre2.a
 
 %files devel
 %license LICENSE
@@ -97,3 +99,5 @@ DESTDIR="%{buildroot}" cmake --install build
 %{_libdir}/*.so
 
 %changelog
+* Tue Aug 12 2025 Arne Juul
+- use 2025-08-12 version
