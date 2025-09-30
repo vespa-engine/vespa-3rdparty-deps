@@ -9,7 +9,7 @@
 %global _vespa_abseil_cpp_version 20250127.1
 %global _vespa_gtest_version 1.16.0
 %global _vespa_protobuf_version 5.30.1
-%global _vespa_onnxruntime_version 1.22.0
+%global _vespa_onnxruntime_version 1.22.2
 %global _vespa_libzstd_version 1.5.6-1
 %global _vespa_lz4_version 1.9.4-2
 %global _vespa_toolset_version 14.2.1
@@ -72,7 +72,6 @@ Requires: gcc-toolset-14-dwz
 Requires: glibc-langpack-en
 Requires: llvm-devel
 Requires: maven
-Requires: vespa-boost-devel >= 1.76.0-1
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
 Requires: vespa-openssl-devel >= 3.1.7
@@ -86,7 +85,6 @@ Requires: vespa-toolset-14-meta >= %{_vespa_toolset_version}
 
 %if 0%{?el9}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
-Requires: boost-devel >= 1.75
 Requires: vespa-cmake >= 3.29.1
 Requires: gcc-toolset-14-gcc-c++
 Requires: gcc-toolset-14-binutils
@@ -108,7 +106,6 @@ Requires: vespa-toolset-14-meta >= %{_vespa_toolset_version}
 
 %if 0%{?el10}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
-Requires: boost-devel >= 1.83
 Requires: cmake >= 3.30.5
 Requires: gcc-c++
 Requires: libatomic
@@ -126,7 +123,6 @@ Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 %endif
 
 %if 0%{?fedora}
-Requires: boost-devel
 Requires: cmake >= 3.9.1
 %if 0%{?amzn2023}
 Requires: gcc14-c++
