@@ -4,7 +4,10 @@
 %undefine _missing_build_ids_terminate_build
 
 # Force special prefix for Vespa
-%define _prefix /opt/vespa-deps
+%global _prefix /opt/vespa-deps
+
+# allow rpath pointing to our libdir
+%global __brp_check_rpaths %{nil}
 
 # Only strip debug info
 %global _find_debuginfo_opts -g
@@ -19,10 +22,10 @@
 %global __requires_exclude_from /c_rehash$|\\.pl$
 
 # Version
-%define ver_major _TMPL_VER_MAJOR
-%define ver_minor _TMPL_VER_MINOR
-%define ver_patch _TMPL_VER_PATCH
-%define ver_release _TMPL_VER_RELEASE
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
 
 Summary:        OpenSSL package for Vespa
 Name:           vespa-openssl
@@ -32,16 +35,19 @@ License:        Apache License v2
 URL:            https://www.openssl.org
 Source0:        https://github.com/openssl/openssl/releases/download/openssl-%{version}/openssl-%{version}.tar.gz
 
-
-%if 0%{?el8}%{?el9}
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
-BuildRequires: gcc-toolset-14-gcc-c++
 BuildRequires: make
 BuildRequires: perl
+%if 0%{?el8} || 0%{?el9}
+%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: vespa-toolset-14-meta
+BuildRequires: gcc-toolset-14-gcc-c++
+%endif
+%if 0%{?el10}
+BuildRequires: gcc-c++
+%global _extra_cpp_flags -fPIC
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
-BuildRequires: make
 BuildRequires: perl-File-Compare
 BuildRequires: perl-File-Copy
 BuildRequires: perl-FindBin
@@ -65,8 +71,13 @@ OpenSSL dev package for Vespa.
 source %{_devtoolset_enable} || true
 %endif
 mkdir build && cd build
-CFLAGS="-g -O3" \
-../config --prefix=%{_prefix} --openssldir=%{_prefix}/conf/ssl --libdir=lib64 -Wl,-rpath=%{_prefix}/lib64 %{?_configure_args}
+/usr/bin/env \
+	CFLAGS="-g -O3 %{?_extra_cpp_flags}" \
+../config --prefix=%{_prefix} --openssldir=%{_prefix}/conf/ssl --libdir=lib64 -Wl,-rpath,%{_libdir} %{?_configure_args}
+
+perl -pi -e 's/ build_html_docs / /' Makefile
+perl -pi -e 's/ install_html_docs / /' Makefile
+
 make %{?_smp_mflags}
 
 %install
@@ -76,7 +87,7 @@ source %{_devtoolset_enable} || true
 cd build
 %make_install
 
-%define _unpackaged_files_terminate_build 0
+%global _unpackaged_files_terminate_build 0
 
 %files
 %{_prefix}/bin/
@@ -91,3 +102,5 @@ cd build
 %license LICENSE.txt
 
 %changelog
+* Wed Oct  1 2025 - Arne Juul
+- for 3.5.4, add -fPIC on el10
