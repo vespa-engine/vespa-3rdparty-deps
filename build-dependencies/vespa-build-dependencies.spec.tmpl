@@ -61,6 +61,7 @@ Requires: vespa-datasketches-cpp = %{_vespa_datasketches_version}
 Requires: vespa-jllama = %{_vespa_jllama_version}
 Requires: vespa-mimalloc-devel = %{_vespa_mimalloc_version}
 Requires: vespa-gbenchmark-devel = %{_vespa_gbenchmark_version}
+Requires: vespa-highway-devel = %{_vespa_highway_version}
 
 %if 0%{?el8}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
