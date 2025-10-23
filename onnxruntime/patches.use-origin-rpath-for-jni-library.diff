@@ -1,12 +1,10 @@
-diff --git a/cmake/onnxruntime_java.cmake b/cmake/onnxruntime_java.cmake
-index d7b47f699..542f72b6f 100644
---- a/cmake/onnxruntime_java.cmake
-+++ b/cmake/onnxruntime_java.cmake
-@@ -52,6 +52,7 @@
+--- a/cmake/onnxruntime_java.cmake	2025-09-27 03:28:08.000000000 +0000
++++ b/cmake/onnxruntime_java.cmake	2025-10-23 13:45:43.334017983 +0000
+@@ -57,6 +57,7 @@
  # Build the JNI library
  onnxruntime_add_shared_library_module(onnxruntime4j_jni ${onnxruntime4j_native_src})
  set_property(TARGET onnxruntime4j_jni PROPERTY C_STANDARD 11)
 +set_target_properties(onnxruntime4j_jni PROPERTIES BUILD_RPATH_USE_ORIGIN TRUE)
  
- # depend on java sources. if they change, the JNI should recompile
- add_dependencies(onnxruntime4j_jni onnxruntime4j)
+ if (APPLE)
+   set_target_properties(onnxruntime4j_jni PROPERTIES
