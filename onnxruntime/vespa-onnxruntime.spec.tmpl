@@ -34,9 +34,8 @@ Patch2:         patches.use-gradle.diff
 Patch3:         patches.apply-cpuinfo.diff
 Patch4:         patches.onnx-use-extra.diff
 Patch5:         patches.extra-includes.diff
-Patch6:         patches.noexecstack.diff
 
-%if 0%{?fedora} && !0%{?amzn}
+%if ( 0%{?fedora} && !0%{?amzn} ) || 0%{?el10}
 BuildRequires: cmake
 BuildRequires: ccache
 %else
@@ -145,7 +144,6 @@ about packaging.
 %patch -P 3 -p1
 %patch -P 4 -p1
 %patch -P 5 -p1
-%patch -P 6 -p1
 
 mkdir cmake/patches/pytorch_cpuinfo
 cp -a %{SOURCE1} cmake/patches/pytorch_cpuinfo/arm-linux-init.diff

@@ -1,20 +1,20 @@
 diff --git a/cmake/patches/onnx/onnx.patch b/cmake/patches/onnx/onnx.patch
-index 4ca96834c6..34ae5905ae 100644
+index f51370212f..65904c093d 100644
 --- a/cmake/patches/onnx/onnx.patch
 +++ b/cmake/patches/onnx/onnx.patch
-@@ -31,6 +31,15 @@ index 6d7ca846..69aa622f 100644
+@@ -85,6 +85,15 @@ index 8b5af303..8593fe4a 100644
                                    ${EXTRA_FLAGS})
-    if(ONNX_USE_PROTOBUF_SHARED_LIBS)
-        target_compile_options(onnx_proto
-+@@ -696,7 +686,7 @@
-+ elseif(APPLE)
-+ 
+    add_msvc_runtime_flag(onnx_proto)
+    add_msvc_runtime_flag(onnx)
++@@ -641,7 +641,7 @@
++                         PROPERTIES STATIC_LIBRARY_FLAGS
++                                    "${onnx_static_library_flags}")
 + else()
 +-  target_compile_options(onnx PRIVATE -Wall -Wextra)
 ++  target_compile_options(onnx PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable)
-+ endif()
-+ 
-+ if(APPLE)
- diff --git a/onnx/common/file_utils.h b/onnx/common/file_utils.h
- index b847798e..a6c31904 100644
- --- a/onnx/common/file_utils.h
++   if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
++     target_compile_options(onnx PRIVATE "-Wno-stringop-overflow")
++     target_compile_options(onnx_proto PRIVATE "-Wno-stringop-overflow")
+ diff --git a/onnx/defs/nn/defs.cc b/onnx/defs/nn/defs.cc
+ index 64366270..4aed9027 100644
+ --- a/onnx/defs/nn/defs.cc
