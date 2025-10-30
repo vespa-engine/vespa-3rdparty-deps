@@ -167,6 +167,15 @@ if [ -f /usr/bin/python3.11 ]; then
     sed -i 's=^python3 =python3.11 =' build.sh
 fi
 
+if [ $(arch) = "aarch64" ]; then
+	CXXFLAGS="-march=armv8.2-a+fp16+dotprod+crypto -mtune=neoverse-n1"
+	export CXXFLAGS
+fi
+if [ $(arch) = "x86_64" ]; then
+	CXXFLAGS="-march=haswell -mtune=skylake-avx512"
+	export CXXFLAGS
+fi
+
 ./build.sh \
     --allow_running_as_root \
     --config RelWithDebInfo \
