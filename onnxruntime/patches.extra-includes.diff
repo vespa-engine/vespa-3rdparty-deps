@@ -1,5 +1,17 @@
+diff --git a/onnxruntime/core/common/semver.h b/onnxruntime/core/common/semver.h
+index a07c24f016..7d488fcb2d 100644
+--- a/onnxruntime/core/common/semver.h
++++ b/onnxruntime/core/common/semver.h
+@@ -5,6 +5,7 @@
+ 
+ #include <optional>
+ #include <string_view>
++#include <cstdint>
+ 
+ #include "core/common/status.h"
+ 
 diff --git a/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h b/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
-index 7122aec45e..dd42c60bea 100644
+index ae321cca09..0b876ff1fd 100644
 --- a/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
 +++ b/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
 @@ -3,6 +3,7 @@
