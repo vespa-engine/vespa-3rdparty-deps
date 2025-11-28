@@ -1,0 +1,83 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Don't create separate debug package
+%global debug_package %{nil}
+
+# Don't "provide" the shared library
+%global __provides_exclude ^lib.*\\.so[0-9.]*\\(\\)\\(64bit\\)
+%global __requires_exclude ^lib.*\.so[0-9.]*\\(64bit\\)$
+
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+%global orig_name libatomic
+
+Summary:        This package contains the GNU Atomic library
+Name:           vespa-%{orig_name}
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        MIT
+URL:            https://gcc.gnu.org/
+Source0:        https://ftp.fu-berlin.de/unix/languages/gcc/releases/gcc-%{version}/gcc-%{version}.tar.gz
+
+%if 0%{?el8} || 0%{?el9}
+BuildRequires: vespa-toolset-14-meta
+%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: binutils-devel
+BuildRequires: dejagnu
+BuildRequires: elfutils-devel
+BuildRequires: elfutils-libelf-devel
+BuildRequires: gcc-toolset-14-gdb
+BuildRequires: glibc-static
+BuildRequires: gmp-devel
+BuildRequires: libmpc-devel
+BuildRequires: make
+BuildRequires: mpfr-devel
+BuildRequires: rpm-devel
+BuildRequires: scl-utils-build
+BuildRequires: sharutils
+%endif
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q -n gcc-%{version}
+
+%build
+
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable}
+%endif
+
+mkdir -p build
+cd build
+../configure --prefix=%{_prefix} --disable-bootstrap CFLAGS="${annoflags}"  CXXFLAGS="${annoflags}" LDFLAGS="${annoflags}" LDFLAGS_FOR_TARGET="${annoflags}"
+make %{?_smp_mflags}
+
+%install
+cd build
+liba_mkf=$(echo *-linux-*/libatomic/Makefile)
+liba_dir=${liba_mkf%/Makefile}
+cd ${liba_dir}
+%make_install
+
+%files
+%{_libdir}/libatomic.*
+
+%changelog
+* Thu Nov 27 2025 - arnej@vespa.ai
+- just compile gcc and package libatomic
