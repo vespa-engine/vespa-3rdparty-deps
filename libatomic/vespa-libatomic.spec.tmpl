@@ -25,7 +25,7 @@ Summary:        This package contains the GNU Atomic library
 Name:           vespa-%{orig_name}
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
-License:        MIT
+License:        LGPL
 URL:            https://gcc.gnu.org/
 Source0:        https://ftp.fu-berlin.de/unix/languages/gcc/releases/gcc-%{version}/gcc-%{version}.tar.gz
 
@@ -65,7 +65,7 @@ source %{_devtoolset_enable}
 
 mkdir -p build
 cd build
-../configure --prefix=%{_prefix} --disable-bootstrap CFLAGS="${annoflags}"  CXXFLAGS="${annoflags}" LDFLAGS="${annoflags}" LDFLAGS_FOR_TARGET="${annoflags}"
+../configure --prefix=%{_prefix} --disable-bootstrap
 make %{?_smp_mflags}
 
 %install
@@ -76,6 +76,7 @@ cd ${liba_dir}
 %make_install
 
 %files
+%license COPYING.RUNTIME
 %{_libdir}/libatomic.*
 
 %changelog
