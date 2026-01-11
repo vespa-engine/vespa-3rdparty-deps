@@ -1,0 +1,66 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# no debuggable binaries here
+%global debug_package %{nil}
+BuildArchitectures: noarch
+
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+Summary:        Vespa meta-package for gcc-toolset
+Name:           vespa-toolset-%{ver_major}-meta
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        Apache
+URL:            https://vespa.ai/
+Patch0:         patch.gthr-default.h.diff
+Patch1:         patch.stl_vector.h.diff
+
+%if 0%{?el8}%{?el9}
+Requires: gcc-toolset-%{ver_major}-gcc-c++
+Requires: gcc-toolset-%{ver_major}-libatomic-devel
+Requires: gcc-toolset-%{ver_major}-gcc-plugin-annobin
+
+%global _devtoolset_enable /opt/rh/gcc-toolset-%{ver_major}/enable
+%endif
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+Meta-package for required gcc-toolset packages and fixups.
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%global mydir %{_prefix}/share/toolset-meta/%{ver_major}
+%install
+mkdir -p %{buildroot}%{mydir}
+cp -a %{_sourcedir}/patch.gthr-default.h.diff %{buildroot}%{mydir}
+cp -a %{_sourcedir}/patch.stl_vector.h.diff   %{buildroot}%{mydir}
+
+%files
+%{mydir}
+
+%post
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable}
+lgcf=`gcc -print-libgcc-file-name`
+libdir=${lgcf%/libgcc.*}
+vernum=${libdir##*/}
+parentdir=${libdir%/*}
+triple=${parentdir##*/}
+rootdir=${parentdir%/lib/gcc/*}
+incdir=${rootdir}/include/c++/${vernum}
+cd ${incdir} || exit 1
+cat %{mydir}/patch.stl_vector.h.diff | patch -p0 -r -
+cd ${triple} || exit 1
+cat %{mydir}/patch.gthr-default.h.diff | patch -p0 -r -
+rm -f /opt/rh/gcc-toolset
+ln -s $(dirname %{_devtoolset_enable}) /opt/rh/gcc-toolset
+printf '%s\n'  "# gcc"  "source /opt/rh/gcc-toolset/enable"  > /etc/profile.d/enable-gcc-toolset.sh
+%endif
+
+%changelog

@@ -1,0 +1,13 @@
+--- bits/gthr-default.h.orig	2026-01-11 10:24:04.472764635 +0000
++++ bits/gthr-default.h	2026-01-11 10:25:00.552681680 +0000
+@@ -285,9 +285,7 @@
+ __GTHREAD_INLINE int
+ __gthread_active_p (void)
+ {
+-  static void *const __gthread_active_ptr
+-    = __extension__ (void *) &GTHR_ACTIVE_PROXY;
+-  return __gthread_active_ptr != 0;
++  return 1;
+ }
+ #pragma GCC visibility pop
+ 

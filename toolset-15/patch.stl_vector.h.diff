@@ -1,0 +1,34 @@
+--- bits/stl_vector.h.orig	2026-01-11 10:28:35.672363496 +0000
++++ bits/stl_vector.h	2026-01-11 10:28:37.691360510 +0000
+@@ -2111,13 +2111,13 @@
+ #if __cplusplus < 201103L
+       // Called by insert(p,x)
+       void
+-      _M_insert_aux(iterator __position, const value_type& __x);
++      _M_insert_aux(iterator __position, const value_type& __x) __attribute((noinline));
+ 
+       void
+-      _M_realloc_insert(iterator __position, const value_type& __x);
++      _M_realloc_insert(iterator __position, const value_type& __x) __attribute((noinline));
+ 
+       void
+-      _M_realloc_append(const value_type& __x);
++      _M_realloc_append(const value_type& __x) __attribute((noinline));
+ #else
+       // A value_type object constructed with _Alloc_traits::construct()
+       // and destroyed with _Alloc_traits::destroy().
+@@ -2160,12 +2160,12 @@
+       template<typename _Arg>
+ 	_GLIBCXX20_CONSTEXPR
+ 	void
+-	_M_insert_aux(iterator __position, _Arg&& __arg);
++	_M_insert_aux(iterator __position, _Arg&& __arg) __attribute((noinline));
+ 
+       template<typename... _Args>
+ 	_GLIBCXX20_CONSTEXPR
+ 	void
+-	_M_realloc_insert(iterator __position, _Args&&... __args);
++	_M_realloc_insert(iterator __position, _Args&&... __args) __attribute((noinline));
+ 
+       template<typename... _Args>
+ 	_GLIBCXX20_CONSTEXPR
