@@ -4,7 +4,7 @@
 %undefine _missing_build_ids_terminate_build
 
 # Force special prefix for Vespa
-%define _prefix /opt/vespa-deps
+%global _prefix /opt/vespa-deps
 
 # use one of these two alternatives:
 # Don't create separate debug package
@@ -40,7 +40,7 @@ Source0:        https://github.com/xxx-home/%{orig_name}/archive/refs/tags/v%{ve
 # Some common things, may need to change
 %if 0%{?el8}%{?el9}
 BuildRequires: vespa-toolset-14-meta
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: vespa-cmake
 %else
 BuildRequires: gcc-c++

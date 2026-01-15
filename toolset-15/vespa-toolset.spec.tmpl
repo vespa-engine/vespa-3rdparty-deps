@@ -19,7 +19,7 @@ URL:            https://vespa.ai/
 Patch0:         patch.gthr-default.h.diff
 Patch1:         patch.stl_vector.h.diff
 
-%if 0%{?el8}%{?el9}
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
 Requires: gcc-toolset-%{ver_major}-gcc-c++
 Requires: gcc-toolset-%{ver_major}-libatomic-devel
 Requires: gcc-toolset-%{ver_major}-gcc-plugin-annobin
@@ -45,6 +45,10 @@ cp -a %{_sourcedir}/patch.stl_vector.h.diff   %{buildroot}%{mydir}
 %{mydir}
 
 %post
+%if 0%{?el10}
+rm -f /opt/rh/gcc-toolset-%{ver_major}/enable
+ln -s /usr/lib/gcc-toolset/%{ver_major}-env.source /opt/rh/gcc-toolset-%{ver_major}/enable
+%endif
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable}
 lgcf=`gcc -print-libgcc-file-name`
@@ -64,3 +68,5 @@ printf '%s\n'  "# gcc"  "source /opt/rh/gcc-toolset/enable"  > /etc/profile.d/en
 %endif
 
 %changelog
+* Tue Jan 13 2026 - arnej
+- added; gcc-toolset-15 now available on EL8, EL9 and EL10
