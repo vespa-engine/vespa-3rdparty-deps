@@ -4,8 +4,8 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 # Version
 MAJOR=3
 MINOR=5
-PATCH=4
-RELEASE=2
+PATCH=5
+RELEASE=1
 
 # The actual name for the generated (base) package
 PKGNAME=vespa-openssl
