@@ -20,8 +20,12 @@
 %global _vespa_highway_version 1.3.0
 %global _vespa_gbenchmark_version 1.9.4
 %if 0%{?fedora}
+%if %{fedora} > 43
+%global _vespa_java_version 25
+%else
 %if %{fedora} > 39
 %global _vespa_java_version 21
+%endif
 %endif
 %endif
 %if 0%{?el10} || 0%{?el9}
