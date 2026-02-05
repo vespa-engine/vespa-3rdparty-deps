@@ -12,7 +12,6 @@
 %global _vespa_onnxruntime_version 1.23.2
 %global _vespa_libzstd_version 1.5.6-1
 %global _vespa_lz4_version 1.9.4-2
-%global _vespa_toolset_version 14.2.1
 %global _vespa_openblas_version 0.3.27
 %global _vespa_jllama_version 4.1.0
 %global _vespa_datasketches_version 5.2.0
@@ -33,6 +32,11 @@
 %endif
 %if ! 0%{?_vespa_java_version:1}
 %global _vespa_java_version 17
+%endif
+%if  0%{?el9} || 0%{?el10}
+%global _vespa_toolset_version 15.0.0
+%else
+%global _vespa_toolset_version 14.2.1
 %endif
 
 Name:           vespa-build-dependencies
@@ -91,9 +95,6 @@ Requires: maven-openjdk%{_vespa_java_version}
 %if 0%{?el9}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
 Requires: vespa-cmake >= 3.29.1
-Requires: gcc-toolset-14-gcc-c++
-Requires: gcc-toolset-14-binutils
-Requires: gcc-toolset-14-libatomic-devel
 Requires: gcc-toolset-14-dwz
 Requires: glibc-langpack-en
 Requires: vespa-gmock-devel = %{_vespa_gtest_version}
@@ -105,8 +106,8 @@ Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
-Requires: vespa-toolset-14-meta >= %{_vespa_toolset_version}
 Requires: maven-openjdk%{_vespa_java_version}
+Requires: vespa-toolset-15-meta >= %{_vespa_toolset_version}
 %endif
 
 %if 0%{?el10}
@@ -125,6 +126,7 @@ Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: abseil-cpp-devel
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 Requires: maven-openjdk%{_vespa_java_version}
+Requires: vespa-toolset-15-meta >= %{_vespa_toolset_version}
 %endif
 
 %if 0%{?fedora}
