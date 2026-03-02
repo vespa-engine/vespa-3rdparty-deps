@@ -112,18 +112,37 @@ source %{_devtoolset_enable} || true
 PATH=%{_prefix}/bin:/usr/local/cuda-%{_cuda_version_norm_num}/bin:$PATH
 mvn compile
 
+%ifarch x86_64
+%define _arch_cmake_options \
+    -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG -msse4.2 -mf16c -mfma -mbmi2 -mavx -mavx2" \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG -msse4.2 -mf16c -mfma -mbmi2 -mavx -mavx2" \
+    -DGGML_SSE42=ON \
+    -DGGML_F16C=ON \
+    -DGGML_FMA=ON \
+    -DGGML_BMI2=ON \
+    -DGGML_AVX=ON \
+    -DGGML_AVX2=ON
+%endif
+
+%ifarch aarch64
+%define _arch_cmake_options \
+    -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG -march=armv8.2-a+fp16+dotprod+crypto -mtune=neoverse-n1" \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG -march=armv8.2-a+fp16+dotprod+crypto -mtune=neoverse-n1" \
+    -DGGML_USE_CPU_AARCH64=ON
+%endif
+
 %define _common_cmake_options \
-    -DCMAKE_INSTALL_RPATH=\$ORIGIN \
+    -DCMAKE_INSTALL_RPATH='\$ORIGIN' \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
-    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DGGML_METAL=OFF \
     -DGGML_OPENMP=ON \
     -DGGML_NATIVE=OFF \
     -DLLAMA_NATIVE=OFF
 
-cmake -S . -B build %{shrink:%{_common_cmake_options}} \
+cmake -S . -B build %{shrink:%{_common_cmake_options}} %{shrink:%{_arch_cmake_options}} \
+    -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DGGML_CUDA=OFF
 
 VERBOSE=1 cmake --build build --config RelWithDebInfo -j 4
