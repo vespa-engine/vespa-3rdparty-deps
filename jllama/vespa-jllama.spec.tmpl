@@ -141,8 +141,6 @@ mvn compile
     -DLLAMA_NATIVE=OFF
 
 cmake -S . -B build %{shrink:%{_common_cmake_options}} %{shrink:%{_arch_cmake_options}} \
-    -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
-    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DGGML_CUDA=OFF
 
 VERBOSE=1 cmake --build build --config RelWithDebInfo -j 4
@@ -151,6 +149,8 @@ VERBOSE=1 cmake --build build --config RelWithDebInfo -j 4
 
 cmake -S . -B build-cuda %{shrink:%{_common_cmake_options}} \
     -DGGML_CUDA=ON \
+    -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DCMAKE_CUDA_ARCHITECTURES="75;80;89"
 
 VERBOSE=1 cmake --build build-cuda -j 4
