@@ -24,7 +24,7 @@
 %global _vespa_java_version 21
 %endif
 %endif
-%if 0%{?el10}
+%if 0%{?el9} || 0%{?el10}
 %global _vespa_java_version 21
 %endif
 %if ! 0%{?_vespa_java_version:1}
@@ -37,7 +37,7 @@ Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        MIT
 URL:            https://github.com/kherud/
-Source0:        https://github.com/kherud/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
+Source0:        https://github.com/arnej27959/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
 
 %if 0%{?amzn2023}
 BuildRequires: java-17-amazon-corretto-devel
