@@ -25,10 +25,8 @@ Release:        %{ver_release}%{?dist}
 License:        MIT
 URL:            https://github.com/WireGuard/wireguard-go
 BuildRequires:  make
-BuildRequires:  golang >= 1.12.9
-# The source is set to a fixed commit here becase wireguard-go is not released frequently. We can switch back after 
-# they have tagged a new release
-Source0:        https://github.com/WireGuard/wireguard-go/archive/%{gitref}.zip
+BuildRequires:  golang >= 1.24.0
+Source0:        https://github.com/WireGuard/wireguard-go/archive/refs/tags/%{version}.zip
 
 %description
 Wireguard-go built for Vespa.
@@ -38,7 +36,7 @@ Wireguard-go built for Vespa.
 
 %prep
 # Extract wireguard-go
-%setup -T -b 0 -q -n wireguard-go-%{gitref}
+%setup -T -b 0 -q -n wireguard-go-%{version}
 
 %build
 PATH=$HOME/go/bin:$PATH
@@ -48,6 +46,7 @@ PATH=$HOME/sdk/go%{go_version}/bin/:$PATH
 go version
 go env -w GOPROXY="https://proxy.golang.org,direct"
 make
+grep crypto go.mod
 
 %install
 %make_install PREFIX=%{_prefix}
