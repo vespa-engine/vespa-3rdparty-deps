@@ -1,0 +1,76 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# NOTE: not our usual prefix
+%global _prefix /usr
+
+%global debug_package %{nil}
+
+BuildArchitectures: noarch
+
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+%global orig_name maven
+
+Summary: Java project management and project comprehension tool
+
+Name:           vespa-%{orig_name}
+Conflicts:      %{orig_name}
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        Apache
+URL:            https://projects.apache.org/project.html?maven
+Source0:        https://dlcdn.apache.org/maven/maven-%{ver_major}/%{version}/binaries/apache-maven-%{version}-bin.zip
+BuildRequires:  unzip
+
+%if 0%{?el8}
+Requires: java-17-openjdk-devel
+%endif
+
+%if 0%{?el9} || 0%{?el10}
+Requires: java-21-openjdk-devel
+%endif
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+Maven is a software project management and comprehension tool. Based on the
+concept of a project object model (POM), Maven can manage a project's build,
+reporting and documentation from a central piece of information.
+
+Vespa note:
+This package exists so we can drop in a simple RPM instead of the various
+packages supplied by the OS vendor, and is only used in a few restricted
+circumstances (like our automated system test setup).
+
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q -n apache-%{orig_name}-%{version}
+
+%build
+ls -lA
+
+%install
+%global target_dir %{_datadir}/apache-%{orig_name}-%{version}
+
+mkdir -p %{buildroot}%{target_dir}
+mkdir -p %{buildroot}%{_bindir}
+
+cp -a . %{buildroot}%{target_dir}
+
+ln -s %{target_dir}/bin/mvn %{buildroot}%{_bindir}/mvn
+
+%files
+%license LICENSE
+%{target_dir}
+%{_bindir}/mvn
+
+%changelog
+* Fri Mar  6 2026 - arnej
+- just repacking as an RPM
