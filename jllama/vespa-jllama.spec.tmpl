@@ -20,8 +20,12 @@
 %define ver_release _TMPL_VER_RELEASE
 
 %if 0%{?fedora}
+%if %{fedora} > 43
+%global _vespa_java_version 25
+%else
 %if %{fedora} > 39
 %global _vespa_java_version 21
+%endif
 %endif
 %endif
 %if 0%{?el9} || 0%{?el10}
