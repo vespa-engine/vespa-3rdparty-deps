@@ -127,7 +127,6 @@ PATH=%{_prefix}/bin:$PATH
 
 mkdir build
 %{_cmake_prog} \
-   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
    -DCMAKE_INSTALL_RPATH='$ORIGIN' \
    -DCMAKE_PREFIX_PATH=%{_prefix} \
