@@ -15,6 +15,9 @@
 %global _use_vespa_gtest 1
 %global _vespa_gtest_version 1.16.0
 %endif
+%if 0%{?amzn2023}
+%global _cmake_extra_options -DCMAKE_C_COMPILER=gcc14-gcc -DCMAKE_CXX_COMPILER=gcc14-g++
+%endif
 
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
@@ -40,7 +43,12 @@ BuildRequires: make
 BuildRequires: vespa-cmake
 %endif
 %if 0%{?el10} || 0%{?fedora}
+%if 0%{?amzn2023}
+BuildRequires: gcc14-c++
+BuildRequires: vespa-gcc14-annobin-plugin
+%else
 BuildRequires: gcc-c++
+%endif
 BuildRequires: make
 BuildRequires: cmake
 %endif
@@ -115,6 +123,7 @@ mkdir build
     -DABSL_FIND_GOOGLETEST=ON \
     -DABSL_PROPAGATE_CXX_STD=ON \
     -DCMAKE_CXX_STANDARD=20 \
+    %{?_cmake_extra_options} \
     -S . \
     -B build
 

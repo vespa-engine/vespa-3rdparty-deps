@@ -1,0 +1,72 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't enable LTO
+%global _lto_cflags %{nil}
+
+%global _plugin_dir %(test -f /usr/bin/gcc14-gcc && gcc14-gcc --print-file-name=plugin || true)
+
+Summary:        Annobin plugin for gcc 14
+Name:           vespa-gcc14-annobin-plugin
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        GPL
+URL:            https://sourceware.org/annobin/
+Source0:        source-is-in-annobin-plugin-gcc-package
+
+%if 0%{?amzn2023}
+BuildRequires: gcc14-c++
+BuildRequires: gcc14-plugin-devel
+BuildRequires: annobin-plugin-gcc
+BuildRequires: elfutils-libelf-devel
+BuildRequires: rpm-devel
+BuildRequires: make
+%endif
+
+%description
+Annobin plugin for gcc 14 on Amazon Linux 2023.
+
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%if ! 0%{?amzn2023}
+echo This RPM is only for Amaon Linux 2023
+exit 1
+%endif
+%setup -c -T
+tar --transform='s,^annobin-[0-9.]*/,,' -xf /usr/src/annobin/latest-annobin.tar.xz
+
+%build
+
+# Build temporary annobin without using annobin
+env CC=gcc14-gcc CXX=gcc14-g++ CFLAGS="-g -O3" CXXFLAGS="-g -O3" LDFLAGS= \
+  ./configure --with-gcc-plugin-dir=%{_plugin_dir}
+TMPDEST=$(pwd)/tmpdest
+TMP_PLUGIN_PATH=${TMPDEST}%{_plugin_dir}
+make -C gcc-plugin DESTDIR=${TMPDEST} install
+make -C gcc-plugin clean
+rm config.status
+# Rebuild using temporary annobin
+env CC="gcc14-gcc -iplugindir=${TMP_PLUGIN_PATH}" CXX="gcc14-g++ -iplugindir=${TMP_PLUGIN_PATH}" \
+  ./configure --with-gcc-plugin-dir=%{_plugin_dir}
+make -C gcc-plugin
+
+%install
+
+make -C gcc-plugin DESTDIR=%{buildroot} install
+
+%files
+%{_plugin_dir}
+%license LICENSE
+
+%changelog
+* Thu Mar 26 2026 Tor Egge - 14.2.1
+- Just rebuild annobin using gcc14-g++
