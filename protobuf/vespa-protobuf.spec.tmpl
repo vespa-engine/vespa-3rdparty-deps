@@ -27,7 +27,10 @@
 %global _use_vespa_gtest 1
 %global _vespa_gtest_version 1.16.0
 %global _use_vespa_abseil_cpp 1
-%global _vespa_abseil_cpp_version 20250127.1
+%global _vespa_abseil_cpp_version 20260107.1
+%endif
+%if 0%{?amzn2023}
+%global _cmake_extra_options -DCMAKE_C_COMPILER=gcc14-gcc -DCMAKE_CXX_COMPILER=gcc14-g++
 %endif
 
 # Don't provide shared library or pkgconfig
@@ -53,7 +56,12 @@ BuildRequires: vespa-cmake
 BuildRequires: cmake
 %endif
 %if 0%{?el10} || 0%{?fedora}
+%if 0%{?amzn2023}
+BuildRequires: gcc14-c++
+BuildRequires: vespa-gcc14-annobin-plugin
+%else
 BuildRequires: gcc-c++
+%endif
 BuildRequires: make
 %endif
 %if 0%{?_use_vespa_abseil_cpp}
@@ -92,6 +100,7 @@ This package contains protobuf runtime library for C++.
 %package devel
 Summary:        Protocol Buffers for C++ development
 Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-upb%{?_isa} = %{version}-%{release}
 %if 0%{?_use_vespa_abseil_cpp}
 Requires:       vespa-abseil-cpp-devel%{?_isa} = %{_vespa_abseil_cpp_version}
 %else
@@ -101,6 +110,18 @@ Requires:       abseil-cpp-devel%{?_isa}
 %description devel
 This package contains protobuf compiler for C++ and C++ headers and libraries.
 %{_vespa_3rdparty_deps_packaging_notice}
+
+%package upb
+Summary:        micro-protobuf library
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+%if 0%{?_use_vespa_abseil_cpp}
+Requires:       vespa-abseil-cpp-devel%{?_isa} = %{_vespa_abseil_cpp_version}
+%else
+Requires:       abseil-cpp-devel%{?_isa}
+%endif
+
+%description upb
+This package contains the micro-protobuf library (libupb) for static linking.
 
 %prep
 %setup -q -n protobuf-%{ver_minor}.%{ver_patch}
@@ -115,15 +136,15 @@ PATH=%{_prefix}/bin:$PATH
 mkdir build
 %{_cmake_prog} \
    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
-   -DCMAKE_INSTALL_RPATH=%{_libdir} \
+   -DCMAKE_INSTALL_RPATH='$ORIGIN' \
    -DCMAKE_PREFIX_PATH=%{_prefix} \
    -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3" \
+   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -Wno-deprecated-declarations" \
    -DBUILD_SHARED_LIBS=ON \
    -DCMAKE_CXX_STANDARD=23 \
    -Dprotobuf_LOCAL_DEPENDENCIES_ONLY=ON \
-   -Dprotobuf_BUILD_LIBUPB=OFF \
+    %{?_cmake_extra_options} \
    -S . \
    -B build
 
@@ -167,6 +188,15 @@ DESTDIR="%{buildroot}" %{_cmake_prog} --install build
 %{_bindir}/protoc-%{version_suffix}
 %license LICENSE
 
+%files upb
+%{_bindir}/protoc-gen-upb*
+%{_libdir}/libupb.a
+%{_includedir}/upb
+%license LICENSE
+
 %changelog
+* Thu Mar 26 2026 Arne Juul - 6.34.1
+- Track upstream release of protobuf 34.1
+
 * Tue Mar 18 2025 Tor Egge <Tor.Egge@online.no> - 5.30.1
 - Track upstream release of protobuf 30.1
