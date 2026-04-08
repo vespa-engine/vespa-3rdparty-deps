@@ -4,16 +4,18 @@
 %undefine _missing_build_ids_terminate_build
 
 # Force special prefix for Vespa
-%define _prefix /opt/vespa-deps
+%global _prefix /opt/vespa-deps
 
 # Version
-%define ver_major _TMPL_VER_MAJOR
-%define ver_minor _TMPL_VER_MINOR
-%define ver_patch _TMPL_VER_PATCH
-%define ver_release _TMPL_VER_RELEASE
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+%global orig_name valgrind
 
 Summary:        Valgrind compiled for vespa
-Name:           vespa-valgrind
+Name:           vespa-%{orig_name}
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        GPLv2+
@@ -21,16 +23,14 @@ URL:            http://www.valgrind.org/
 Source0:        https://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
 
 %if 0%{?el8}
-%define _devtoolset_enable /opt/rh/gcc-toolset/enable
-%define _devtoolset_gdb /opt/rh/gcc-toolset-13/root/usr/bin/gdb
-BuildRequires: vespa-toolset-13-meta
+%global _devtoolset_enable /opt/rh/gcc-toolset/enable
+%global _devtoolset_gdb /opt/rh/gcc-toolset-14/root/usr/bin/gdb
+BuildRequires: vespa-toolset-14-meta
 BuildRequires: glibc-devel
-BuildRequires: gcc-toolset-13-gdb
+BuildRequires: gcc-toolset-14-gdb
 BuildRequires: procps
 BuildRequires: perl-generators
 BuildRequires: perl(Getopt::Long)
-BuildRequires: automake
-BuildRequires: autoconf
 BuildRequires: docbook-dtds
 BuildRequires: make
 BuildRequires: elfutils-debuginfod
@@ -41,15 +41,16 @@ BuildRequires: python3.11-rpm-macros
 
 %description
 Valgrind compiled for vespa.
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details
+about packaging.
 
 %prep
-%setup -q -n valgrind-%{version}
+%setup -q -n %{orig_name}-%{version}
 
 %build
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-./autogen.sh
 
 %undefine _strict_symbol_defs_build
 
@@ -78,3 +79,5 @@ source %{_devtoolset_enable} || true
 %{_prefix}/share/
 
 %changelog
+* Wed Apr  8 2026 - arnej
+- Add valgrind 3.26.0
