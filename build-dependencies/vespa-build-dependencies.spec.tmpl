@@ -56,7 +56,6 @@ Requires: perl
 Requires: perl-Getopt-Long
 Requires: rpm-build
 Requires: systemd
-Requires: valgrind
 Requires: zlib-devel
 
 # Common 3rdparty deps that do not exist as RPMs elsewhere:
@@ -66,6 +65,12 @@ Requires: vespa-jllama = %{_vespa_jllama_version}
 Requires: vespa-mimalloc-devel = %{_vespa_mimalloc_version}
 Requires: vespa-gbenchmark-devel = %{_vespa_gbenchmark_version}
 Requires: vespa-highway-devel = %{_vespa_highway_version}
+
+%if 0%{?el8}
+Requires: vespa-valgrind >= 3.26.0
+%else
+Requires: valgrind
+%endif
 
 %if 0%{?el8}
 %global _centos_stream %(grep -qs '^NAME="CentOS Stream"' /etc/os-release && echo 1 || echo 0)
