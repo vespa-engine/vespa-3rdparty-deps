@@ -3,6 +3,7 @@
 # Version
 %global ver_major _TMPL_VER_MAJOR
 %global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
 %global ver_release _TMPL_VER_RELEASE
 
 # Force special prefix for Vespa
@@ -27,11 +28,13 @@
 
 Summary:        abseil-cpp compiled for vespa
 Name:           vespa-abseil-cpp
-Version:        %{ver_major}.%{ver_minor}
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
 Release:        %{ver_release}%{?dist}
 License:        Apache License, Version 2.0
 URL:            https://github.com/abseil/abseil-cpp
-Source0:        https://github.com/abseil/abseil-cpp/releases/download/%{version}/abseil-cpp-%{version}.tar.gz
+Source0:        https://github.com/abseil/abseil-cpp/releases/download/%{ver_major}.%{ver_minor}/abseil-cpp-%{ver_major}.%{ver_minor}.tar.gz
+Patch0:         avoid-odr-violation.diff
+Patch1:         skip-2-stack-frames.diff
 
 %global _cmake_prog cmake
 %global _ctest_prog ctest
@@ -99,7 +102,9 @@ This package contains Abseil C++ headers and libraries.
 %{_vespa_3rdparty_deps_packaging_notice}
 
 %prep
-%setup -q -n abseil-cpp-%{version}
+%setup -q -n abseil-cpp-%{ver_major}.%{ver_minor}
+%patch -P 0 -p 1
+%patch -P 1 -p 0
 
 %build
 %if 0%{?_devtoolset_enable:1}
@@ -114,7 +119,7 @@ mkdir build
     -DCMAKE_PREFIX_PATH=%{_prefix} \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3" \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-march=haswell -g -O3" \
     -DBUILD_SHARED_LIBS=ON \
     -DABSL_BUILD_TESTING=ON \
     -DABSL_ENABLE_INSTALL=ON \

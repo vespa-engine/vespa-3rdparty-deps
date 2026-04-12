@@ -1,0 +1,128 @@
+From 9034b9ca6ecc53ff44ba0e41f069815147338f86 Mon Sep 17 00:00:00 2001
+From: Derek Mauro <dmauro@google.com>
+Date: Wed, 8 Apr 2026 10:19:37 -0700
+Subject: [PATCH] Introduce ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY in
+ absl/base/options.h to provide a centralized policy for hardware-accelerated
+ implementations in headers.
+
+This option addresses ODR violations that occur when Abseil headers
+use compile-time feature detection (such as __SSE4_2__) in inline
+functions. If translation units are compiled with inconsistent CPU
+architecture flags (e.g., -march=native vs -march=generic) and linked
+together, they may disagree on the implementation of these inline
+functions. This can lead to crashes or silent data corruption in
+hashing.
+
+The new option provides three levels of control:
+- 0: Portable. Forces software-only implementations in headers,
+  guaranteeing ABI safety across mixed translation units.
+- 1: Required. Forces hardware-accelerated implementations in
+  headers. The build will fail if the required instructions are not
+  enabled in the compiler environment.
+- 2: Auto-detect. Selects the best available implementation based on
+  compiler flags, but can't guarantee safety if translation units are
+  compiled with inconsistent flags.
+
+PiperOrigin-RevId: 896569507
+Change-Id: Ifcbc1f3980883feeaa4f05f845ce32310ca7d533
+---
+ absl/base/options.h         | 26 ++++++++++++++++++++++++++
+ absl/hash/internal/hash.h   | 14 ++++++++++++++
+ ci/absl_alternate_options.h |  1 +
+ 3 files changed, 41 insertions(+)
+
+diff --git a/absl/base/options.h b/absl/base/options.h
+index cfacc6e3e04..033eac36be1 100644
+--- a/absl/base/options.h
++++ b/absl/base/options.h
+@@ -183,4 +183,30 @@
+ 
+ #define ABSL_OPTION_HARDENED 0
+ 
++// ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY
++//
++// This option controls whether Abseil is allowed to use non-portable
++// hardware-accelerated implementations in headers (where they are typically
++// inlined into the caller's translation unit).
++//
++// Using such optimizations in headers can lead to One Definition Rule (ODR)
++// violations if different translation units are built with different CPU
++// architecture flags (e.g., -march=native vs -march=generic) and linked
++// together.
++//
++// A value of 0 means to use the portable software implementation in headers.
++// This provides the best ODR guarantees when linking code built with
++// inconsistent flags, but may be slower.
++//
++// A value of 1 means that the implementation requires the use of a
++// hardware-accelerated implementation. This requires the compiler environment
++// to support these instructions; otherwise, the build will fail.
++//
++// A value of 2 means to select the best available implementation based on
++// the compiler flags, but can't guarantee ODR safety if translation units are
++// built with inconsistent flags.
++//
++// User code should not inspect this macro.
++#define ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY 0
++
+ #endif  // ABSL_BASE_OPTIONS_H_
+diff --git a/absl/hash/internal/hash.h b/absl/hash/internal/hash.h
+index ae3d9a26237..760dd8c0135 100644
+--- a/absl/hash/internal/hash.h
++++ b/absl/hash/internal/hash.h
+@@ -79,6 +79,7 @@
+ #include "absl/base/internal/endian.h"
+ #include "absl/base/internal/unaligned_access.h"
+ #include "absl/base/optimization.h"
++#include "absl/base/options.h"
+ #include "absl/base/port.h"
+ #include "absl/container/fixed_array.h"
+ #include "absl/hash/internal/city.h"
+@@ -96,6 +97,10 @@
+ #include <filesystem>  // NOLINT
+ #endif
+ 
++// We are allowed to use a non-portable hardware-accelerated implementation in
++// headers if ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY != 0
++#if ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY != 0
++
+ // 32-bit builds with SSE 4.2 do not have _mm_crc32_u64, so the
+ // __x86_64__ condition is necessary.
+ #if defined(__SSE4_2__) && defined(__x86_64__)
+@@ -129,6 +134,15 @@
+ #define ABSL_HASH_INTERNAL_CRC32_U32 __crc32cw
+ #define ABSL_HASH_INTERNAL_CRC32_U8 __crc32cb
+ 
++#endif  // Platform tests
++
++#endif  // ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY != 0
++
++
++#if ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY == 1
++#ifndef ABSL_HASH_INTERNAL_HAS_CRC32
++#error "Hardware acceleration is required by ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY but not supported on this platform; see absl/base/options.h"
++#endif
+ #endif
+ 
+ namespace absl {
+diff --git a/ci/absl_alternate_options.h b/ci/absl_alternate_options.h
+index 7f70aad7103..54a1b78cd9f 100644
+--- a/ci/absl_alternate_options.h
++++ b/ci/absl_alternate_options.h
+@@ -25,5 +25,6 @@
+ #define ABSL_OPTION_USE_INLINE_NAMESPACE 1
+ #define ABSL_OPTION_INLINE_NAMESPACE_NAME ns
+ #define ABSL_OPTION_HARDENED 1
++#define ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY 2
+ 
+ #endif  // ABSL_CI_ABSL_ALTERNATE_OPTIONS_H_
+--- abseil-cpp-20260107.1/absl/base/options.h.orig	2026-04-12 17:18:59.836544300 +0000
++++ abseil-cpp-20260107.1/absl/base/options.h	2026-04-12 17:19:21.815506432 +0000
+@@ -179,6 +179,6 @@
+ // built with inconsistent flags.
+ //
+ // User code should not inspect this macro.
+-#define ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY 0
++#define ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY 1
+ 
+ #endif  // ABSL_BASE_OPTIONS_H_

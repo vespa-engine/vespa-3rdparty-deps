@@ -1,0 +1,11 @@
+--- absl/strings/internal/cordz_info_test.cc.orig	2026-04-12 17:05:59.838888125 +0000
++++ absl/strings/internal/cordz_info_test.cc	2026-04-12 17:07:53.645692053 +0000
+@@ -265,7 +265,7 @@
+   // line number of the current stack isn't included in the HasSubstr check.
+   local_stack.resize(static_cast<size_t>(
+       absl::GetStackTrace(local_stack.data(), kMaxStackDepth,
+-                          /*skip_count=*/1)));
++                          /*skip_count=*/2)));
+ 
+   std::string got_stack = FormatStack(info->GetStack());
+   std::string expected_stack = FormatStack(local_stack);

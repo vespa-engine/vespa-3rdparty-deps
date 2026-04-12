@@ -5,7 +5,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=6
 MINOR=34
 PATCH=1
-RELEASE=2
+RELEASE=5
 
 # Note:
 #
@@ -29,6 +29,7 @@ srpm:
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
 	cat $(PKGNAME).spec.tmpl | sed "$(SEDCMD)" > $(SPECFILE)
 	spectool -g -C $(SOURCEDIR) $(SPECFILE)
+	cp -a *.diff $(SOURCEDIR)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
 	cp -a $(RPMTOPDIR)/SRPMS/* $(outdir)
 
