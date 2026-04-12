@@ -127,6 +127,15 @@ This package contains the micro-protobuf library (libupb) for static linking.
 %setup -q -n protobuf-%{ver_minor}.%{ver_patch}
 
 %build
+
+%ifarch x86_64
+%define _arch_cmake_options -march=haswell
+%endif
+
+%ifarch aarch64
+%define _arch_cmake_options -march=armv8.2-a+dotprod+crypto -mtune=neoverse-n1
+%endif
+
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
@@ -140,7 +149,7 @@ mkdir build
    -DCMAKE_PREFIX_PATH=%{_prefix} \
    -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-march=haswell -g -O3 -Wno-deprecated-declarations" \
+   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -Wno-deprecated-declarations" \
    -DBUILD_SHARED_LIBS=ON \
    -DCMAKE_CXX_STANDARD=23 \
    -Dprotobuf_LOCAL_DEPENDENCIES_ONLY=ON \
