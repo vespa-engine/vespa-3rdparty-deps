@@ -5,7 +5,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=0
 MINOR=0
 PATCH=20250522
-RELEASE=1
+RELEASE=2
 GITREF=f333402bd9cbe0f3eeb02507bd14e23d7d639280
 
 # The actual name for the generated package
