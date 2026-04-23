@@ -30,8 +30,12 @@ BuildRequires:  unzip
 Requires: java-17-openjdk-devel
 %endif
 
-%if 0%{?el9} || 0%{?el10}
+%if 0%{?el9}
 Requires: java-21-openjdk-devel
+%endif
+
+%if 0%{?el10}
+Requires: java-25-openjdk-devel
 %endif
 
 %global _vespa_3rdparty_deps_packaging_notice \
