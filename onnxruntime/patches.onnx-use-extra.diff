@@ -1,20 +1,26 @@
 diff --git a/cmake/patches/onnx/onnx.patch b/cmake/patches/onnx/onnx.patch
-index f51370212f..65904c093d 100644
+index 0a56807787..38d6adb7b8 100644
 --- a/cmake/patches/onnx/onnx.patch
 +++ b/cmake/patches/onnx/onnx.patch
-@@ -85,6 +85,15 @@ index 8b5af303..8593fe4a 100644
-                                   ${EXTRA_FLAGS})
-    add_msvc_runtime_flag(onnx_proto)
-    add_msvc_runtime_flag(onnx)
-+@@ -641,7 +641,7 @@
-+                         PROPERTIES STATIC_LIBRARY_FLAGS
-+                                    "${onnx_static_library_flags}")
-+ else()
-+-  target_compile_options(onnx PRIVATE -Wall -Wextra)
-++  target_compile_options(onnx PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable)
-+   if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
-+     target_compile_options(onnx PRIVATE "-Wno-stringop-overflow")
-+     target_compile_options(onnx_proto PRIVATE "-Wno-stringop-overflow")
- diff --git a/onnx/defs/nn/defs.cc b/onnx/defs/nn/defs.cc
- index 64366270..4aed9027 100644
- --- a/onnx/defs/nn/defs.cc
+@@ -51,7 +51,7 @@ diff --git a/cmake/Utils.cmake b/cmake/Utils.cmake
+ index 1987edd..04b3088 100644
+ --- a/cmake/Utils.cmake
+ +++ b/cmake/Utils.cmake
+-@@ -103,18 +103,7 @@ endfunction()
++@@ -103,23 +103,12 @@
+  
+  function(add_onnx_compile_options target)
+    if(MSVC)
+@@ -70,6 +70,12 @@ index 1987edd..04b3088 100644
+      if(ONNX_WERROR)
+        target_compile_options(${target} PRIVATE "/WX")
+      endif()
++   else()
++-    target_compile_options(${target} PRIVATE -Wall -Wextra)
+++    target_compile_options(${target} PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable)
++     if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION
++                                     VERSION_GREATER_EQUAL 13)
++       target_compile_options(${target} PRIVATE "-Wno-stringop-overflow")
+ diff --git a/onnx/defs/nn/old.cc b/onnx/defs/nn/old.cc
+ index a6a8a83..153da87 100644
+ --- a/onnx/defs/nn/old.cc

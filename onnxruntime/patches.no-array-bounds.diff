@@ -1,12 +1,11 @@
 diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
-index baf21745e0..9ec20b6b55 100644
+index 63d17b38ac..681c872a7f 100644
 --- a/cmake/CMakeLists.txt
 +++ b/cmake/CMakeLists.txt
-@@ -582,6 +582,14 @@ else()
+@@ -662,6 +662,13 @@ else()
+   check_cxx_compiler_flag(-Wshorten-64-to-32 HAS_SHORTEN_64_TO_32)
    check_cxx_compiler_flag(-Wstrict-aliasing HAS_STRICT_ALIASING)
-   check_nvcc_compiler_flag(-Wstrict-aliasing NVCC_HAS_STRICT_ALIASING)
    check_cxx_compiler_flag(-Wstringop-overflow HAS_STRINGOP_OVERFLOW)
-+  check_cxx_compiler_flag(-Warray-bounds HAS_ARRAY_BOUNDS)
 +  check_cxx_compiler_flag(-Wdeprecated HAS_DEPRECATED)
 +  check_cxx_compiler_flag(-Wdeprecated-pragma HAS_DEPRECATED_PRAGMA)
 +  check_cxx_compiler_flag(-Woverloaded-virtual HAS_OVERLOADED_VIRTUAL)
@@ -17,7 +16,7 @@ index baf21745e0..9ec20b6b55 100644
    check_cxx_compiler_flag(-Wtautological-pointer-compare HAS_TAUTOLOGICAL_POINTER_COMPARE)
    check_cxx_compiler_flag(-Wundefined-var-template HAS_UNDEFINED_VAR_TEMPLATE)
    check_cxx_compiler_flag(-Wunused-but-set-parameter HAS_UNUSED_BUT_SET_PARAMETER)
-@@ -630,6 +638,43 @@ else()
+@@ -711,6 +718,43 @@ else()
    if (HAS_DEPRECATED_LITERAL_OPERATOR)
      list(APPEND ORT_WARNING_FLAGS -Wno-deprecated-literal-operator)
    endif()
