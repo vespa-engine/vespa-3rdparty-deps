@@ -20,6 +20,7 @@
 %global _vespa_highway_version 1.3.0
 %global _vespa_gbenchmark_version 1.9.4
 %global _vespa_icu_version 78.3.0
+%global _vespa_re2_version 20251105
 %if 0%{?fedora}
 %if %{fedora} > 43
 %global _vespa_java_version 25
@@ -63,8 +64,10 @@ Requires: zlib-devel
 
 %if 0%{?el8} || 0%{?el9} || 0%{?el10}
 Requires: vespa-icu-devel = %{_vespa_icu_version}
+Requires: vespa-re2-devel = %{_vespa_re2_version}
 %else
 Requires: libicu-devel
+Requires: re2-devel
 %endif
 
 # Common 3rdparty deps that do not exist as RPMs elsewhere:
@@ -187,7 +190,6 @@ Requires: java-%{_vespa_java_version}-openjdk-devel
 Requires: maven-openjdk%{_vespa_java_version}
 Requires: xxhash-devel >= 0.8.1
 %endif
-Requires: re2-devel
 
 %description
 
