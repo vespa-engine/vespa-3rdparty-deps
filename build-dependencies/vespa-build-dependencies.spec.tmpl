@@ -52,7 +52,6 @@ Requires: flex >= 2.5.0
 Requires: git
 Requires: golang
 Requires: libedit-devel
-Requires: libicu-devel
 Requires: make
 Requires: perf
 Requires: perl
@@ -60,6 +59,12 @@ Requires: perl-Getopt-Long
 Requires: rpm-build
 Requires: systemd
 Requires: zlib-devel
+
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
+Requires: vespa-icu-devel
+%else
+Requires: libicu-devel
+%endif
 
 # Common 3rdparty deps that do not exist as RPMs elsewhere:
 Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
