@@ -27,10 +27,17 @@ License:        BSD
 URL:            https://github.com/google/re2/
 Source0:        https://github.com/google/re2/archive/%{ver_major_long}.tar.gz
 
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
+%define _devtoolset_enable /opt/rh/gcc-toolset-15/enable
+BuildRequires: vespa-toolset-15-meta
+BuildRequires: vespa-icu-devel
+%else
+BuildRequires: icu-devel
+BuildRequires: gcc
+BuildRequires: gcc-c++
+%endif
+
 %if 0%{?el8} || 0%{?el9}
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
-BuildRequires: gcc-toolset-14-gcc
-BuildRequires: gcc-toolset-14-gcc-c++
 BuildRequires: vespa-cmake
 BuildRequires: vespa-abseil-cpp-devel
 %else
@@ -38,10 +45,6 @@ BuildRequires: cmake
 BuildRequires: abseil-cpp-devel
 %endif
 
-%if 0%{?fedora}
-BuildRequires: gcc
-BuildRequires: gcc-c++
-%endif
 BuildRequires: make
 
 %global _vespa_3rdparty_deps_packaging_notice \
@@ -68,6 +71,14 @@ source %{_devtoolset_enable} || true
 # PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:$PATH
 
+%ifarch x86_64
+%define _arch_cmake_options -march=haswell
+%endif
+
+%ifarch aarch64
+%define _arch_cmake_options -march=armv8.2-a+dotprod+crypto+crc -mtune=neoverse-n1
+%endif
+
 cmake -S . -B build \
     -DCMAKE_PREFIX_PATH=%{_prefix} \
     -DCMAKE_INSTALL_PREFIX=%{_prefix}     \
@@ -76,6 +87,7 @@ cmake -S . -B build \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
     -DCMAKE_CXX_STANDARD=20 \
     -DBUILD_SHARED_LIBS=ON \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
 VERBOSE=1 cmake --build build %{?_smp_mflags}
@@ -99,5 +111,7 @@ DESTDIR="%{buildroot}" cmake --install build
 %{_libdir}/*.so
 
 %changelog
+* Wed May 27 2026 Arne Juul
+- use 2025-11-05 version
 * Tue Aug 12 2025 Arne Juul
 - use 2025-08-12 version
