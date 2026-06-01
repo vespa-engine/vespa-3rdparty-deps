@@ -13,12 +13,17 @@ BuildArchitectures: noarch
 %define ver_patch _TMPL_VER_PATCH
 %define ver_release _TMPL_VER_RELEASE
 
-%if 0%{?fedora}
-%if %{fedora} > 39
+%if 0%{?fedora} && ! 0%{?amzn2023}
+%if %{fedora} > 43
+%global _vespa_java_version 25
+%else
 %global _vespa_java_version 21
 %endif
 %endif
 %if 0%{?el10}
+%global _vespa_java_version 25
+%endif
+%if 0%{?el9}
 %global _vespa_java_version 21
 %endif
 %if ! 0%{?_vespa_java_version:1}
@@ -70,3 +75,5 @@ cp -p %{SOURCE1} %{buildroot}%{_prefix}/bin/gradle
 %license LICENSE
 
 %changelog
+* Sun May 31 2026 Tor Egge - 9.5.1
+- bump version to 9.5.1
