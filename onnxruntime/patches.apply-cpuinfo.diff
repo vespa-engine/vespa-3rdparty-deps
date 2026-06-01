@@ -1,12 +1,13 @@
 diff --git a/cmake/external/onnxruntime_external_deps.cmake b/cmake/external/onnxruntime_external_deps.cmake
-index ebf20ab21b..3dfa9eebe3 100644
+index 915d97e7a5..c33fd07710 100644
 --- a/cmake/external/onnxruntime_external_deps.cmake
 +++ b/cmake/external/onnxruntime_external_deps.cmake
-@@ -383,6 +383,7 @@ if (CPUINFO_SUPPORTED)
-         URL_HASH SHA1=${DEP_SHA1_pytorch_cpuinfo}
-         EXCLUDE_FROM_ALL
-         PATCH_COMMAND ${Patch_EXECUTABLE} -p1 < ${PROJECT_SOURCE_DIR}/patches/cpuinfo/9bb12d342fd9479679d505d93a478a6f9cd50a47.patch
-+        PATCH_COMMAND ${Patch_EXECUTABLE} -p4 < ${PROJECT_SOURCE_DIR}/patches/pytorch_cpuinfo/arm-linux-init.diff
-         FIND_PACKAGE_ARGS NAMES cpuinfo
-       )
+@@ -372,6 +372,8 @@ if (CPUINFO_SUPPORTED)
+         ${Patch_EXECUTABLE} -p1 < ${PROJECT_SOURCE_DIR}/patches/cpuinfo/patch_vcpkg_arm64ec_support.patch &&
+         # https://github.com/pytorch/cpuinfo/pull/348
+         ${Patch_EXECUTABLE} -p1 < ${PROJECT_SOURCE_DIR}/patches/cpuinfo/win_arm_fp16_detection_fallback.patch
++        # but why?
++        ${Patch_EXECUTABLE} -p4 < ${PROJECT_SOURCE_DIR}/patches/pytorch_cpuinfo/arm-linux-init.diff
+       FIND_PACKAGE_ARGS NAMES cpuinfo
+     )
    else()
