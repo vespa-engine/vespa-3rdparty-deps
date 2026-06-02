@@ -66,7 +66,7 @@ index 83d1751e55..661e20300b 100644
 +    list(APPEND ORT_WARNING_FLAGS -Wno-error=sfinae-incomplete)
 +  endif()
 +  if (HAS_W_TEMPLATE_BODY)
-+    list(APPEND ORT_WARNING_FLAGS -Wno-template-body)
++    list(APPEND ORT_WARNING_FLAGS -Wtemplate-body)
 +  endif()
 +
    #see:https://reviews.llvm.org/D131307
