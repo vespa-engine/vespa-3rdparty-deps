@@ -27,6 +27,7 @@ Release:        %{ver_release}%{?dist}
 License:        MIT License
 URL:            https://microsoft.github.io/onnxruntime
 Source0:        vespa-onnxruntime-%{version}.tar.gz
+Source1:        patches.device-transform.diff
 Patch0:         patches.use-origin-rpath-for-jni-library.diff
 Patch1:         patches.no-array-bounds.diff
 Patch2:         patches.use-gradle.diff
@@ -149,8 +150,10 @@ about packaging.
 %patch -P 5 -p1
 %patch -P 6 -p1
 %patch -P 7 -p1
-
-mkdir cmake/patches/pytorch_cpuinfo
+(
+  cd /usr/local/cuda-13/targets/*/include/cccl/cub/device
+  patch -N
+) < %{SOURCE1} || true
 
 %build
 
