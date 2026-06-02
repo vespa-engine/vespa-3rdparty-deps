@@ -105,22 +105,22 @@ BuildRequires: libunwind
 BuildRequires: bzip2
 
 %if 0%{?_enable_cuda:1}
-%global _cuda_version_major 12
-%global _cuda_version_minor 8
-%global _cuda_version_micro 90
+%global _cuda_version_major 13
+%global _cuda_version_minor 3
+%global _cuda_version_micro 29
 %global _cuda_version_pkg_name %{_cuda_version_major}-%{_cuda_version_minor}
 %global _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
 %global _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
 
-%global _cudnn_version 9.8.0.87
+%global _cudnn_version 9.23.0.39
 
-BuildRequires: cuda-toolkit-12-config-common = %{_cuda_version_full_num}
+BuildRequires: cuda-toolkit-%{_cuda_version_major}-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-toolkit-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-libraries-devel-%{_cuda_version_pkg_name}
 BuildRequires: cuda-compiler-%{_cuda_version_pkg_name}
 BuildRequires: cuda-cudart-devel-%{_cuda_version_pkg_name}
 BuildRequires: cuda-command-line-tools-%{_cuda_version_pkg_name}
-BuildRequires: libcudnn9-devel-cuda-12 = %{_cudnn_version}
+BuildRequires: libcudnn9-devel-cuda-%{_cuda_version_major} = %{_cudnn_version}
 %endif
 
 %description
@@ -245,7 +245,7 @@ Requires:       libcufft-%{_cuda_version_pkg_name}
 Requires:       libcublas-%{_cuda_version_pkg_name}
 Requires:       libcurand-%{_cuda_version_pkg_name}
 Requires:       libnvjitlink-%{_cuda_version_pkg_name}
-Requires:       libcudnn9-cuda-12 = %{_cudnn_version}
+Requires:       libcudnn9-cuda-%{_cuda_version_major} = %{_cudnn_version}
 
 %description cuda
 CUDA support package for Vespa.
@@ -259,6 +259,10 @@ about packaging.
 %endif
 
 %changelog
+* Mon Jun  1 2026 Arne Juul - 1.26.0
+- bump version to 1.26.0
+- update CUDA to 13.3
+
 * Mon Sep 22 2025 Arne Juul - 1.22.2
 - bump version to 1.22.2
 - remove temporary patch
