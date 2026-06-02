@@ -77,7 +77,7 @@ BuildRequires: python3.11-setuptools
 %if 0%{?el10}
 %global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: vespa-toolset-15-meta
-BuildRequires: gcc-toolset-15-dwz
+BuildRequires: dwz
 BuildRequires: gtest-devel
 BuildRequires: gmock-devel
 BuildRequires: make
@@ -86,6 +86,7 @@ BuildRequires: python3
 BuildRequires: python3-devel
 BuildRequires: python3-numpy
 BuildRequires: python3-setuptools
+%global _enable_cuda 1
 %endif
 %if 0%{?amzn2023}
 BuildRequires: python3.11
