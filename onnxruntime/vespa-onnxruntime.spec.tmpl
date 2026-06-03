@@ -27,7 +27,6 @@ Release:        %{ver_release}%{?dist}
 License:        MIT License
 URL:            https://microsoft.github.io/onnxruntime
 Source0:        vespa-onnxruntime-%{version}.tar.gz
-Source1:        patches.device-transform.diff
 Patch0:         patches.use-origin-rpath-for-jni-library.diff
 Patch1:         patches.no-array-bounds.diff
 Patch2:         patches.use-gradle.diff
@@ -124,6 +123,7 @@ BuildRequires: cuda-compiler-%{_cuda_version_pkg_name}
 BuildRequires: cuda-cudart-devel-%{_cuda_version_pkg_name}
 BuildRequires: cuda-command-line-tools-%{_cuda_version_pkg_name}
 BuildRequires: libcudnn9-devel-cuda-%{_cuda_version_major} = %{_cudnn_version}
+BuildRequires: vespa-cuda-fix >= %{_cuda_version_major}.%{_cuda_version_minor}.0
 %endif
 
 %description
@@ -150,10 +150,6 @@ about packaging.
 %patch -P 5 -p1
 %patch -P 6 -p1
 %patch -P 7 -p1
-(
-  cd /usr/local/cuda-13/targets/*/include/cccl/cub/device
-  patch -N
-) < %{SOURCE1} || true
 
 %build
 
