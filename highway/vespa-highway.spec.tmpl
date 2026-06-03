@@ -64,8 +64,8 @@ URL:            https://github.com/google/highway
 Source0:        https://github.com/google/highway/releases/download/%{version}/highway-%{version}.tar.gz
 
 %if 0%{?el8} || 0%{?el9}
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
-BuildRequires: gcc-toolset-14-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-15/enable
+BuildRequires: gcc-toolset-15-gcc-c++
 BuildRequires: make
 BuildRequires: vespa-cmake
 %else
@@ -127,7 +127,9 @@ mkdir build
    -S . \
    -B build
 
-make -C build %{?_smp_mflags}
+# Highway tests are very heavy to build, so default parallelism may
+# crash GCC with OOMs. The core library itself is mostly header-only.
+make -C build -j2
 
 %check
 # PATH to vespa-cmake etc
@@ -161,6 +163,10 @@ cd build
 %license LICENSE
 
 %changelog
+
+* Mon Jun 1 2026 Tor Brede Vekterli <vekterli@vespa.ai> - 1.4.0
+- Update to Highway v1.4.0 and build with GCC 15
+
 * Mon Aug 25 2025 Tor Brede Vekterli <vekterli@vespa.ai> - 1.3.0
 - Initial version of Google Highway Vespa C++ RPM
 
