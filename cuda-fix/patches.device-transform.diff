@@ -1,0 +1,15 @@
+--- device_transform.cuh.orig	2015-07-08 00:00:00.000000000 +0000
++++ device_transform.cuh	2026-06-02 22:01:05.467814176 +0000
+@@ -41,9 +41,11 @@
+ } // namespace detail
+ CUB_NAMESPACE_END
+ 
++namespace cuda {
+ template <typename T>
+-struct ::cuda::proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::__return_constant<T>> : ::cuda::std::true_type
++struct proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::__return_constant<T>> : std::true_type
+ {};
++}
+ 
+ CUB_NAMESPACE_BEGIN
+ namespace detail::transform
