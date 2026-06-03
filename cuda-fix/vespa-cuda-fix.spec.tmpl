@@ -1,0 +1,45 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# no debuggable binaries here
+%global debug_package %{nil}
+BuildArchitectures: noarch
+
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+Summary:        Vespa fix package patching CUDA 13.3
+Name:           vespa-cuda-fix
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        Apache
+URL:            https://vespa.ai/
+Source0:        patches.device-transform.diff
+
+Requires: cccl-13-3
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+Meta-package for patching CUDA 13
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%global mydir %{_prefix}/share/cuda/%{version}
+%install
+mkdir -p %{buildroot}%{mydir}
+cp -a %{SOURCE0} %{buildroot}%{mydir}
+
+%files
+%{mydir}
+
+%post
+cd /usr/local/cuda-%{ver_major}/targets/*/include/cccl/cub/device || exit 1
+cat %{mydir}/patches.device-transform.diff | patch -N -r -
+
+%changelog
+* Wed Jun  3 2026 Arne Juul - initial version
+- added patch for C++ syntax
