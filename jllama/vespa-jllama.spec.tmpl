@@ -65,36 +65,38 @@ BuildRequires: vespa-ccache
 BuildRequires: ccache
 %endif
 
-%if 0%{?el8} || 0%{?el9}
-BuildRequires: vespa-toolset-14-meta
-BuildRequires: gcc-toolset-14-gcc-c++
-%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
+BuildRequires: vespa-toolset-15-meta
+%global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: vespa-cmake
 %global _enable_cuda 1
 %else
 BuildRequires: cmake
 %endif
 
-%if 0%{?el10} || 0%{?fedora}
+%if 0%{?fedora}
 BuildRequires: gcc-c++
 %endif
 
 BuildRequires: make
 BuildRequires: git
 
-%if 0%{?_enable_cuda}
-%global _cuda_version_major 12
-%global _cuda_version_minor 8
-%global _cuda_version_micro 90
+%if 0%{?_enable_cuda:1}
+%global _cuda_version_major 13
+%global _cuda_version_minor 3
+%global _cuda_version_micro 29
 %global _cuda_version_pkg_name %{_cuda_version_major}-%{_cuda_version_minor}
 %global _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
 %global _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
-BuildRequires: cuda-toolkit-12-config-common = %{_cuda_version_full_num}
+%global _cudnn_version 9.23.0.39
+BuildRequires: cuda-toolkit-%{_cuda_version_major}-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-toolkit-config-common = %{_cuda_version_full_num}
-BuildRequires: cuda-cudart-devel-%{_cuda_version_pkg_name} = %{_cuda_version_full_num}
-BuildRequires: cuda-compiler-%{_cuda_version_pkg_name}
-BuildRequires: cuda-command-line-tools-%{_cuda_version_pkg_name}
 BuildRequires: cuda-libraries-devel-%{_cuda_version_pkg_name}
+BuildRequires: cuda-compiler-%{_cuda_version_pkg_name}
+BuildRequires: cuda-cudart-devel-%{_cuda_version_pkg_name}
+BuildRequires: cuda-command-line-tools-%{_cuda_version_pkg_name}
+BuildRequires: libcudnn9-devel-cuda-%{_cuda_version_major} = %{_cudnn_version}
+BuildRequires: vespa-cuda-fix >= %{_cuda_version_major}.%{_cuda_version_minor}.0
 %endif
 
 %global _vespa_3rdparty_deps_packaging_notice \
@@ -139,6 +141,7 @@ mvn compile
     -DCMAKE_INSTALL_RPATH='\$ORIGIN' \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_CXX_STANDARD=20 \
     -DGGML_METAL=OFF \
     -DGGML_OPENMP=ON \
     -DGGML_NATIVE=OFF \
@@ -155,7 +158,8 @@ cmake -S . -B build-cuda %{shrink:%{_common_cmake_options}} \
     -DGGML_CUDA=ON \
     -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
-    -DCMAKE_CUDA_ARCHITECTURES="75;80;89"
+    -DCMAKE_CUDA_ARCHITECTURES="75;80;89" \
+    -DCMAKE_CUDA_FLAGS="--std c++20"
 
 VERBOSE=1 cmake --build build-cuda -j 4
 %endif
