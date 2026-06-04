@@ -16,8 +16,8 @@
 %global _vespa_openblas_version 0.3.27
 %global _vespa_jllama_version 4.7.9
 %global _vespa_datasketches_version 5.2.0
-%global _vespa_mimalloc_version 2.2.4
-%global _vespa_highway_version 1.3.0
+%global _vespa_mimalloc_version 3.3.2
+%global _vespa_highway_version 1.4.0
 %global _vespa_gbenchmark_version 1.9.4
 %global _vespa_icu_version 78.3.0
 %global _vespa_re2_version 20251105
@@ -198,6 +198,10 @@ Vespa - The open big data serving engine - build dependencies
 %files
 
 %changelog
+* Thu Jun 4 2026 Tor Brede Vekterli <vekterli@vespa.ai> 1.15.0
+- Upgrade vespa-mimalloc to 3.3.2
+- Upgrade vespa-highway to 1.4.0
+
 * Thu Mar 26 2026 Arne Juul
 - New versions of abseil and protobuf
 
