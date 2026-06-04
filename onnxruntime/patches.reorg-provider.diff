@@ -1,0 +1,181 @@
+diff -ru a/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h b/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h
+--- a/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h	2026-06-01 13:29:02.415022342 +0000
++++ b/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h	2026-06-02 09:24:02.093137041 +0000
+@@ -536,20 +536,6 @@
+   PROVIDER_DISALLOW_ALL(ConfigOptions)
+ };
+ 
+-struct ComputeCapability final {
+-  static std::unique_ptr<ComputeCapability> Create(std::unique_ptr<IndexedSubGraph> t_sub_graph) { return g_host->ComputeCapability__construct(std::move(t_sub_graph)); }
+-  static void operator delete(void* p) { g_host->ComputeCapability__operator_delete(reinterpret_cast<ComputeCapability*>(p)); }
+-
+-  std::unique_ptr<IndexedSubGraph>& SubGraph() { return g_host->ComputeCapability__SubGraph(this); }
+-
+-  void copy_optimization_func(ComputeCapability* selection_cc) { g_host->ComputeCapability__copy_optimization_func(this, selection_cc); }
+-  void add_nodes_to_optimize(std::unique_ptr<ComputeCapability> optimization_cc) { g_host->ComputeCapability__add_nodes_to_optimize(this, std::move(optimization_cc)); }
+-
+-  ComputeCapability() = delete;
+-  ComputeCapability(const ComputeCapability&) = delete;
+-  void operator=(const ComputeCapability&) = delete;
+-};
+-
+ struct DataTransferManager final {
+   Status CopyTensor(const Tensor& src, Tensor& dst) const { return g_host->DataTransferManager__CopyTensor(this, src, dst); }
+ #if !defined(DISABLE_SPARSE_TENSORS)
+@@ -619,6 +605,20 @@
+   void operator=(const IndexedSubGraph&) = delete;
+ };
+ 
++struct ComputeCapability final {
++  static std::unique_ptr<ComputeCapability> Create(std::unique_ptr<IndexedSubGraph> t_sub_graph) { return g_host->ComputeCapability__construct(std::move(t_sub_graph)); }
++  static void operator delete(void* p) { g_host->ComputeCapability__operator_delete(reinterpret_cast<ComputeCapability*>(p)); }
++
++  std::unique_ptr<IndexedSubGraph>& SubGraph() { return g_host->ComputeCapability__SubGraph(this); }
++
++  void copy_optimization_func(ComputeCapability* selection_cc) { g_host->ComputeCapability__copy_optimization_func(this, selection_cc); }
++  void add_nodes_to_optimize(std::unique_ptr<ComputeCapability> optimization_cc) { g_host->ComputeCapability__add_nodes_to_optimize(this, std::move(optimization_cc)); }
++
++  ComputeCapability() = delete;
++  ComputeCapability(const ComputeCapability&) = delete;
++  void operator=(const ComputeCapability&) = delete;
++};
++
+ struct KernelDef final {
+   static void operator delete(void* p) { g_host->KernelDef__operator_delete(reinterpret_cast<KernelDef*>(p)); }
+ 
+@@ -1041,6 +1041,67 @@
+   void operator=(const Model&) = delete;
+ };
+ 
++class GraphViewer final {
++ public:
++  static void operator delete(void* p) { g_host->GraphViewer__operator_delete(reinterpret_cast<GraphViewer*>(p)); }
++
++  std::unique_ptr<Model> CreateModel(const logging::Logger& logger, const ModelMetaData& metadata = ModelMetaData()) const { return g_host->GraphViewer__CreateModel(this, logger, metadata); }
++
++  const std::string& Name() const noexcept { return g_host->GraphViewer__Name(this); }
++  const std::filesystem::path& ModelPath() const noexcept { return g_host->GraphViewer__ModelPath(this); }
++
++  const ConstGraphNodes& Nodes() const noexcept { return g_host->GraphViewer__Nodes(this); }
++  const Node* GetNode(NodeIndex node_index) const { return g_host->GraphViewer__GetNode(this, node_index); }
++  const NodeArg* GetNodeArg(const std::string& name) const { return g_host->GraphViewer__GetNodeArg(this, name); }
++
++  bool IsSubgraph() const { return g_host->GraphViewer__IsSubgraph(this); }
++  const Graph& GetGraph() const { return g_host->GraphViewer__GetGraph(this); }
++  bool IsConstantInitializer(const std::string& name, bool check_outer_scope) const { return g_host->GraphViewer__IsConstantInitializer(this, name, check_outer_scope); }
++  const ONNX_NAMESPACE::TensorProto* GetConstantInitializer(const std::string& name,
++                                                            bool check_outer_scope = true) const {
++    return g_host->GraphViewer__GetConstantInitializer(this, name, check_outer_scope);
++  }
++  bool GetOrtValueInitializer(const std::string& tensor_name, OrtValue& ort_value) const {
++    return g_host->GraphViewer__GetOrtValueInitializer(this, tensor_name, ort_value);
++  }
++  const Node* ParentNode() const { return g_host->GraphViewer__ParentNode(this); }
++
++  int NumberOfNodes() const noexcept { return g_host->GraphViewer__NumberOfNodes(this); }
++  int MaxNodeIndex() const noexcept { return g_host->GraphViewer__MaxNodeIndex(this); }
++
++  const std::vector<const NodeArg*>& GetInputs() const noexcept { return g_host->GraphViewer__GetInputs(this); }
++  const std::vector<const NodeArg*>& GetOutputs() const noexcept { return g_host->GraphViewer__GetOutputs(this); }
++  bool NodeProducesGraphOutput(const Node& node) const {
++    return g_host->GraphViewer__NodeProducesGraphOutput(this, node);
++  }
++  const std::unordered_set<const NodeArg*>& GetValueInfo() const noexcept { return g_host->GraphViewer__GetValueInfo(this); }
++
++  const InitializedTensorSet& GetAllInitializedTensors() const noexcept { return g_host->GraphViewer__GetAllInitializedTensors(this); }
++  bool GetInitializedTensor(const std::string& tensor_name, const ONNX_NAMESPACE::TensorProto*& value) const { return g_host->GraphViewer__GetInitializedTensor(this, tensor_name, value); }
++
++  const std::unordered_map<std::string, int>& DomainToVersionMap() const noexcept { return g_host->GraphViewer__DomainToVersionMap(this); }
++
++  const std::vector<NodeIndex>& GetNodesInTopologicalOrder(int execution_order = 0) const { return g_host->GraphViewer__GetNodesInTopologicalOrder(this, execution_order); }
++  const std::vector<const NodeArg*>& GetInputsIncludingInitializers() const noexcept { return g_host->GraphViewer__GetInputsIncludingInitializers(this); }
++  const std::unordered_set<std::string>& GetOuterScopeNodeArgNames() const noexcept {
++    return g_host->GraphViewer__GetOuterScopeNodeArgNames(this);
++  }
++
++  void ToProto(ONNX_NAMESPACE::GraphProto& graph_proto,
++               bool include_initializers,
++               bool include_outer_scope_args,
++               int execution_order = 0,
++               bool include_initializer_data = true) const {
++    g_host->GraphViewer__ToProto(this, graph_proto, include_initializers, include_outer_scope_args, execution_order, include_initializer_data);
++  }
++  const Node* GetProducerNode(const std::string& node_arg_name) const { return g_host->GraphViewer__GetProducerNode(this, node_arg_name); }
++  IOnnxRuntimeOpSchemaCollectionPtr GetSchemaRegistry() const { return g_host->GraphViewer__GetSchemaRegistry(this); }
++
++  GraphViewer() = delete;
++  GraphViewer(const GraphViewer&) = delete;
++  void operator=(const GraphViewer&) = delete;
++};
++
+ struct Graph final {
+   std::unique_ptr<GraphViewer> CreateGraphViewer() const { return g_host->Graph__CreateGraphViewer(this); }
+   std::unique_ptr<ONNX_NAMESPACE::GraphProto> ToGraphProto() const { return g_host->Graph__ToGraphProto(this); }
+@@ -1121,67 +1182,6 @@
+ 
+ using ModelMetaData = std::unordered_map<std::string, std::string>;
+ 
+-class GraphViewer final {
+- public:
+-  static void operator delete(void* p) { g_host->GraphViewer__operator_delete(reinterpret_cast<GraphViewer*>(p)); }
+-
+-  std::unique_ptr<Model> CreateModel(const logging::Logger& logger, const ModelMetaData& metadata = ModelMetaData()) const { return g_host->GraphViewer__CreateModel(this, logger, metadata); }
+-
+-  const std::string& Name() const noexcept { return g_host->GraphViewer__Name(this); }
+-  const std::filesystem::path& ModelPath() const noexcept { return g_host->GraphViewer__ModelPath(this); }
+-
+-  const ConstGraphNodes& Nodes() const noexcept { return g_host->GraphViewer__Nodes(this); }
+-  const Node* GetNode(NodeIndex node_index) const { return g_host->GraphViewer__GetNode(this, node_index); }
+-  const NodeArg* GetNodeArg(const std::string& name) const { return g_host->GraphViewer__GetNodeArg(this, name); }
+-
+-  bool IsSubgraph() const { return g_host->GraphViewer__IsSubgraph(this); }
+-  const Graph& GetGraph() const { return g_host->GraphViewer__GetGraph(this); }
+-  bool IsConstantInitializer(const std::string& name, bool check_outer_scope) const { return g_host->GraphViewer__IsConstantInitializer(this, name, check_outer_scope); }
+-  const ONNX_NAMESPACE::TensorProto* GetConstantInitializer(const std::string& name,
+-                                                            bool check_outer_scope = true) const {
+-    return g_host->GraphViewer__GetConstantInitializer(this, name, check_outer_scope);
+-  }
+-  bool GetOrtValueInitializer(const std::string& tensor_name, OrtValue& ort_value) const {
+-    return g_host->GraphViewer__GetOrtValueInitializer(this, tensor_name, ort_value);
+-  }
+-  const Node* ParentNode() const { return g_host->GraphViewer__ParentNode(this); }
+-
+-  int NumberOfNodes() const noexcept { return g_host->GraphViewer__NumberOfNodes(this); }
+-  int MaxNodeIndex() const noexcept { return g_host->GraphViewer__MaxNodeIndex(this); }
+-
+-  const std::vector<const NodeArg*>& GetInputs() const noexcept { return g_host->GraphViewer__GetInputs(this); }
+-  const std::vector<const NodeArg*>& GetOutputs() const noexcept { return g_host->GraphViewer__GetOutputs(this); }
+-  bool NodeProducesGraphOutput(const Node& node) const {
+-    return g_host->GraphViewer__NodeProducesGraphOutput(this, node);
+-  }
+-  const std::unordered_set<const NodeArg*>& GetValueInfo() const noexcept { return g_host->GraphViewer__GetValueInfo(this); }
+-
+-  const InitializedTensorSet& GetAllInitializedTensors() const noexcept { return g_host->GraphViewer__GetAllInitializedTensors(this); }
+-  bool GetInitializedTensor(const std::string& tensor_name, const ONNX_NAMESPACE::TensorProto*& value) const { return g_host->GraphViewer__GetInitializedTensor(this, tensor_name, value); }
+-
+-  const std::unordered_map<std::string, int>& DomainToVersionMap() const noexcept { return g_host->GraphViewer__DomainToVersionMap(this); }
+-
+-  const std::vector<NodeIndex>& GetNodesInTopologicalOrder(int execution_order = 0) const { return g_host->GraphViewer__GetNodesInTopologicalOrder(this, execution_order); }
+-  const std::vector<const NodeArg*>& GetInputsIncludingInitializers() const noexcept { return g_host->GraphViewer__GetInputsIncludingInitializers(this); }
+-  const std::unordered_set<std::string>& GetOuterScopeNodeArgNames() const noexcept {
+-    return g_host->GraphViewer__GetOuterScopeNodeArgNames(this);
+-  }
+-
+-  void ToProto(ONNX_NAMESPACE::GraphProto& graph_proto,
+-               bool include_initializers,
+-               bool include_outer_scope_args,
+-               int execution_order = 0,
+-               bool include_initializer_data = true) const {
+-    g_host->GraphViewer__ToProto(this, graph_proto, include_initializers, include_outer_scope_args, execution_order, include_initializer_data);
+-  }
+-  const Node* GetProducerNode(const std::string& node_arg_name) const { return g_host->GraphViewer__GetProducerNode(this, node_arg_name); }
+-  IOnnxRuntimeOpSchemaCollectionPtr GetSchemaRegistry() const { return g_host->GraphViewer__GetSchemaRegistry(this); }
+-
+-  GraphViewer() = delete;
+-  GraphViewer(const GraphViewer&) = delete;
+-  void operator=(const GraphViewer&) = delete;
+-};
+-
+ struct ConstGraphNodes final {
+   IteratorHolder<ConstGraphNodes_Iterator, const Node> begin() const {
+     return g_host->ConstGraphNodes__begin(this);
