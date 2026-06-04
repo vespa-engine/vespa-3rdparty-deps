@@ -38,9 +38,9 @@ Source0:        https://github.com/openssl/openssl/releases/download/openssl-%{v
 BuildRequires: make
 BuildRequires: perl
 %if 0%{?el8} || 0%{?el9}
-%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
-BuildRequires: vespa-toolset-14-meta
-BuildRequires: gcc-toolset-14-gcc-c++
+%global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
+BuildRequires: vespa-toolset-15-meta
+BuildRequires: gcc-toolset-15-gcc-c++
 %endif
 %if 0%{?el10}
 BuildRequires: gcc-c++

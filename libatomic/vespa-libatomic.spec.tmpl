@@ -30,8 +30,8 @@ URL:            https://gcc.gnu.org/
 Source0:        https://ftp.fu-berlin.de/unix/languages/gcc/releases/gcc-%{version}/gcc-%{version}.tar.gz
 
 %if 0%{?el8} || 0%{?el9}
-BuildRequires: vespa-toolset-14-meta
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: vespa-toolset-15-meta
+%define _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: binutils-devel
 BuildRequires: dejagnu
 BuildRequires: elfutils-devel
@@ -64,7 +64,7 @@ source %{_devtoolset_enable}
 
 mkdir -p build
 cd build
-../configure --prefix=%{_prefix} --disable-bootstrap
+../configure --prefix=%{_prefix} --disable-bootstrap --disable-multilib
 make %{?_smp_mflags}
 
 %install

@@ -23,25 +23,18 @@ URL:            http://www.cmake.org
 Source0:        https://github.com/Kitware/CMake/releases/download/v%{version}/cmake-%{version}.tar.gz
 
 %if 0%{?el8} || 0%{?el9}
-BuildRequires: gcc-toolset-14-gcc-c++
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
-BuildRequires: vespa-ccache
+BuildRequires: gcc-toolset-15-gcc-c++
+%define _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 %endif
 
 %if 0%{?el10}
 BuildRequires: gcc-c++
-BuildRequires: ccache
 %endif
 
 %if 0%{?fedora}
 BuildRequires: gcc-c++
 %if %{fedora} > 40
 BuildRequires: openssl-devel-engine
-%endif
-%if 0%{?amzn2023}
-BuildRequires: vespa-ccache
-%else
-BuildRequires: ccache
 %endif
 %endif
 
@@ -67,7 +60,11 @@ source %{_devtoolset_enable} || true
 # PATH to vespa-ccache
 PATH=%{_prefix}/bin:$PATH
 
-./bootstrap --enable-ccache --prefix=/opt/vespa-deps --parallel=8
+if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
+	wcc="--enable-ccache"
+fi
+
+./bootstrap $wcc --prefix=/opt/vespa-deps --parallel=8
 make %{?_smp_mflags}
 
 %install
@@ -84,5 +81,8 @@ source %{_devtoolset_enable} || true
 %{_prefix}/doc/
 
 %changelog
+* Wed Jun 3 2026 Arne Juul - use ccache only if present
+- avoid BuildRequires for ccache, but use if present
+
 * Fri Sep 5 2025 Tor Egge <Tor.Egge@online.no> - 3.30.2-2
 - Add build dependency for ncurses-devel to build ccmake

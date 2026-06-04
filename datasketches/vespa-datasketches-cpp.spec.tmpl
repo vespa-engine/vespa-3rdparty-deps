@@ -27,8 +27,8 @@ Source0:        https://github.com/apache/%{orig_name}/archive/refs/tags/%{versi
 Patch0:         patches.extra-includes.diff
 
 %if 0%{?el8}%{?el9}
-BuildRequires: vespa-toolset-14-meta
-%define _devtoolset_enable /opt/rh/gcc-toolset-14/enable
+BuildRequires: vespa-toolset-15-meta
+%define _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: vespa-cmake
 %else
 BuildRequires: cmake
