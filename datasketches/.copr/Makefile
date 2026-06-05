@@ -6,7 +6,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=5
 MINOR=2
 PATCH=0
-RELEASE=2
+RELEASE=3
 
 # The actual name for the generated (base) package
 PKGNAME=vespa-datasketches-cpp

@@ -39,9 +39,8 @@ Patch1:         skip-2-stack-frames.diff
 %global _cmake_prog cmake
 %global _ctest_prog ctest
 %if 0%{?el8} || 0%{?el9}
-%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
-BuildRequires: gcc-toolset-14-gcc-c++
-BuildRequires: gcc-toolset-14-annobin-plugin-gcc
+BuildRequires: vespa-toolset-15-meta
+%global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: make
 BuildRequires: vespa-cmake
 %endif

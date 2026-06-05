@@ -24,10 +24,10 @@ Source0:        https://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
 
 %if 0%{?el8}
 %global _devtoolset_enable /opt/rh/gcc-toolset/enable
-%global _devtoolset_gdb /opt/rh/gcc-toolset-14/root/usr/bin/gdb
-BuildRequires: vespa-toolset-14-meta
+%global _devtoolset_gdb /opt/rh/gcc-toolset-15/root/usr/bin/gdb
+BuildRequires: vespa-toolset-15-meta
 BuildRequires: glibc-devel
-BuildRequires: gcc-toolset-14-gdb
+BuildRequires: gcc-toolset-15-gdb
 BuildRequires: procps
 BuildRequires: perl-generators
 BuildRequires: perl(Getopt::Long)

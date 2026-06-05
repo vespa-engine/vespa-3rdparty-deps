@@ -5,7 +5,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=1
 MINOR=5
 PATCH=7
-RELEASE=2
+RELEASE=3
 
 # The actual name for the generated (base) package
 PKGNAME=vespa-zstd

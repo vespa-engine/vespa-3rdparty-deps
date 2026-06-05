@@ -5,8 +5,8 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 # Version
 MAJOR=3
 MINOR=30
-PATCH=2
-RELEASE=3
+PATCH=9
+RELEASE=1
 PKGNAME=vespa-cmake
 
 RPMTOPDIR=$(TOP)/rpmbuild
