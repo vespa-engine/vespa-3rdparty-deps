@@ -37,8 +37,10 @@ cp -a %{SOURCE0} %{buildroot}%{mydir}
 %{mydir}
 
 %post
-cd /usr/local/cuda-%{ver_major}/targets/*/include/cccl/cub/device || exit 1
-cat %{mydir}/patches.device-transform.diff | patch -N -r -
+find /usr -name device_transform.cuh | while read fn; do
+    cd ${fn%/*}
+    cat %{mydir}/patches.device-transform.diff | patch -N -r -
+done
 
 %changelog
 * Wed Jun  3 2026 Arne Juul - initial version
