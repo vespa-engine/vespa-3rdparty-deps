@@ -5,7 +5,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 # Version
 MAJOR=13
 MINOR=3
-PATCH=0
+PATCH=1
 RELEASE=1
 
 # The actual name for the generated (base) package
