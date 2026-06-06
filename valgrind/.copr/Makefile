@@ -3,9 +3,9 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=3
-MINOR=26
-PATCH=0
-RELEASE=2
+MINOR=27
+PATCH=1
+RELEASE=1
 
 PKGNAME=vespa-valgrind
 
