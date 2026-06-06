@@ -27,12 +27,14 @@ Release:        %{ver_release}%{?dist}
 License:        MIT License
 URL:            https://microsoft.github.io/onnxruntime
 Source0:        vespa-onnxruntime-%{version}.tar.gz
-Source1:        patches.external-pytorch-cpuinfo-src-arm-linux-init.diff
 Patch0:         patches.use-origin-rpath-for-jni-library.diff
 Patch1:         patches.no-array-bounds.diff
 Patch2:         patches.use-gradle.diff
-Patch3:         patches.apply-cpuinfo.diff
+Patch3:         patches.reorg-provider.diff
 Patch4:         patches.onnx-use-extra.diff
+Patch5:         patches.same-name-two-unit-tests.diff
+Patch6:         patches.avoid-sign-change.diff
+Patch7:         patches.mod-abseil-macro.diff
 
 %if ( 0%{?fedora} && !0%{?amzn} ) || 0%{?el10}
 BuildRequires: cmake
@@ -46,9 +48,9 @@ BuildRequires: vespa-ccache
 BuildRequires: vespa-gradle
 BuildRequires: which
 %if 0%{?el8}
-%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
-BuildRequires: vespa-toolset-14-meta
-BuildRequires: gcc-toolset-14-dwz
+%global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
+BuildRequires: vespa-toolset-15-meta
+BuildRequires: gcc-toolset-15-dwz
 BuildRequires: gtest-devel
 BuildRequires: make
 BuildRequires: glibc-langpack-en
@@ -60,8 +62,8 @@ BuildRequires: python3.11-setuptools
 %global _enable_cuda 1
 %endif
 %if 0%{?el9}
-%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
-BuildRequires: vespa-toolset-14-meta
+%global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
+BuildRequires: vespa-toolset-15-meta
 BuildRequires: gcc-toolset-14-dwz
 BuildRequires: gtest-devel
 BuildRequires: make
@@ -73,7 +75,9 @@ BuildRequires: python3.11-setuptools
 %global _enable_cuda 1
 %endif
 %if 0%{?el10}
-BuildRequires: gcc-c++
+%global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
+BuildRequires: vespa-toolset-15-meta
+BuildRequires: dwz
 BuildRequires: gtest-devel
 BuildRequires: gmock-devel
 BuildRequires: make
@@ -82,6 +86,7 @@ BuildRequires: python3
 BuildRequires: python3-devel
 BuildRequires: python3-numpy
 BuildRequires: python3-setuptools
+%global _enable_cuda 1
 %endif
 %if 0%{?amzn2023}
 BuildRequires: python3.11
@@ -102,22 +107,23 @@ BuildRequires: libunwind
 BuildRequires: bzip2
 
 %if 0%{?_enable_cuda:1}
-%global _cuda_version_major 12
-%global _cuda_version_minor 8
-%global _cuda_version_micro 90
+%global _cuda_version_major 13
+%global _cuda_version_minor 3
+%global _cuda_version_micro 29
 %global _cuda_version_pkg_name %{_cuda_version_major}-%{_cuda_version_minor}
 %global _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
 %global _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
 
-%global _cudnn_version 9.8.0.87
+%global _cudnn_version 9.23.0.39
 
-BuildRequires: cuda-toolkit-12-config-common = %{_cuda_version_full_num}
+BuildRequires: cuda-toolkit-%{_cuda_version_major}-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-toolkit-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-libraries-devel-%{_cuda_version_pkg_name}
 BuildRequires: cuda-compiler-%{_cuda_version_pkg_name}
 BuildRequires: cuda-cudart-devel-%{_cuda_version_pkg_name}
 BuildRequires: cuda-command-line-tools-%{_cuda_version_pkg_name}
-BuildRequires: libcudnn9-devel-cuda-12 = %{_cudnn_version}
+BuildRequires: libcudnn9-devel-cuda-%{_cuda_version_major} = %{_cudnn_version}
+BuildRequires: vespa-cuda-fix >= %{_cuda_version_major}.%{_cuda_version_minor}.0
 %endif
 
 %description
@@ -142,9 +148,9 @@ about packaging.
 %patch -P 2 -p0
 %patch -P 3 -p1
 %patch -P 4 -p1
-
-mkdir cmake/patches/pytorch_cpuinfo
-cp -a %{SOURCE1} cmake/patches/pytorch_cpuinfo/arm-linux-init.diff
+%patch -P 5 -p1
+%patch -P 6 -p1
+%patch -P 7 -p1
 
 %build
 
@@ -158,7 +164,7 @@ PATH=%{_prefix}/bin:$PATH
 # 75: Tesla T4
 # 80: Ampere A100
 # 89: Ada Lovelace L40 / L40S
-%global _enable_cuda_extra_defines CMAKE_CUDA_ARCHITECTURES="75;80;89"
+%global _enable_cuda_extra_defines CMAKE_CUDA_ARCHITECTURES="75;80;89" CMAKE_CUDA_FLAGS="--std c++20"
 %endif
 
 if [ -f /usr/bin/python3.11 ]; then
@@ -187,6 +193,7 @@ fi
     --skip_submodule_sync \
     --cmake_extra_defines \
             CMAKE_INSTALL_PREFIX=%{_prefix} \
+            CMAKE_CXX_STANDARD=20 \
             CMAKE_CXX_COMPILER_LAUNCHER=ccache \
             CMAKE_CUDA_COMPILER_LAUNCHER=ccache \
             %{?_enable_cuda_extra_defines:%{_enable_cuda_extra_defines}} \
@@ -241,7 +248,7 @@ Requires:       libcufft-%{_cuda_version_pkg_name}
 Requires:       libcublas-%{_cuda_version_pkg_name}
 Requires:       libcurand-%{_cuda_version_pkg_name}
 Requires:       libnvjitlink-%{_cuda_version_pkg_name}
-Requires:       libcudnn9-cuda-12 = %{_cudnn_version}
+Requires:       libcudnn9-cuda-%{_cuda_version_major} = %{_cudnn_version}
 
 %description cuda
 CUDA support package for Vespa.
@@ -255,6 +262,10 @@ about packaging.
 %endif
 
 %changelog
+* Mon Jun  1 2026 Arne Juul - 1.26.0
+- bump version to 1.26.0
+- update CUDA to 13.3
+
 * Mon Sep 22 2025 Arne Juul - 1.22.2
 - bump version to 1.22.2
 - remove temporary patch

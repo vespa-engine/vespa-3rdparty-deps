@@ -1,0 +1,44 @@
+diff --git a/onnxruntime/test/mlas/unittest/test_hqnbitgemm_neon.cpp b/onnxruntime/test/mlas/unittest/test_hqnbitgemm_neon.cpp
+index 3762e30af3..90ce9c6498 100644
+--- a/onnxruntime/test/mlas/unittest/test_hqnbitgemm_neon.cpp
++++ b/onnxruntime/test/mlas/unittest/test_hqnbitgemm_neon.cpp
+@@ -25,7 +25,7 @@ Abstract:
+ 
+ #if defined(MLAS_F16VEC_INTRINSICS_SUPPORTED) && defined(MLAS_TARGET_ARM64)
+ 
+-class MlasNeonFp16CastTest : public MlasTestBase {
++class MlasHqnBitNeonFp16CastTest : public MlasTestBase {
+  private:
+   MatrixGuardBuffer<float> fp32Buffer_;
+   MatrixGuardBuffer<unsigned short> fp16Buffer_;
+@@ -738,7 +738,7 @@ class MlasNeonFp16DequantB8BitTest : public MlasTestBase {
+ static UNUSED_VARIABLE bool added_to_main = AddTestRegister([](bool is_short_execute) {
+   size_t count = 0;
+   if (is_short_execute) {
+-    count += MlasDirectShortExecuteTests<MlasNeonFp16CastTest>::RegisterShortExecute();
++    count += MlasDirectShortExecuteTests<MlasHqnBitNeonFp16CastTest>::RegisterShortExecute();
+     if (GetMlasPlatform().QNBitGemmDispatch) {
+       if (GetMlasPlatform().QNBitGemmDispatch->HQ4BitGemmPackQuantBData) {
+         count += MlasDirectShortExecuteTests<MlasNeonFp16PrepackTest>::RegisterShortExecute();
+diff --git a/onnxruntime/test/mlas/unittest/test_sqnbitgemm_neon_fp16.cpp b/onnxruntime/test/mlas/unittest/test_sqnbitgemm_neon_fp16.cpp
+index 243752bbea..e1bee09102 100644
+--- a/onnxruntime/test/mlas/unittest/test_sqnbitgemm_neon_fp16.cpp
++++ b/onnxruntime/test/mlas/unittest/test_sqnbitgemm_neon_fp16.cpp
+@@ -21,7 +21,7 @@ Abstract:
+ 
+ #if defined(MLAS_F16VEC_INTRINSICS_SUPPORTED) && defined(MLAS_TARGET_ARM64)
+ 
+-class MlasNeonFp16CastTest : public MlasTestBase {
++class MlasSqnBitNeonFp16CastTest : public MlasTestBase {
+  private:
+   void TestFp16ToFp32(size_t count) {
+     std::vector<unsigned short> src(count);
+@@ -74,7 +74,7 @@ class MlasNeonFp16CastTest : public MlasTestBase {
+ static UNUSED_VARIABLE bool added_to_main = AddTestRegister([](bool is_short_execute) {
+   size_t count = 0;
+   if (is_short_execute) {
+-    count += MlasDirectShortExecuteTests<MlasNeonFp16CastTest>::RegisterShortExecute();
++    count += MlasDirectShortExecuteTests<MlasSqnBitNeonFp16CastTest>::RegisterShortExecute();
+   }
+   return count;
+ });
