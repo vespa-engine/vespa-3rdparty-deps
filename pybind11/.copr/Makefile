@@ -2,10 +2,10 @@
 TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
-MAJOR=2
-MINOR=10
+MAJOR=3
+MINOR=0
 PATCH=4
-RELEASE=2
+RELEASE=1
 
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES
