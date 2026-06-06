@@ -66,9 +66,9 @@ BuildRequires: ccache
 %endif
 
 %if 0%{?el8} || 0%{?el9}
-BuildRequires: vespa-toolset-15-meta
-BuildRequires: gcc-toolset-15-gcc-c++
-%global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
+BuildRequires: vespa-toolset-14-meta
+BuildRequires: gcc-toolset-14-gcc-c++
+%global _devtoolset_enable /opt/rh/gcc-toolset-14/enable
 BuildRequires: vespa-cmake
 %global _enable_cuda 1
 %else
