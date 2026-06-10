@@ -8,6 +8,9 @@
 
 %global debug_package %{nil}
 
+# Don't enable LTO
+%global _lto_cflags %{nil}
+
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so[0-9.]*\\(\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
 

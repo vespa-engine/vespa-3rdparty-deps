@@ -9,6 +9,9 @@
 # Only strip debug info
 %global _find_debuginfo_opts -g
 
+# Don't enable LTO
+%global _lto_cflags %{nil}
+
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so(\\.[0-9.]*)?\\([A-Z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
 
