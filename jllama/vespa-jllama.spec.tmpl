@@ -135,8 +135,8 @@ mvn compile
 
 %ifarch aarch64
 %define _arch_cmake_options \
-    -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG -march=armv8.2-a+fp16+dotprod+crypto -mtune=neoverse-n1" \
-    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG -march=armv8.2-a+fp16+dotprod+crypto -mtune=neoverse-n1" \
+    -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG -march=armv8.2-a+dotprod+crypto -mtune=neoverse-n1" \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG -march=armv8.2-a+dotprod+crypto -mtune=neoverse-n1" \
     -DGGML_USE_CPU_AARCH64=ON
 %endif
 
