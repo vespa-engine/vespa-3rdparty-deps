@@ -1,0 +1,1320 @@
+diff --git a/include/onnxruntime/core/graph/node_arg.h b/include/onnxruntime/core/graph/node_arg.h
+index 4a18d7617ac13..5d054258526df 100644
+--- a/include/onnxruntime/core/graph/node_arg.h
++++ b/include/onnxruntime/core/graph/node_arg.h
+@@ -121,6 +121,9 @@ class NodeArg {
+   /** Sets the inferred shape scalar value */
+   void SetInferredShapeScalarValue(int64_t value) noexcept { inferred_scalar_value_ = value; }
+ 
++  /** Clears the inferred shape scalar value */
++  void ClearInferredShapeScalarValue() noexcept { inferred_scalar_value_.reset(); }
++
+   /** Gets a flag indicating whether this NodeArg exists or not.
+   Optional inputs are allowed in ONNX and an empty #Name represents a non-existent input argument. */
+   bool Exists() const noexcept;
+diff --git a/onnxruntime/core/graph/data_propagation/add_op_data_propagation.cc b/onnxruntime/core/graph/data_propagation/add_op_data_propagation.cc
+index 172941c0ee023..06dca7d0d464b 100644
+--- a/onnxruntime/core/graph/data_propagation/add_op_data_propagation.cc
++++ b/onnxruntime/core/graph/data_propagation/add_op_data_propagation.cc
+@@ -6,6 +6,7 @@
+ #include "core/graph/node_arg.h"
+ #include "core/graph/onnx_protobuf.h"
+ #include "core/providers/common.h"
++#include "core/graph/data_propagation/data_propagation_value_utils.h"
+ 
+ namespace onnxruntime {
+ 
+@@ -20,10 +21,16 @@ Status AddOpDataPropagation::infer() {
+     return Status::OK();
+   }
+ 
+-  if (input_0->GetInferredShapeScalarValue().has_value() && input_1->GetInferredShapeScalarValue().has_value()) {
+-    output_def_.SetInferredShapeScalarValue(
+-        input_0->GetInferredShapeScalarValue().value() +
+-        input_1->GetInferredShapeScalarValue().value());
++  int64_t lhs = 0;
++  int64_t rhs = 0;
++  bool lhs_is_rank1 = false;
++  bool rhs_is_rank1 = false;
++  if (TryGetSinglePropagatedShapeValue(*input_0, lhs, lhs_is_rank1) &&
++      TryGetSinglePropagatedShapeValue(*input_1, rhs, rhs_is_rank1)) {
++    // Single-element operands may be carried as a rank-0 scalar or a rank-1 [1] value. Per ONNX
++    // broadcasting, the result is rank-1 if either operand is rank-1, otherwise a scalar; keep
++    // the propagated value's rank consistent with that so downstream consumers see the right rank.
++    SetSinglePropagatedShapeValue(output_def_, lhs + rhs, lhs_is_rank1 || rhs_is_rank1);
+   }
+ 
+   return Status::OK();
+diff --git a/onnxruntime/core/graph/data_propagation/add_op_data_propagation.h b/onnxruntime/core/graph/data_propagation/add_op_data_propagation.h
+index f9eb9990142c1..d074dc4ea69da 100644
+--- a/onnxruntime/core/graph/data_propagation/add_op_data_propagation.h
++++ b/onnxruntime/core/graph/data_propagation/add_op_data_propagation.h
+@@ -41,7 +41,7 @@ class AddOpDataPropagation : public CustomDataPropagationBase {
+  public:
+   AddOpDataPropagation(const Node& node,
+                        NodeArg& output_def,
+-                       std::function<Status(const std::string&, TensorShapeVector&)> func,
++                       GetInitializedInputValuesFunc func,
+                        const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+                        const logging::Logger& logger) noexcept
+       : CustomDataPropagationBase(node, output_def, func, output_from_onnx_op_data_propagation, logger) {}
+diff --git a/onnxruntime/core/graph/data_propagation/custom_data_propagation.cc b/onnxruntime/core/graph/data_propagation/custom_data_propagation.cc
+index b7254aa828107..0b260f598a5ad 100644
+--- a/onnxruntime/core/graph/data_propagation/custom_data_propagation.cc
++++ b/onnxruntime/core/graph/data_propagation/custom_data_propagation.cc
+@@ -19,7 +19,7 @@ namespace onnxruntime {
+ 
+ std::unique_ptr<CustomDataPropagationBase> CreateCustomDataPropagation(const Node& node,
+                                                                        NodeArg& output_def,
+-                                                                       std::function<Status(const std::string&, TensorShapeVector&)> func,
++                                                                       GetInitializedInputValuesFunc func,
+                                                                        const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+                                                                        const logging::Logger& logger) {
+   int dim_size = 0;
+diff --git a/onnxruntime/core/graph/data_propagation/custom_data_propagation.h b/onnxruntime/core/graph/data_propagation/custom_data_propagation.h
+index 7511f77f58519..5ac78c5a1b7f4 100644
+--- a/onnxruntime/core/graph/data_propagation/custom_data_propagation.h
++++ b/onnxruntime/core/graph/data_propagation/custom_data_propagation.h
+@@ -10,6 +10,21 @@
+ 
+ namespace onnxruntime {
+ 
++/**
++ * @brief Signature of the helper used to read a constant-initializer input's values during
++ * data propagation.
++ *
++ * @param input_name  Name of the input to read.
++ * @param input_values Receives the initializer's flattened int64 values (empty if the input is
++ *                     not a constant initializer).
++ * @param num_dims     Receives the rank (number of dimensions) of the initializer's shape, or is
++ *                     left unchanged when the input is not a constant initializer. A value of 0
++ *                     denotes a scalar (rank-0) initializer; this lets callers distinguish a 0-D
++ *                     scalar from a rank-1 single-element initializer (both have one element).
++ */
++using GetInitializedInputValuesFunc =
++    std::function<Status(const std::string& input_name, TensorShapeVector& input_values, int& num_dims)>;
++
+ /**
+  * @class CustomDataPropagation
+  * Custom data propagation for the operator to help enhance shape inference.
+@@ -27,7 +42,7 @@ class CustomDataPropagationBase {
+  protected:
+   CustomDataPropagationBase(const Node& node,
+                             NodeArg& output_def,
+-                            std::function<Status(const std::string&, TensorShapeVector&)> func,
++                            GetInitializedInputValuesFunc func,
+                             const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+                             const logging::Logger& logger) noexcept
+       : node_(node),
+@@ -38,7 +53,7 @@ class CustomDataPropagationBase {
+ 
+   const Node& node_;
+   NodeArg& output_def_;
+-  std::function<Status(const std::string&, TensorShapeVector&)> get_initialized_input_values_func_;
++  GetInitializedInputValuesFunc get_initialized_input_values_func_;
+   const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation_;
+   const logging::Logger& logger_;
+ };
+@@ -68,7 +83,7 @@ class CustomDataPropagationBase {
+ std::unique_ptr<CustomDataPropagationBase> CreateCustomDataPropagation(
+     const Node& node,
+     NodeArg& output_def,
+-    std::function<Status(const std::string&, TensorShapeVector&)> func,
++    GetInitializedInputValuesFunc func,
+     const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+     const logging::Logger& logger);
+ 
+diff --git a/onnxruntime/core/graph/data_propagation/data_propagation_value_utils.h b/onnxruntime/core/graph/data_propagation/data_propagation_value_utils.h
+new file mode 100644
+index 0000000000000..e3610e70d51cf
+--- /dev/null
++++ b/onnxruntime/core/graph/data_propagation/data_propagation_value_utils.h
+@@ -0,0 +1,67 @@
++// Copyright (c) Microsoft Corporation. All rights reserved.
++// Licensed under the MIT License.
++
++#pragma once
++
++#include <cstdint>
++
++#include "core/graph/node_arg.h"
++
++namespace onnxruntime {
++
++// Data propagation carries a small "shape value" in one of two non-interchangeable channels
++// on a NodeArg: a rank-0 scalar (inferred_scalar_value_) or a rank>=1 list of values
++// (inferred_shape_values_). The helpers below let custom data-propagation ops read and write a
++// single-element value while preserving its rank (rank-0 scalar vs rank-1 [1]), so a producer
++// and its consumers cannot silently disagree on rank (e.g. Gather feeding Mul feeding TopK).
++
++// Reads a single int64 shape value carried by a NodeArg's data propagation, accepting either a
++// rank-0 scalar value or a rank-1 single-element value. On success, sets `value`, sets
++// `is_rank1` to false for a scalar source or true for a rank-1 [1] source, and returns true.
++// Returns false if the NodeArg carries no usable single-element shape value.
++inline bool TryGetSinglePropagatedShapeValue(const NodeArg& input_def, int64_t& value, bool& is_rank1) {
++  if (input_def.GetInferredShapeScalarValue().has_value()) {
++    value = input_def.GetInferredShapeScalarValue().value();
++    is_rank1 = false;
++    return true;
++  }
++
++  const auto& inferred_values = input_def.GetInferredShapeValues();
++  if (inferred_values.has_value() &&
++      inferred_values->dim_size() == 1 &&
++      inferred_values->dim(0).has_dim_value()) {
++    value = inferred_values->dim(0).dim_value();
++    is_rank1 = true;
++    return true;
++  }
++
++  return false;
++}
++
++// Stores a single int64 shape value on `output_def`, as a rank-0 scalar when `is_rank1` is false
++// or as a rank-1 single-element value when `is_rank1` is true. The rank-1 representation mirrors
++// how Graph::getInputData() reconstructs a TensorProto (dims=[1]) from inferred_shape_values_.
++// The setter is correct-by-construction: it populates exactly one channel and clears the other, so
++// the scalar-first reader (TryGetSinglePropagatedShapeValue) and the values-first getInputData()
++// can never disagree on rank even if `output_def` carried a stale value from another channel.
++inline void SetSinglePropagatedShapeValue(NodeArg& output_def, int64_t value, bool is_rank1) {
++  if (!is_rank1) {
++    output_def.SetInferredShapeScalarValue(value);
++    // Keep exactly one channel populated: drop any stale values channel that getInputData() would
++    // otherwise prefer over this scalar.
++    output_def.GetMutableInferredShapeValues().reset();
++    return;
++  }
++
++  auto& inferred_values = output_def.GetMutableInferredShapeValues();
++  if (!inferred_values.has_value()) {
++    inferred_values.emplace();
++  }
++  inferred_values->clear_dim();
++  inferred_values->add_dim()->set_dim_value(value);
++  // Keep exactly one channel populated: drop any stale scalar that the scalar-first reader would
++  // otherwise return ahead of this rank-1 value.
++  output_def.ClearInferredShapeScalarValue();
++}
++
++}  // namespace onnxruntime
+diff --git a/onnxruntime/core/graph/data_propagation/div_op_data_propagation.cc b/onnxruntime/core/graph/data_propagation/div_op_data_propagation.cc
+index 2ea9b3047941c..6ded5903601a7 100644
+--- a/onnxruntime/core/graph/data_propagation/div_op_data_propagation.cc
++++ b/onnxruntime/core/graph/data_propagation/div_op_data_propagation.cc
+@@ -6,6 +6,7 @@
+ #include "core/graph/node_arg.h"
+ #include "core/graph/onnx_protobuf.h"
+ #include "core/providers/common.h"
++#include "core/graph/data_propagation/data_propagation_value_utils.h"
+ 
+ namespace onnxruntime {
+ 
+@@ -20,10 +21,17 @@ Status DivOpDataPropagation::infer() {
+     return Status::OK();
+   }
+ 
+-  if (input_0->GetInferredShapeScalarValue().has_value() && input_1->GetInferredShapeScalarValue().has_value()) {
+-    output_def_.SetInferredShapeScalarValue(
+-        input_0->GetInferredShapeScalarValue().value() /
+-        input_1->GetInferredShapeScalarValue().value());
++  int64_t lhs = 0;
++  int64_t rhs = 0;
++  bool lhs_is_rank1 = false;
++  bool rhs_is_rank1 = false;
++  if (TryGetSinglePropagatedShapeValue(*input_0, lhs, lhs_is_rank1) &&
++      TryGetSinglePropagatedShapeValue(*input_1, rhs, rhs_is_rank1) &&
++      rhs != 0) {
++    // Single-element operands may be carried as a rank-0 scalar or a rank-1 [1] value. Per ONNX
++    // broadcasting, the result is rank-1 if either operand is rank-1, otherwise a scalar; keep
++    // the propagated value's rank consistent with that so downstream consumers see the right rank.
++    SetSinglePropagatedShapeValue(output_def_, lhs / rhs, lhs_is_rank1 || rhs_is_rank1);
+   }
+ 
+   return Status::OK();
+diff --git a/onnxruntime/core/graph/data_propagation/div_op_data_propagation.h b/onnxruntime/core/graph/data_propagation/div_op_data_propagation.h
+index 9b32b59039282..0e4a76f9fdbab 100644
+--- a/onnxruntime/core/graph/data_propagation/div_op_data_propagation.h
++++ b/onnxruntime/core/graph/data_propagation/div_op_data_propagation.h
+@@ -41,7 +41,7 @@ class DivOpDataPropagation : public CustomDataPropagationBase {
+  public:
+   DivOpDataPropagation(const Node& node,
+                        NodeArg& output_def,
+-                       std::function<Status(const std::string&, TensorShapeVector&)> func,
++                       GetInitializedInputValuesFunc func,
+                        const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+                        const logging::Logger& logger) noexcept
+       : CustomDataPropagationBase(node, output_def, func, output_from_onnx_op_data_propagation, logger) {}
+diff --git a/onnxruntime/core/graph/data_propagation/gather_op_data_propagation.cc b/onnxruntime/core/graph/data_propagation/gather_op_data_propagation.cc
+index 39ac926a8553f..d747ac20219cf 100644
+--- a/onnxruntime/core/graph/data_propagation/gather_op_data_propagation.cc
++++ b/onnxruntime/core/graph/data_propagation/gather_op_data_propagation.cc
+@@ -6,6 +6,7 @@
+ #include "core/graph/node_arg.h"
+ #include "core/graph/onnx_protobuf.h"
+ #include "core/providers/common.h"
++#include "core/graph/data_propagation/data_propagation_value_utils.h"
+ 
+ namespace onnxruntime {
+ 
+@@ -58,7 +59,8 @@ Status GatherOpDataPropagation::infer() {
+ 
+     ORT_TRY {
+       TensorShapeVector indices;
+-      ORT_RETURN_IF_ERROR(get_initialized_input_values_func_(input_1->Name(), indices));
++      int indices_num_dims = -1;
++      ORT_RETURN_IF_ERROR(get_initialized_input_values_func_(input_1->Name(), indices, indices_num_dims));
+       if (indices.size() == 1) {
+         // Note: Index value is expected to be within bounds [-s, s-1] along axis of size s
+         auto index = static_cast<int32_t>(
+@@ -66,7 +68,34 @@ Status GatherOpDataPropagation::infer() {
+ 
+         auto& dim = tensor_shape_proto.dim(index);
+         if (dim.has_dim_value()) {
+-          output_def_.SetInferredShapeScalarValue(dim.dim_value());
++          // Gather output rank = data_rank - 1 + indices_rank. The "data" input here is the
++          // 1-D Shape output, so the output rank equals the indices rank. Route by that rank:
++          //   * a 0-D scalar index   -> a scalar output value,
++          //   * a 1-D index          -> a rank-1 [1] output value (so consumers that require a
++          //     1-D tensor, e.g. TopK's K input, still observe the correct rank),
++          //   * a rank >= 2 index (or an unknown rank) -> decline, because the single-value
++          //     channel cannot represent a rank >= 2 Gather output; falling back to ONNX data
++          //     propagation is safer than fabricating a rank-1 value.
++          //
++          // The index rank is sourced canonically from the same constant initializer the index
++          // value came from (indices_num_dims). If that is unavailable (sentinel < 0), fall back
++          // to the indices NodeArg shape; an unknown shape then routes to decline.
++          int effective_num_dims = indices_num_dims;
++          if (effective_num_dims < 0) {
++            const ONNX_NAMESPACE::TensorShapeProto* indices_shape = input_1->Shape();
++            effective_num_dims = (indices_shape != nullptr) ? indices_shape->dim_size() : -1;
++          }
++
++          if (effective_num_dims == 0) {
++            // 0-D scalar index -> a scalar output value.
++            SetSinglePropagatedShapeValue(output_def_, dim.dim_value(), /*is_rank1=*/false);
++          } else if (effective_num_dims == 1) {
++            // 1-D index -> a rank-1 [1] output value.
++            SetSinglePropagatedShapeValue(output_def_, dim.dim_value(), /*is_rank1=*/true);
++          }
++          // rank >= 2 or unknown index rank (effective_num_dims < 0): leave the output unset and
++          // let ONNX data propagation handle it. The single-value channel cannot represent a
++          // rank >= 2 Gather output, so emitting a rank-1 value would fabricate a misleading rank.
+         }
+       }
+     }
+diff --git a/onnxruntime/core/graph/data_propagation/gather_op_data_propagation.h b/onnxruntime/core/graph/data_propagation/gather_op_data_propagation.h
+index c6b542e5af6e3..2f75223506974 100644
+--- a/onnxruntime/core/graph/data_propagation/gather_op_data_propagation.h
++++ b/onnxruntime/core/graph/data_propagation/gather_op_data_propagation.h
+@@ -40,7 +40,7 @@ class GatherOpDataPropagation : public CustomDataPropagationBase {
+  public:
+   GatherOpDataPropagation(const Node& node,
+                           NodeArg& output_def,
+-                          std::function<Status(const std::string&, TensorShapeVector&)> func,
++                          GetInitializedInputValuesFunc func,
+                           const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+                           const logging::Logger& logger) noexcept
+       : CustomDataPropagationBase(node, output_def, func, output_from_onnx_op_data_propagation, logger) {}
+diff --git a/onnxruntime/core/graph/data_propagation/mul_op_data_propagation.cc b/onnxruntime/core/graph/data_propagation/mul_op_data_propagation.cc
+index 4c5c25022e40b..3df2932f83cc9 100644
+--- a/onnxruntime/core/graph/data_propagation/mul_op_data_propagation.cc
++++ b/onnxruntime/core/graph/data_propagation/mul_op_data_propagation.cc
+@@ -6,6 +6,7 @@
+ #include "core/graph/node_arg.h"
+ #include "core/graph/onnx_protobuf.h"
+ #include "core/providers/common.h"
++#include "core/graph/data_propagation/data_propagation_value_utils.h"
+ 
+ namespace onnxruntime {
+ 
+@@ -20,10 +21,16 @@ Status MulOpDataPropagation::infer() {
+     return Status::OK();
+   }
+ 
+-  if (input_0->GetInferredShapeScalarValue().has_value() && input_1->GetInferredShapeScalarValue().has_value()) {
+-    output_def_.SetInferredShapeScalarValue(
+-        input_0->GetInferredShapeScalarValue().value() *
+-        input_1->GetInferredShapeScalarValue().value());
++  int64_t lhs = 0;
++  int64_t rhs = 0;
++  bool lhs_is_rank1 = false;
++  bool rhs_is_rank1 = false;
++  if (TryGetSinglePropagatedShapeValue(*input_0, lhs, lhs_is_rank1) &&
++      TryGetSinglePropagatedShapeValue(*input_1, rhs, rhs_is_rank1)) {
++    // Single-element operands may be carried as a rank-0 scalar or a rank-1 [1] value. Per ONNX
++    // broadcasting, the result is rank-1 if either operand is rank-1, otherwise a scalar; keep
++    // the propagated value's rank consistent with that so downstream consumers see the right rank.
++    SetSinglePropagatedShapeValue(output_def_, lhs * rhs, lhs_is_rank1 || rhs_is_rank1);
+   }
+ 
+   return Status::OK();
+diff --git a/onnxruntime/core/graph/data_propagation/mul_op_data_propagation.h b/onnxruntime/core/graph/data_propagation/mul_op_data_propagation.h
+index b42a591eb4c7b..101a020351d1c 100644
+--- a/onnxruntime/core/graph/data_propagation/mul_op_data_propagation.h
++++ b/onnxruntime/core/graph/data_propagation/mul_op_data_propagation.h
+@@ -40,7 +40,7 @@ class MulOpDataPropagation : public CustomDataPropagationBase {
+  public:
+   MulOpDataPropagation(const Node& node,
+                        NodeArg& output_def,
+-                       std::function<Status(const std::string&, TensorShapeVector&)> func,
++                       GetInitializedInputValuesFunc func,
+                        const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+                        const logging::Logger& logger) noexcept
+       : CustomDataPropagationBase(node, output_def, func, output_from_onnx_op_data_propagation, logger) {}
+diff --git a/onnxruntime/core/graph/data_propagation/size_op_data_propagation.h b/onnxruntime/core/graph/data_propagation/size_op_data_propagation.h
+index 184202254f078..c83788a19e911 100644
+--- a/onnxruntime/core/graph/data_propagation/size_op_data_propagation.h
++++ b/onnxruntime/core/graph/data_propagation/size_op_data_propagation.h
+@@ -18,7 +18,7 @@ class SizeOpDataPropagation : public CustomDataPropagationBase {
+  public:
+   SizeOpDataPropagation(const Node& node,
+                         NodeArg& output_def,
+-                        std::function<Status(const std::string&, TensorShapeVector&)> func,
++                        GetInitializedInputValuesFunc func,
+                         const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+                         const logging::Logger& logger) noexcept
+       : CustomDataPropagationBase(node, output_def, func, output_from_onnx_op_data_propagation, logger) {}
+diff --git a/onnxruntime/core/graph/data_propagation/squeeze_op_data_propagation.cc b/onnxruntime/core/graph/data_propagation/squeeze_op_data_propagation.cc
+index b33d4f5589016..a720d0a36216e 100644
+--- a/onnxruntime/core/graph/data_propagation/squeeze_op_data_propagation.cc
++++ b/onnxruntime/core/graph/data_propagation/squeeze_op_data_propagation.cc
+@@ -43,7 +43,8 @@ Status SqueezeOpDataPropagation::infer() {
+       if (node_.InputDefs().size() > 1) {
+         const auto* input_1 = node_.InputDefs()[1];
+         ORT_TRY {
+-          ORT_RETURN_IF_ERROR(get_initialized_input_values_func_(input_1->Name(), axes));
++          [[maybe_unused]] int axes_num_dims = -1;
++          ORT_RETURN_IF_ERROR(get_initialized_input_values_func_(input_1->Name(), axes, axes_num_dims));
+         }
+         ORT_CATCH(const std::exception& ex) {
+           ORT_HANDLE_EXCEPTION([&]() {
+diff --git a/onnxruntime/core/graph/data_propagation/squeeze_op_data_propagation.h b/onnxruntime/core/graph/data_propagation/squeeze_op_data_propagation.h
+index 15e1e8458525a..8c8f98a9fddd4 100644
+--- a/onnxruntime/core/graph/data_propagation/squeeze_op_data_propagation.h
++++ b/onnxruntime/core/graph/data_propagation/squeeze_op_data_propagation.h
+@@ -16,7 +16,7 @@ class SqueezeOpDataPropagation : public CustomDataPropagationBase {
+  public:
+   SqueezeOpDataPropagation(const Node& node,
+                            NodeArg& output_def,
+-                           std::function<Status(const std::string&, TensorShapeVector&)> func,
++                           GetInitializedInputValuesFunc func,
+                            const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+                            const logging::Logger& logger) noexcept
+       : CustomDataPropagationBase(node, output_def, func, output_from_onnx_op_data_propagation, logger) {}
+diff --git a/onnxruntime/core/graph/data_propagation/sub_op_data_propagation.cc b/onnxruntime/core/graph/data_propagation/sub_op_data_propagation.cc
+index 4ee8ab546e707..a827a3d82de51 100644
+--- a/onnxruntime/core/graph/data_propagation/sub_op_data_propagation.cc
++++ b/onnxruntime/core/graph/data_propagation/sub_op_data_propagation.cc
+@@ -6,6 +6,7 @@
+ #include "core/graph/node_arg.h"
+ #include "core/graph/onnx_protobuf.h"
+ #include "core/providers/common.h"
++#include "core/graph/data_propagation/data_propagation_value_utils.h"
+ 
+ namespace onnxruntime {
+ 
+@@ -20,10 +21,16 @@ Status SubOpDataPropagation::infer() {
+     return Status::OK();
+   }
+ 
+-  if (input_0->GetInferredShapeScalarValue().has_value() && input_1->GetInferredShapeScalarValue().has_value()) {
+-    output_def_.SetInferredShapeScalarValue(
+-        input_0->GetInferredShapeScalarValue().value() -
+-        input_1->GetInferredShapeScalarValue().value());
++  int64_t lhs = 0;
++  int64_t rhs = 0;
++  bool lhs_is_rank1 = false;
++  bool rhs_is_rank1 = false;
++  if (TryGetSinglePropagatedShapeValue(*input_0, lhs, lhs_is_rank1) &&
++      TryGetSinglePropagatedShapeValue(*input_1, rhs, rhs_is_rank1)) {
++    // Single-element operands may be carried as a rank-0 scalar or a rank-1 [1] value. Per ONNX
++    // broadcasting, the result is rank-1 if either operand is rank-1, otherwise a scalar; keep
++    // the propagated value's rank consistent with that so downstream consumers see the right rank.
++    SetSinglePropagatedShapeValue(output_def_, lhs - rhs, lhs_is_rank1 || rhs_is_rank1);
+   }
+ 
+   return Status::OK();
+diff --git a/onnxruntime/core/graph/data_propagation/sub_op_data_propagation.h b/onnxruntime/core/graph/data_propagation/sub_op_data_propagation.h
+index a9be294b8f62f..90186218540b0 100644
+--- a/onnxruntime/core/graph/data_propagation/sub_op_data_propagation.h
++++ b/onnxruntime/core/graph/data_propagation/sub_op_data_propagation.h
+@@ -41,7 +41,7 @@ class SubOpDataPropagation : public CustomDataPropagationBase {
+  public:
+   SubOpDataPropagation(const Node& node,
+                        NodeArg& output_def,
+-                       std::function<Status(const std::string&, TensorShapeVector&)> func,
++                       GetInitializedInputValuesFunc func,
+                        const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+                        const logging::Logger& logger) noexcept
+       : CustomDataPropagationBase(node, output_def, func, output_from_onnx_op_data_propagation, logger) {}
+diff --git a/onnxruntime/core/graph/data_propagation/unsqueeze_op_data_propagation.cc b/onnxruntime/core/graph/data_propagation/unsqueeze_op_data_propagation.cc
+index ff5ef6853bc78..52cacd4ccfbe8 100644
+--- a/onnxruntime/core/graph/data_propagation/unsqueeze_op_data_propagation.cc
++++ b/onnxruntime/core/graph/data_propagation/unsqueeze_op_data_propagation.cc
+@@ -34,6 +34,22 @@ Status UnsqueezeOpDataPropagation::infer() {
+   } else if (input_0->GetInferredShapeValues().has_value()) {
+     const auto& tensor_shape_proto = input_0->GetInferredShapeValues().value();
+ 
++    // Decline when unsqueezing a single-element (scalar-like, rank-1 [1]) value would yield a
++    // rank >= 2 result the values channel cannot faithfully represent (it would otherwise fabricate
++    // a misleading [1, value]). A single-element value (dim_size == 1) is the channel's
++    // representation of a scalar-like quantity; any unsqueeze lifts it to rank >= 2, which the
++    // single-value channel cannot represent. Multi-element shape vectors (dim_size > 1) are
++    // legitimate and left untouched.
++    //
++    // This decline is locked end to end by UnsqueezeSingleValueDeclineTest via a rank-lowering
++    // Squeeze (Shape -> Gather([-1]) -> Unsqueeze -> Squeeze -> Range): with the decline, Range's
++    // length stays symbolic; relaxing it fabricates [1, value], which makes the downstream Range
++    // input non-scalar and the model fails to load -- so the behavior IS observable and the test
++    // discriminates it. Multi-element shape vectors are unaffected.
++    if (tensor_shape_proto.dim_size() == 1) {
++      return Status::OK();
++    }
++
+     // The TensorShapeProto (inferred shape values) should have rank > 0 and
+     // all the dimensions have values (not symbolic)
+     if (tensor_shape_proto.dim_size() > 0) {
+@@ -54,7 +70,8 @@ Status UnsqueezeOpDataPropagation::infer() {
+       if (node_.InputDefs().size() > 1) {
+         const auto* input_1 = node_.InputDefs()[1];
+         ORT_TRY {
+-          ORT_RETURN_IF_ERROR(get_initialized_input_values_func_(input_1->Name(), axes));
++          [[maybe_unused]] int axes_num_dims = -1;
++          ORT_RETURN_IF_ERROR(get_initialized_input_values_func_(input_1->Name(), axes, axes_num_dims));
+         }
+         ORT_CATCH(const std::exception& ex) {
+           ORT_HANDLE_EXCEPTION([&]() {
+diff --git a/onnxruntime/core/graph/data_propagation/unsqueeze_op_data_propagation.h b/onnxruntime/core/graph/data_propagation/unsqueeze_op_data_propagation.h
+index 26b6587aa93fc..dfd309262faf5 100644
+--- a/onnxruntime/core/graph/data_propagation/unsqueeze_op_data_propagation.h
++++ b/onnxruntime/core/graph/data_propagation/unsqueeze_op_data_propagation.h
+@@ -15,7 +15,7 @@ class UnsqueezeOpDataPropagation : public CustomDataPropagationBase {
+  public:
+   UnsqueezeOpDataPropagation(const Node& node,
+                              NodeArg& output_def,
+-                             std::function<Status(const std::string&, TensorShapeVector&)> func,
++                             GetInitializedInputValuesFunc func,
+                              const ONNX_NAMESPACE::TypeProto& output_from_onnx_op_data_propagation,
+                              const logging::Logger& logger) noexcept
+       : CustomDataPropagationBase(node, output_def, func, output_from_onnx_op_data_propagation, logger) {}
+diff --git a/onnxruntime/core/graph/graph.cc b/onnxruntime/core/graph/graph.cc
+index f87d530f9fbbf..0b91a2c1c651c 100644
+--- a/onnxruntime/core/graph/graph.cc
++++ b/onnxruntime/core/graph/graph.cc
+@@ -2967,7 +2967,8 @@ Status Graph::SaveShapeValuesFromDataPropagation(const Node& node,
+                                                  NodeArg& output_def,
+                                                  const TypeProto& onnx_inferred_type_after_data_propagation) const {
+   // Helper function to get the input value if it's a initializer.
+-  auto get_initialized_input_values_func = [&](const std::string& input_name, TensorShapeVector& input_values)
++  auto get_initialized_input_values_func = [&](const std::string& input_name, TensorShapeVector& input_values,
++                                               int& num_dims)
+       -> Status {
+     const TensorProto* initializer = this->GetConstantInitializer(input_name, true);
+ 
+@@ -2977,6 +2978,11 @@ Status Graph::SaveShapeValuesFromDataPropagation(const Node& node,
+       auto tensor_shape = utils::GetTensorShapeFromTensorProto(*initializer);
+       size_t element_cnt = narrow<size_t>(tensor_shape.Size());
+ 
++      // Report the initializer's rank so callers can distinguish a 0-D scalar from a rank-1
++      // single-element tensor (both have a single element). Sourcing the rank from the same
++      // TensorProto the values come from keeps value and rank consistent.
++      num_dims = static_cast<int>(tensor_shape.NumDimensions());
++
+       // Check if this is in-memory external data (data stored in OrtValue)
+       if (utils::HasExternalDataInMemory(*initializer)) {
+         // Try to get the OrtValue for this initializer
+diff --git a/onnxruntime/test/framework/shape_inference_test.cc b/onnxruntime/test/framework/shape_inference_test.cc
+index 6d92acf6bae78..81eef32688b1b 100644
+--- a/onnxruntime/test/framework/shape_inference_test.cc
++++ b/onnxruntime/test/framework/shape_inference_test.cc
+@@ -7,6 +7,7 @@
+ #include "gtest/gtest.h"
+ #include "core/common/span_utils.h"
+ #include "core/graph/model.h"
++#include "core/graph/data_propagation/data_propagation_value_utils.h"
+ #include "core/session/onnxruntime_cxx_api.h"
+ #include "test/framework/model_builder_utils.h"
+ #include "test/util/include/asserts.h"
+@@ -191,6 +192,362 @@ TEST(ShapeInferenceV2Test, PartialDataPropagationTest) {
+   }
+ }
+ 
++// Regression test for the Shape -> Gather(1-D index) -> TopK rank-drop.
++//
++// The Gather index is the 1-D constant [-1] (rank 1), so per ONNX Gather semantics the Gather
++// output is a rank-1, single-element tensor -- exactly what TopK's K input requires. Previously
++// the Gather custom data propagation scalarized that single element (dropping the rank),
++// producing a 0-D K initializer that ONNX TopK shape inference rejected with
++// "K input must be a one-dimensional tensor of size 1." at model load time.
++//
++// The failure reproduces even at ORT_DISABLE_ALL (constant folding never runs there), which
++// proves the cause is shape-inference data propagation, not constant folding. This test loads
++// the model at the disabled, basic, and all-optimization levels, which bracket the data-propagation
++// path: data propagation runs in the pre-optimization Graph::Resolve pass, so it is independent of
++// the graph-optimization level (ORT_ENABLE_ALL already applies the extended and layout transformers,
++// so they need not be enumerated separately). The test asserts the rank-1 K shape is preserved so the
++// model loads and TopK output shapes are inferred correctly.
++TEST(ShapeInferenceV2Test, GatherToTopKRankPreservationTest) {
++  auto model_path = ORT_TSTR("testdata/test_shape_data_propagation_gather_topk.onnx");
++
++  for (auto opt_level : {ORT_DISABLE_ALL, ORT_ENABLE_BASIC, ORT_ENABLE_ALL}) {
++    Ort::SessionOptions session_options{};
++    session_options.SetGraphOptimizationLevel(opt_level);
++
++    // Loading must succeed at each level; before the fix this threw a
++    // ShapeInferenceError at ORT_DISABLE_ALL (and above).
++    Ort::Session session(*ort_env, model_path, session_options);
++
++    ORT_ENFORCE(session.GetOutputCount() == 2);
++
++    // K is data-propagated as the last dimension of X (2000), so both TopK outputs are 1-D
++    // tensors of length 2000.
++    for (size_t output_index = 0; output_index < 2; ++output_index) {
++      Ort::TypeInfo type_info = session.GetOutputTypeInfo(output_index);
++      auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
++      std::vector<int64_t> output_shape = tensor_info.GetShape();
++      EXPECT_TRUE(output_shape.size() == 1) << "TopK output should be a 1-D tensor";
++      EXPECT_TRUE(output_shape[0] == 2000) << "TopK output length should be the inferred K value (2000)";
++    }
++  }
++}
++
++// Regression test for the Shape -> Gather(1-D index) -> Mul -> TopK chain.
++//
++// This covers the elementwise data-propagation consumers (Add/Sub/Mul/Div) with rank-1
++// single-element operands. Both Gather indices are 1-D constants, so each Gather output is a
++// rank-1 single-element value; Mul must keep propagating that (as a rank-1 [1] value) so the
++// downstream TopK still receives a valid 1-D K. Previously the elementwise ops only handled
++// rank-0 scalar operands, so once the Gather producer was fixed to emit rank-1 values the chain
++// would have silently stopped propagating at Mul (degrading TopK's K to a symbolic dim).
++//
++// Asserting that both TopK outputs resolve to the concrete length 2000 (== 50 * 40) proves the
++// value propagated end to end through Mul rather than being lost.
++TEST(ShapeInferenceV2Test, GatherMulToTopKRankPreservationTest) {
++  auto model_path = ORT_TSTR("testdata/test_shape_data_propagation_gather_mul_topk.onnx");
++
++  for (auto opt_level : {ORT_DISABLE_ALL, ORT_ENABLE_BASIC, ORT_ENABLE_ALL}) {
++    Ort::SessionOptions session_options{};
++    session_options.SetGraphOptimizationLevel(opt_level);
++
++    // Loading must succeed at each level; before the fix this threw a
++    // ShapeInferenceError at ORT_DISABLE_ALL (and above).
++    Ort::Session session(*ort_env, model_path, session_options);
++
++    ORT_ENFORCE(session.GetOutputCount() == 2);
++
++    // K = 50 * 40 = 2000 is data-propagated through the two Gathers and the Mul, so both TopK
++    // outputs are 1-D tensors of length 2000.
++    for (size_t output_index = 0; output_index < 2; ++output_index) {
++      Ort::TypeInfo type_info = session.GetOutputTypeInfo(output_index);
++      auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
++      std::vector<int64_t> output_shape = tensor_info.GetShape();
++      EXPECT_TRUE(output_shape.size() == 1) << "TopK output should be a 1-D tensor";
++      EXPECT_TRUE(output_shape[0] == 2000) << "TopK output length should be the propagated K value (2000)";
++    }
++  }
++}
++
++// Negative regression test for the single-element guard in the elementwise data-propagation
++// consumers (Add/Sub/Mul/Div), exercised end to end.
++//
++// Shape(X[3, 4]) -> S is a rank-1 MULTI-element value [3, 4]. Mul(S, S) -> M must stay the
++// multi-element value [9, 16] so ConstantOfShape(M) resolves to the rank-2 shape [9, 16]. For a
++// multi-element data-propagation output ONNX's own Mul data propagation supplies the value and
++// ORT's custom elementwise propagation is intentionally NOT engaged (it is dispatched only for a
++// rank-0 result, see CreateCustomDataPropagation). This is an end-to-end non-regression guard that
++// the rank-routing changes did not disturb the multi-element chain; the single-element guard inside
++// the shared helper is exercised directly by SinglePropagatedShapeValueGuardTest below.
++TEST(ShapeInferenceV2Test, ShapeMulMultiElementNoScalarCollapseTest) {
++  auto model_path = ORT_TSTR("testdata/test_shape_data_propagation_shape_mul_constantofshape.onnx");
++
++  for (auto opt_level : {ORT_DISABLE_ALL, ORT_ENABLE_BASIC, ORT_ENABLE_ALL}) {
++    Ort::SessionOptions session_options{};
++    session_options.SetGraphOptimizationLevel(opt_level);
++
++    Ort::Session session(*ort_env, model_path, session_options);
++
++    ORT_ENFORCE(session.GetOutputCount() == 1);
++
++    Ort::TypeInfo type_info = session.GetOutputTypeInfo(0);
++    auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
++    std::vector<int64_t> output_shape = tensor_info.GetShape();
++
++    // ConstantOfShape(Mul(Shape(X), Shape(X))) == ConstantOfShape([9, 16]) -> rank-2 [9, 16].
++    // A collapse of the multi-element value to a scalar would yield rank 1 here.
++    EXPECT_TRUE(output_shape.size() == 2) << "Output should stay rank 2; the multi-element value must not collapse";
++    EXPECT_TRUE(output_shape.size() == 2 && output_shape[0] == 9 && output_shape[1] == 16)
++        << "ConstantOfShape output should be the propagated multi-element shape [9, 16]";
++  }
++}
++
++// Regression for microsoft/onnxruntime#29072.
++// End-to-end lock for Gather's custom data-propagation DECLINE on a rank-2 index.
++//
++// The Gather index is the constant [[-1]] of shape [1, 1] (rank 2), so the Gather output rank is
++// data_rank - 1 + index_rank = 1 - 1 + 2 = 2. The single-value data-propagation channel can carry
++// only rank-0 (scalar) and rank-1 [1] values, so Gather's custom propagation must DECLINE rather
++// than fabricate a rank-1 value. The index is a raw graph initializer (not surfaced through the
++// data-propagation getInputData channel), so ONNX's own Gather data propagator bails and control
++// reaches our custom decline branch.
++//
++// The decline is made OBSERVABLE through a rank-lowering Squeeze:
++//   Shape(X) -> Gather([[ -1 ]]) -> Squeeze -> Range(0, K, 1)
++// With the correct decline, nothing is propagated, Squeeze has no value to lower, and Range's limit
++// stays symbolic -- so the Range output dimension is UNKNOWN (it carries no concrete dim_value). If
++// the decline were relaxed to emit a rank-1 [1] value, Squeeze would lower it to the scalar 2000 and
++// Range would resolve to a concrete length 2000. Asserting the dimension has no concrete value
++// discriminates the correct decline from the rank-fabricating bug -- real end-to-end coverage of the
++// decline branch (no shared-helper abstraction, no tautological unit test).
++//
++// This drives the decline through onnxruntime::Model::Load (which runs Graph::Resolve) and inspects
++// the resulting output NodeArg shape directly -- no InferenceSession, so none of the session's
++// arena / execution-provider / kernel-registry allocations are created (microsoft/onnxruntime#29139:
++// the single-process onnxruntime_test_all run sits near the AddressSanitizer size-class ceiling, so
++// each added test must stay lean). Data propagation runs inside Graph::Resolve
++// (Graph::InferAndVerifyTypeMatch -> data-propagation RunInferencing); constant folding is a separate
++// session-level optimizer pass that never runs here, so Resolve alone exercises the decline branch in
++// isolation with no folding to mask it.
++TEST(ShapeInferenceV2Test, GatherRank2IndexDeclineTest) {
++  auto model_path = ORT_TSTR("testdata/test_shape_data_propagation_gather_rank2_decline.onnx");
++
++  std::shared_ptr<onnxruntime::Model> model;
++  // Model::Load runs Graph::Resolve, which performs data propagation. A correct decline keeps the
++  // Range length symbolic, so the resolve (and therefore the load) succeeds.
++  ASSERT_STATUS_OK(onnxruntime::Model::Load(model_path, model, nullptr,
++                                            DefaultLoggingManager().DefaultLogger()));
++
++  const auto& graph_outputs = model->MainGraph().GetOutputs();
++  ASSERT_EQ(graph_outputs.size(), static_cast<size_t>(1));
++  const TensorShapeProto* output_shape = graph_outputs[0]->Shape();
++  ASSERT_NE(output_shape, nullptr) << "Range output should have an inferred (rank-1) shape";
++
++  // Range output is 1-D; its single dimension must stay SYMBOLIC (no concrete dim_value) because the
++  // rank-2 Gather index declines rather than propagating a (rank-fabricated) concrete K. A relaxed
++  // decline would fabricate a rank-1 value that Squeeze lowers to scalar 2000, giving the dimension a
++  // concrete value 2000 -- which these assertions reject.
++  ASSERT_EQ(output_shape->dim_size(), 1) << "Range output should be a 1-D tensor";
++  EXPECT_FALSE(output_shape->dim(0).has_dim_value())
++      << "Range length must stay symbolic; the rank-2 Gather index must decline rather than "
++         "fabricate a concrete K (a relaxed decline concretizes it to 2000)";
++}
++
++// Regression for microsoft/onnxruntime#29072.
++// End-to-end lock for Unsqueeze's custom data-propagation DECLINE on a single-element value.
++//
++// Shape(X) -> Gather([-1]) produces a rank-1 single-element value (the last dimension of X, 2000).
++// Unsqueezing that single-element (scalar-like, rank-1 [1]) value would yield a rank >= 2 result
++// ([1, 2000]) that the single-value channel cannot faithfully represent, so Unsqueeze's custom
++// propagation must DECLINE rather than fabricate the misleading [1, value].
++//
++// The decline is made OBSERVABLE through a rank-lowering Squeeze:
++//   Shape(X) -> Gather([-1]) -> Unsqueeze([0]) -> Squeeze -> Range(0, K, 1)
++// With the correct decline, no value is propagated past Unsqueeze, Squeeze has nothing to lower, and
++// Range's limit stays symbolic, so the graph resolves with an unknown Range length. A relaxed decline
++// that fabricated [1, 2000] would propagate a non-scalar value to Range, which ONNX Range shape
++// inference rejects ("Input to 'Range' op should be scalars") -- Graph::Resolve then returns a
++// non-OK status and the load fails. So the decline IS observable: correct -> loads with a symbolic
++// length; relaxed -> load error. This test asserts the model loads and the length stays symbolic.
++//
++// Like GatherRank2IndexDeclineTest this drives the decline through onnxruntime::Model::Load (which
++// runs Graph::Resolve) and inspects the output NodeArg shape directly -- no InferenceSession, so the
++// session arena / EP / kernel-registry allocations are never created (microsoft/onnxruntime#29139).
++// Data propagation runs inside Graph::Resolve; constant folding is a separate session-level optimizer
++// pass that never runs here, so Resolve alone exercises the decline branch with no folding to mask it.
++TEST(ShapeInferenceV2Test, UnsqueezeSingleValueDeclineTest) {
++  auto model_path = ORT_TSTR("testdata/test_shape_data_propagation_unsqueeze_decline.onnx");
++
++  std::shared_ptr<onnxruntime::Model> model;
++  // Model::Load runs Graph::Resolve. A correct decline keeps Range's input scalar so the resolve (and
++  // therefore the load) succeeds; a relaxed decline makes Range's input non-scalar, which Range shape
++  // inference rejects, so Resolve returns non-OK and this assertion fails on the load itself.
++  ASSERT_STATUS_OK(onnxruntime::Model::Load(model_path, model, nullptr,
++                                            DefaultLoggingManager().DefaultLogger()));
++
++  const auto& graph_outputs = model->MainGraph().GetOutputs();
++  ASSERT_EQ(graph_outputs.size(), static_cast<size_t>(1));
++  const TensorShapeProto* output_shape = graph_outputs[0]->Shape();
++  ASSERT_NE(output_shape, nullptr) << "Range output should have an inferred (rank-1) shape";
++
++  // Range output is 1-D; its single dimension must stay SYMBOLIC because Unsqueeze declines rather
++  // than fabricating a rank >= 2 value. A relaxed decline fabricates [1, 2000], which makes Range's
++  // input non-scalar and the load fails above -- so any regression here is caught either as a load
++  // failure or as a concrete dim_value below.
++  ASSERT_EQ(output_shape->dim_size(), 1) << "Range output should be a 1-D tensor";
++  EXPECT_FALSE(output_shape->dim(0).has_dim_value())
++      << "Range length must stay symbolic; unsqueezing a single-element value must decline "
++         "(a relaxed decline fabricates [1, value] and the model fails to load)";
++}
++
++// Lock test for the Shape -> Gather(1-D index) -> Squeeze -> Range chain.
++//
++// Squeeze of a rank-1 single-element value [1] removes the size-1 dimension and yields a 0-D
++// scalar -- the strict-improvement behavior of Squeeze's custom data propagation. This test locks
++// that improvement end to end: the Gather produces a rank-1 single element (the last dimension of
++// X, 2000); Squeeze must propagate it as the scalar 2000; and Range(0, K, 1) must then resolve to
++// a concrete 1-D tensor of length 2000. If Squeeze dropped, corrupted, or failed to scalarize the
++// value, Range's length would stay symbolic (size 0 here) instead of the concrete 2000.
++TEST(ShapeInferenceV2Test, GatherSqueezeRangeRankPreservationTest) {
++  auto model_path = ORT_TSTR("testdata/test_shape_data_propagation_gather_squeeze_range.onnx");
++
++  for (auto opt_level : {ORT_DISABLE_ALL, ORT_ENABLE_BASIC, ORT_ENABLE_ALL}) {
++    Ort::SessionOptions session_options{};
++    session_options.SetGraphOptimizationLevel(opt_level);
++
++    Ort::Session session(*ort_env, model_path, session_options);
++
++    ORT_ENFORCE(session.GetOutputCount() == 1);
++
++    Ort::TypeInfo type_info = session.GetOutputTypeInfo(0);
++    auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
++    std::vector<int64_t> output_shape = tensor_info.GetShape();
++
++    // Range(0, Squeeze(Gather(Shape(X), [-1])), 1) == Range(0, 2000, 1) -> 1-D length 2000.
++    EXPECT_TRUE(output_shape.size() == 1) << "Range output should be a 1-D tensor";
++    EXPECT_TRUE(output_shape.size() == 1 && output_shape[0] == 2000)
++        << "Range length should be the scalar K (2000) propagated through Squeeze";
++  }
++}
++
++// Unit test for the single-element guard in TryGetSinglePropagatedShapeValue, the helper shared by
++// the Add/Sub/Mul/Div data-propagation consumers.
++//
++// A NodeArg can carry a propagated shape value in one of two non-interchangeable channels: a rank-0
++// scalar (inferred_scalar_value_) or a rank>=1 list of values (inferred_shape_values_). The helper
++// must surface a single value from either a scalar source or a rank-1 SINGLE-element source (and
++// report its rank), and must DECLINE for a rank-1 MULTI-element source. Declining is load-bearing:
++// silently using element[0] of a multi-element value would let an elementwise op emit a bogus
++// scalar product that getInputData() would then hand to a rank-sensitive consumer. This test
++// exercises the guard directly -- a relaxed guard that accepted element[0] fails the multi-element
++// case below.
++TEST(ShapeInferenceV2Test, SinglePropagatedShapeValueGuardTest) {
++  // Scalar channel -> accepted, reported as rank-0.
++  {
++    NodeArg arg("scalar_arg", nullptr);
++    arg.SetInferredShapeScalarValue(5);
++    int64_t value = 0;
++    bool is_rank1 = true;
++    EXPECT_TRUE(TryGetSinglePropagatedShapeValue(arg, value, is_rank1));
++    EXPECT_EQ(value, 5);
++    EXPECT_FALSE(is_rank1);
++  }
++
++  // Rank-1 single-element value -> accepted, reported as rank-1.
++  {
++    NodeArg arg("rank1_single_arg", nullptr);
++    auto& values = arg.GetMutableInferredShapeValues();
++    values.emplace();
++    values->add_dim()->set_dim_value(7);
++    int64_t value = 0;
++    bool is_rank1 = false;
++    EXPECT_TRUE(TryGetSinglePropagatedShapeValue(arg, value, is_rank1));
++    EXPECT_EQ(value, 7);
++    EXPECT_TRUE(is_rank1);
++  }
++
++  // Rank-1 MULTI-element value -> DECLINED (the guard); element[0] must never be used.
++  {
++    NodeArg arg("rank1_multi_arg", nullptr);
++    auto& values = arg.GetMutableInferredShapeValues();
++    values.emplace();
++    values->add_dim()->set_dim_value(3);
++    values->add_dim()->set_dim_value(4);
++    int64_t value = -1;
++    bool is_rank1 = false;
++    EXPECT_FALSE(TryGetSinglePropagatedShapeValue(arg, value, is_rank1))
++        << "A rank-1 multi-element value must be declined, not collapsed to element[0]";
++  }
++
++  // Rank-1 single element with a SYMBOLIC (no concrete value) dim -> declined.
++  {
++    NodeArg arg("rank1_symbolic_arg", nullptr);
++    auto& values = arg.GetMutableInferredShapeValues();
++    values.emplace();
++    values->add_dim()->set_dim_param("N");
++    int64_t value = -1;
++    bool is_rank1 = false;
++    EXPECT_FALSE(TryGetSinglePropagatedShapeValue(arg, value, is_rank1))
++        << "A symbolic single-element value has no concrete value and must be declined";
++  }
++
++  // No propagated value on either channel -> declined.
++  {
++    NodeArg arg("empty_arg", nullptr);
++    int64_t value = -1;
++    bool is_rank1 = false;
++    EXPECT_FALSE(TryGetSinglePropagatedShapeValue(arg, value, is_rank1));
++  }
++}
++
++// Unit test that SetSinglePropagatedShapeValue is correct-by-construction: it populates exactly one
++// channel and clears the other. This pins the invariant the elementwise/Gather consumers rely on --
++// the scalar-first reader (TryGetSinglePropagatedShapeValue) and the values-first getInputData() can
++// only agree on rank if no NodeArg ever carries both channels. A setter that left the opposite
++// channel populated would let a stale value win (reintroducing a rank mismatch), so each case below
++// pre-populates the opposite channel and asserts the setter cleared it.
++TEST(ShapeInferenceV2Test, SetSinglePropagatedShapeValueKeepsSingleChannelTest) {
++  // Scalar write must clear a stale values channel.
++  {
++    NodeArg arg("scalar_over_stale_values", nullptr);
++    auto& stale = arg.GetMutableInferredShapeValues();
++    stale.emplace();
++    stale->add_dim()->set_dim_value(99);
++
++    SetSinglePropagatedShapeValue(arg, 5, /*is_rank1=*/false);
++
++    ASSERT_TRUE(arg.GetInferredShapeScalarValue().has_value());
++    EXPECT_EQ(arg.GetInferredShapeScalarValue().value(), 5);
++    EXPECT_FALSE(arg.GetInferredShapeValues().has_value())
++        << "Scalar write must clear the values channel that getInputData() would otherwise prefer";
++
++    int64_t value = 0;
++    bool is_rank1 = true;
++    EXPECT_TRUE(TryGetSinglePropagatedShapeValue(arg, value, is_rank1));
++    EXPECT_EQ(value, 5);
++    EXPECT_FALSE(is_rank1);
++  }
++
++  // Rank-1 write must clear a stale scalar channel.
++  {
++    NodeArg arg("values_over_stale_scalar", nullptr);
++    arg.SetInferredShapeScalarValue(99);
++
++    SetSinglePropagatedShapeValue(arg, 7, /*is_rank1=*/true);
++
++    EXPECT_FALSE(arg.GetInferredShapeScalarValue().has_value())
++        << "Rank-1 write must clear the scalar channel that the scalar-first reader would otherwise return";
++    ASSERT_TRUE(arg.GetInferredShapeValues().has_value());
++    ASSERT_EQ(arg.GetInferredShapeValues()->dim_size(), 1);
++    EXPECT_EQ(arg.GetInferredShapeValues()->dim(0).dim_value(), 7);
++
++    int64_t value = 0;
++    bool is_rank1 = false;
++    EXPECT_TRUE(TryGetSinglePropagatedShapeValue(arg, value, is_rank1));
++    EXPECT_EQ(value, 7);
++    EXPECT_TRUE(is_rank1);
++  }
++}
++
+ namespace {
+ struct MyCustomKernelWithOptionalInput {
+   MyCustomKernelWithOptionalInput(const OrtKernelInfo* info) {
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_gather_mul_topk.onnx b/onnxruntime/test/testdata/test_shape_data_propagation_gather_mul_topk.onnx
+new file mode 100644
+index 0000000000000..66db1819a97d4
+Binary files /dev/null and b/onnxruntime/test/testdata/test_shape_data_propagation_gather_mul_topk.onnx differ
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_gather_mul_topk.py b/onnxruntime/test/testdata/test_shape_data_propagation_gather_mul_topk.py
+new file mode 100644
+index 0000000000000..c1fa947fe2b53
+--- /dev/null
++++ b/onnxruntime/test/testdata/test_shape_data_propagation_gather_mul_topk.py
+@@ -0,0 +1,62 @@
++# Copyright (c) Microsoft Corporation. All rights reserved.
++# Licensed under the MIT License.
++
++# Regression fixture for the Shape -> Gather(1-D index) -> Mul -> TopK chain.
++#
++# This exercises the elementwise data-propagation consumers (Mul) with rank-1
++# single-element operands. Both Gather indices are 1-D constants, so per ONNX
++# Gather semantics each Gather output is a rank-1, single-element tensor. The
++# Mul of those two rank-1 values must keep propagating (as a rank-1 [1] value)
++# so the downstream TopK still receives a valid 1-D K and its output shape is
++# inferred concretely.
++#
++# Before the elementwise ops were made rank-aware, Mul only handled rank-0
++# scalar operands; with the Gather producer now emitting rank-1 values, the
++# chain's data propagation would otherwise silently stop at Mul (degrading the
++# TopK output dim to a symbolic value). This fixture locks in that the chain
++# keeps propagating end to end.
++
++from onnx import IR_VERSION, TensorProto, checker, helper, save
++
++# 2-D input whose static dims (50, 40) drive the K computation: 50 * 40 == 2000.
++x2d = helper.make_tensor_value_info("X2D", TensorProto.FLOAT, [50, 40])
++# 1-D input that TopK selects from; its length matches the computed K (2000).
++x1d = helper.make_tensor_value_info("X1D", TensorProto.FLOAT, [2000])
++
++values_out = helper.make_tensor_value_info("V", TensorProto.FLOAT, ["topk"])
++indices_out = helper.make_tensor_value_info("I", TensorProto.INT64, ["topk"])
++
++# 1-D single-element Gather indices (rank 1), as emitted by common exporters.
++idx_first = helper.make_tensor("idx_first", TensorProto.INT64, [1], [0])
++idx_last = helper.make_tensor("idx_last", TensorProto.INT64, [1], [-1])
++
++# Shape(X2D) -> S : 1-D int64 tensor [50, 40].
++shape_node = helper.make_node("Shape", inputs=["X2D"], outputs=["S"], name="ShapeNode")
++# Gather(S, [0]) -> A : rank-1 size-1 int64 tensor [50].
++gather_first = helper.make_node("Gather", inputs=["S", "idx_first"], outputs=["A"], axis=0, name="GatherFirst")
++# Gather(S, [-1]) -> B : rank-1 size-1 int64 tensor [40].
++gather_last = helper.make_node("Gather", inputs=["S", "idx_last"], outputs=["B"], axis=0, name="GatherLast")
++# Mul(A, B) -> K : rank-1 size-1 int64 tensor [2000].
++mul_node = helper.make_node("Mul", inputs=["A", "B"], outputs=["K"], name="MulNode")
++# TopK(X1D, K) -> V, I : returns all 2000 elements sorted (K == 2000).
++topk_node = helper.make_node("TopK", inputs=["X1D", "K"], outputs=["V", "I"], axis=-1, largest=1, name="TopKNode")
++
++graph = helper.make_graph(
++    nodes=[shape_node, gather_first, gather_last, mul_node, topk_node],
++    name="Shape_Gather_Mul_TopK_Model",
++    inputs=[x2d, x1d],
++    outputs=[values_out, indices_out],
++    initializer=[idx_first, idx_last],
++)
++
++model = helper.make_model(
++    graph,
++    opset_imports=[helper.make_operatorsetid("", 18)],
++    producer_name="onnx-example-generator",
++)
++model.ir_version = IR_VERSION
++
++checker.check_model(model)
++save(model, "test_shape_data_propagation_gather_mul_topk.onnx")
++
++print("Model saved to test_shape_data_propagation_gather_mul_topk.onnx")
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_gather_rank2_decline.onnx b/onnxruntime/test/testdata/test_shape_data_propagation_gather_rank2_decline.onnx
+new file mode 100644
+index 0000000000000..eaedaac4b6a01
+Binary files /dev/null and b/onnxruntime/test/testdata/test_shape_data_propagation_gather_rank2_decline.onnx differ
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_gather_rank2_decline.py b/onnxruntime/test/testdata/test_shape_data_propagation_gather_rank2_decline.py
+new file mode 100644
+index 0000000000000..be3225e998d73
+--- /dev/null
++++ b/onnxruntime/test/testdata/test_shape_data_propagation_gather_rank2_decline.py
+@@ -0,0 +1,70 @@
++# Copyright (c) Microsoft Corporation. All rights reserved.
++# Licensed under the MIT License.
++
++# Lock fixture for Gather's custom data-propagation DECLINE on a rank-2 index.
++#
++# The Gather index is the constant [[-1]] of shape [1, 1] (rank 2). Per ONNX
++# Gather semantics the output rank = data_rank - 1 + index_rank = 1 - 1 + 2 = 2,
++# so the Gather output is a rank-2, single-element tensor [[2000]]. The
++# single-value data-propagation channel can represent only rank-0 (scalar) and
++# rank-1 [1] values, so Gather's custom data propagation must DECLINE here:
++# emitting a rank-1 value would fabricate a rank the channel cannot honestly
++# carry.
++#
++# This fixture makes that decline OBSERVABLE through a rank-lowering Squeeze:
++#   Shape(X) -> Gather([[ -1 ]]) -> Squeeze -> Range(0, K, 1)
++# Because the index is a constant initializer, ONNX's own Gather data
++# propagator bails (it has no getInputData for a constant index), so control
++# reaches our custom decline branch. With the correct decline, no value is
++# propagated, Squeeze has nothing to lower, and Range's limit stays symbolic --
++# the Range output length is therefore an unknown dimension.
++#
++# If the decline were relaxed to emit a rank-1 [1] value, Squeeze would lower it
++# to the scalar 2000 and Range(0, 2000, 1) would resolve to a concrete length
++# 2000. Asserting the Range length is NOT the concrete 2000 thus locks the
++# decline end to end (it discriminates the correct-decline behavior from the
++# rank-fabricating bug).
++
++from onnx import IR_VERSION, TensorProto, checker, helper, save
++
++# Graph input: a 3-D float tensor whose last static dimension is 2000.
++input_tensor = helper.make_tensor_value_info("X", TensorProto.FLOAT, [3, 4, 2000])
++
++# Output: Range result, a 1-D int64 tensor whose length is the propagated K
++# (symbolic when the decline is correct).
++range_out = helper.make_tensor_value_info("R", TensorProto.INT64, ["range_len"])
++
++# Gather index is the rank-2 constant [[-1]] of shape [1, 1] (last dimension).
++gather_idx = helper.make_tensor("gather_idx", TensorProto.INT64, [1, 1], [-1])
++# Range start/delta as 0-D scalar int64 constants.
++range_start = helper.make_tensor("range_start", TensorProto.INT64, [], [0])
++range_delta = helper.make_tensor("range_delta", TensorProto.INT64, [], [1])
++
++# Shape(X) -> S : 1-D int64 tensor [3, 4, 2000].
++shape_node = helper.make_node("Shape", inputs=["X"], outputs=["S"], name="ShapeNode")
++# Gather(S, [[-1]]) -> G : rank-2 [1, 1] int64 value [[2000]].
++gather_node = helper.make_node("Gather", inputs=["S", "gather_idx"], outputs=["G"], axis=0, name="GatherNode")
++# Squeeze(G) -> K : 0-D scalar int64 value (only when a value is propagated).
++squeeze_node = helper.make_node("Squeeze", inputs=["G"], outputs=["K"], name="SqueezeNode")
++# Range(0, K, 1) -> R : 1-D int64 tensor whose length is K (symbolic on decline).
++range_node = helper.make_node("Range", inputs=["range_start", "K", "range_delta"], outputs=["R"], name="RangeNode")
++
++graph = helper.make_graph(
++    nodes=[shape_node, gather_node, squeeze_node, range_node],
++    name="Shape_Gather_Rank2_Decline_Model",
++    inputs=[input_tensor],
++    outputs=[range_out],
++    initializer=[gather_idx, range_start, range_delta],
++)
++
++model = helper.make_model(
++    graph,
++    opset_imports=[helper.make_operatorsetid("", 18)],
++    producer_name="onnx-example-generator",
++)
++model.ir_version = IR_VERSION
++
++checker.check_model(model)
++save(model, "test_shape_data_propagation_gather_rank2_decline.onnx")
++
++print("Model saved to test_shape_data_propagation_gather_rank2_decline.onnx")
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_gather_squeeze_range.onnx b/onnxruntime/test/testdata/test_shape_data_propagation_gather_squeeze_range.onnx
+new file mode 100644
+index 0000000000000..2b2a34996dfbb
+Binary files /dev/null and b/onnxruntime/test/testdata/test_shape_data_propagation_gather_squeeze_range.onnx differ
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_gather_squeeze_range.py b/onnxruntime/test/testdata/test_shape_data_propagation_gather_squeeze_range.py
+new file mode 100644
+index 0000000000000..c5bce6df629e2
+--- /dev/null
++++ b/onnxruntime/test/testdata/test_shape_data_propagation_gather_squeeze_range.py
+@@ -0,0 +1,59 @@
++# Copyright (c) Microsoft Corporation. All rights reserved.
++# Licensed under the MIT License.
++
++# Lock fixture for the Shape -> Gather(1-D index) -> Squeeze -> Range chain.
++#
++# The Gather index is the 1-D constant [-1] (rank 1), so the Gather output is a
++# rank-1, single-element int64 value (the last dimension of X, 2000). Squeeze
++# then removes the size-1 dimension, producing a 0-D scalar -- this is the
++# correct, strict-improvement behavior of Squeeze's custom data propagation
++# (rank-1 [1] -> scalar), and this fixture locks it: the scalar must keep its
++# value (2000) so the downstream Range produces a concrete 1-D length.
++#
++# Range(start=0, limit=K, delta=1) with the propagated scalar K=2000 yields a
++# 1-D tensor of length 2000. Asserting that output length proves Squeeze
++# propagated the single element as a scalar of the correct value (and did not
++# drop or corrupt it).
++
++from onnx import IR_VERSION, TensorProto, checker, helper, save
++
++# Graph input: a 1-D float tensor of static length 2000.
++input_tensor = helper.make_tensor_value_info("X", TensorProto.FLOAT, [2000])
++
++# Output: Range result, a 1-D int64 tensor whose length is the propagated K.
++range_out = helper.make_tensor_value_info("R", TensorProto.INT64, ["range_len"])
++
++# Gather index is the 1-D constant [-1] (last dimension).
++gather_idx = helper.make_tensor("gather_idx", TensorProto.INT64, [1], [-1])
++# Range start/delta as 0-D scalar int64 constants.
++range_start = helper.make_tensor("range_start", TensorProto.INT64, [], [0])
++range_delta = helper.make_tensor("range_delta", TensorProto.INT64, [], [1])
++
++# Shape(X) -> S : 1-D int64 tensor [2000].
++shape_node = helper.make_node("Shape", inputs=["X"], outputs=["S"], name="ShapeNode")
++# Gather(S, [-1]) -> K1 : rank-1 size-1 int64 value [2000].
++gather_node = helper.make_node("Gather", inputs=["S", "gather_idx"], outputs=["K1"], axis=0, name="GatherNode")
++# Squeeze(K1) -> K : 0-D scalar int64 value 2000 (size-1 dim removed).
++squeeze_node = helper.make_node("Squeeze", inputs=["K1"], outputs=["K"], name="SqueezeNode")
++# Range(0, K, 1) -> R : 1-D int64 tensor of length K (== 2000).
++range_node = helper.make_node("Range", inputs=["range_start", "K", "range_delta"], outputs=["R"], name="RangeNode")
++
++graph = helper.make_graph(
++    nodes=[shape_node, gather_node, squeeze_node, range_node],
++    name="Shape_Gather_Squeeze_Range_Model",
++    inputs=[input_tensor],
++    outputs=[range_out],
++    initializer=[gather_idx, range_start, range_delta],
++)
++
++model = helper.make_model(
++    graph,
++    opset_imports=[helper.make_operatorsetid("", 18)],
++    producer_name="onnx-example-generator",
++)
++model.ir_version = IR_VERSION
++
++checker.check_model(model)
++save(model, "test_shape_data_propagation_gather_squeeze_range.onnx")
++
++print("Model saved to test_shape_data_propagation_gather_squeeze_range.onnx")
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_gather_topk.onnx b/onnxruntime/test/testdata/test_shape_data_propagation_gather_topk.onnx
+new file mode 100644
+index 0000000000000..a2b6b815998c9
+Binary files /dev/null and b/onnxruntime/test/testdata/test_shape_data_propagation_gather_topk.onnx differ
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_gather_topk.py b/onnxruntime/test/testdata/test_shape_data_propagation_gather_topk.py
+new file mode 100644
+index 0000000000000..6a99c35de9fde
+--- /dev/null
++++ b/onnxruntime/test/testdata/test_shape_data_propagation_gather_topk.py
+@@ -0,0 +1,54 @@
++# Copyright (c) Microsoft Corporation. All rights reserved.
++# Licensed under the MIT License.
++
++# Regression fixture for the Shape -> Gather(1-D index) -> TopK rank-drop.
++#
++# The Gather index here is the 1-D constant [-1] (rank 1), so per ONNX Gather
++# semantics (output_rank = data_rank - 1 + indices_rank) the Gather output is a
++# rank-1, single-element tensor -- exactly what TopK's K input requires.
++#
++# Before the fix, ORT's Gather custom data propagation scalarized this single
++# element (dropping the rank), producing a 0-D K initializer that ONNX TopK
++# shape inference rejects with:
++#   "K input must be a one-dimensional tensor of size 1."
++# The fix preserves the rank-1 shape so the model loads and infers correctly.
++
++from onnx import IR_VERSION, TensorProto, checker, helper, save
++
++# Graph input: a 1-D float tensor of static length 2000.
++input_tensor = helper.make_tensor_value_info("X", TensorProto.FLOAT, [2000])
++
++# Outputs: TopK values and indices, each a 1-D tensor whose length is K.
++values_out = helper.make_tensor_value_info("V", TensorProto.FLOAT, ["topk"])
++indices_out = helper.make_tensor_value_info("I", TensorProto.INT64, ["topk"])
++
++# Gather index is the 1-D constant [-1] (last dimension), as emitted by common
++# exporters for the "K = size of the last dimension" pattern.
++gather_idx = helper.make_tensor("gather_idx", TensorProto.INT64, [1], [-1])
++
++# Shape(X) -> S : 1-D int64 tensor [2000].
++shape_node = helper.make_node("Shape", inputs=["X"], outputs=["S"], name="ShapeNode")
++# Gather(S, [-1]) -> K : rank-1 size-1 int64 tensor [2000].
++gather_node = helper.make_node("Gather", inputs=["S", "gather_idx"], outputs=["K"], axis=0, name="GatherNode")
++# TopK(X, K) -> V, I : returns all 2000 elements sorted (K == 2000).
++topk_node = helper.make_node("TopK", inputs=["X", "K"], outputs=["V", "I"], axis=-1, largest=1, name="TopKNode")
++
++graph = helper.make_graph(
++    nodes=[shape_node, gather_node, topk_node],
++    name="Shape_Gather_TopK_Model",
++    inputs=[input_tensor],
++    outputs=[values_out, indices_out],
++    initializer=[gather_idx],
++)
++
++model = helper.make_model(
++    graph,
++    opset_imports=[helper.make_operatorsetid("", 18)],
++    producer_name="onnx-example-generator",
++)
++model.ir_version = IR_VERSION
++
++checker.check_model(model)
++save(model, "test_shape_data_propagation_gather_topk.onnx")
++
++print("Model saved to test_shape_data_propagation_gather_topk.onnx")
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_shape_mul_constantofshape.onnx b/onnxruntime/test/testdata/test_shape_data_propagation_shape_mul_constantofshape.onnx
+new file mode 100644
+index 0000000000000..9ac0d850f2ba9
+Binary files /dev/null and b/onnxruntime/test/testdata/test_shape_data_propagation_shape_mul_constantofshape.onnx differ
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_shape_mul_constantofshape.py b/onnxruntime/test/testdata/test_shape_data_propagation_shape_mul_constantofshape.py
+new file mode 100644
+index 0000000000000..e3d0d02d80c00
+--- /dev/null
++++ b/onnxruntime/test/testdata/test_shape_data_propagation_shape_mul_constantofshape.py
+@@ -0,0 +1,50 @@
++# Copyright (c) Microsoft Corporation. All rights reserved.
++# Licensed under the MIT License.
++
++# Negative regression fixture for the single-element guard in the elementwise
++# data-propagation consumers (Add/Sub/Mul/Div).
++#
++# Shape(X[3, 4]) produces a rank-1, MULTI-element value [3, 4]. The elementwise
++# custom data propagation must only fold a single-element value; for a rank-1
++# [N>1] operand it must DECLINE (return no single value) rather than silently
++# using element[0]. If it wrongly used element[0], Mul would emit a bogus scalar
++# (3 * 3 = 9) that would override the correct, ONNX-propagated multi-element
++# value and collapse the downstream ConstantOfShape output from rank-2 [9, 16]
++# to a rank-1 [9].
++#
++# Correct behavior: Mul declines, the multi-element value [9, 16] still flows
++# through, and ConstantOfShape(M) is the rank-2 shape [9, 16].
++
++from onnx import IR_VERSION, TensorProto, checker, helper, save
++
++x = helper.make_tensor_value_info("X", TensorProto.FLOAT, [3, 4])
++# ConstantOfShape output is always rank 2 here (its shape input has 2 elements);
++# declared with symbolic dims so the checker passes while the test asserts the
++# concrete inferred dims [9, 16].
++y = helper.make_tensor_value_info("Y", TensorProto.FLOAT, ["d0", "d1"])
++
++# Shape(X) -> S : 1-D int64 tensor [3, 4] (two elements).
++shape_node = helper.make_node("Shape", inputs=["X"], outputs=["S"], name="ShapeNode")
++# Mul(S, S) -> M : elementwise [9, 16] (still two elements; must NOT collapse to a scalar).
++mul_node = helper.make_node("Mul", inputs=["S", "S"], outputs=["M"], name="MulNode")
++# ConstantOfShape(M) -> Y : output shape equals M's values, i.e. [9, 16].
++cos_node = helper.make_node("ConstantOfShape", inputs=["M"], outputs=["Y"], name="ConstantOfShapeNode")
++
++graph = helper.make_graph(
++    nodes=[shape_node, mul_node, cos_node],
++    name="Shape_Mul_ConstantOfShape_Model",
++    inputs=[x],
++    outputs=[y],
++)
++
++model = helper.make_model(
++    graph,
++    opset_imports=[helper.make_operatorsetid("", 18)],
++    producer_name="onnx-example-generator",
++)
++model.ir_version = IR_VERSION
++
++checker.check_model(model)
++save(model, "test_shape_data_propagation_shape_mul_constantofshape.onnx")
++
++print("Model saved to test_shape_data_propagation_shape_mul_constantofshape.onnx")
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_unsqueeze_decline.onnx b/onnxruntime/test/testdata/test_shape_data_propagation_unsqueeze_decline.onnx
+new file mode 100644
+index 0000000000000..b65e5d5830ac8
+Binary files /dev/null and b/onnxruntime/test/testdata/test_shape_data_propagation_unsqueeze_decline.onnx differ
+diff --git a/onnxruntime/test/testdata/test_shape_data_propagation_unsqueeze_decline.py b/onnxruntime/test/testdata/test_shape_data_propagation_unsqueeze_decline.py
+new file mode 100644
+index 0000000000000..b9df3bd67c762
+--- /dev/null
++++ b/onnxruntime/test/testdata/test_shape_data_propagation_unsqueeze_decline.py
+@@ -0,0 +1,65 @@
++# Copyright (c) Microsoft Corporation. All rights reserved.
++# Licensed under the MIT License.
++
++# Lock fixture for Unsqueeze's custom data-propagation DECLINE on a single-element value.
++#
++# Shape(X) -> Gather([-1]) produces a rank-1 single-element value (the last dimension of X, 2000).
++# Unsqueezing that single-element (scalar-like, rank-1 [1]) value would yield a rank >= 2 result
++# ([1, 2000]) that the single-value data-propagation channel cannot faithfully represent, so
++# Unsqueeze's custom data propagation must DECLINE rather than fabricate the misleading [1, value].
++#
++# The decline is made OBSERVABLE through a rank-lowering Squeeze:
++#   Shape(X) -> Gather([-1]) -> Unsqueeze([0]) -> Squeeze -> Range(0, K, 1)
++# With the correct decline, no value is propagated past Unsqueeze, Squeeze has nothing to lower, and
++# Range's limit stays symbolic -- the model loads and the Range output length is an unknown dimension.
++# If the decline were relaxed to fabricate [1, 2000], Squeeze would lower a non-scalar value into
++# Range, which ONNX Range shape inference rejects ("Input to 'Range' op should be scalars"), so the
++# model fails to load. The decline is thus locked end to end: the correct path loads with a symbolic
++# Range length, while the rank-fabricating bug fails to load.
++
++from onnx import IR_VERSION, TensorProto, checker, helper, save
++
++# Graph input: a 1-D float tensor of static length 2000.
++input_tensor = helper.make_tensor_value_info("X", TensorProto.FLOAT, [2000])
++
++# Output: Range result, a 1-D int64 tensor whose length is the propagated K (symbolic on decline).
++range_out = helper.make_tensor_value_info("R", TensorProto.INT64, ["range_len"])
++
++# Gather index is the 1-D constant [-1] (last dimension) -> rank-1 single-element value.
++gather_idx = helper.make_tensor("gather_idx", TensorProto.INT64, [1], [-1])
++# Unsqueeze axes: insert a leading dimension (axis 0).
++unsqueeze_axes = helper.make_tensor("unsqueeze_axes", TensorProto.INT64, [1], [0])
++# Range start/delta as 0-D scalar int64 constants.
++range_start = helper.make_tensor("range_start", TensorProto.INT64, [], [0])
++range_delta = helper.make_tensor("range_delta", TensorProto.INT64, [], [1])
++
++# Shape(X) -> S : 1-D int64 tensor [2000].
++shape_node = helper.make_node("Shape", inputs=["X"], outputs=["S"], name="ShapeNode")
++# Gather(S, [-1]) -> G : rank-1 size-1 int64 value [2000].
++gather_node = helper.make_node("Gather", inputs=["S", "gather_idx"], outputs=["G"], axis=0, name="GatherNode")
++# Unsqueeze(G, [0]) -> U : rank-2 [1, 1] tensor; custom data propagation must decline.
++unsqueeze_node = helper.make_node("Unsqueeze", inputs=["G", "unsqueeze_axes"], outputs=["U"], name="UnsqueezeNode")
++# Squeeze(U) -> K : 0-D scalar int64 value (only when a value is propagated).
++squeeze_node = helper.make_node("Squeeze", inputs=["U"], outputs=["K"], name="SqueezeNode")
++# Range(0, K, 1) -> R : 1-D int64 tensor whose length is K (symbolic on decline).
++range_node = helper.make_node("Range", inputs=["range_start", "K", "range_delta"], outputs=["R"], name="RangeNode")
++
++graph = helper.make_graph(
++    nodes=[shape_node, gather_node, unsqueeze_node, squeeze_node, range_node],
++    name="Shape_Gather_Unsqueeze_Decline_Model",
++    inputs=[input_tensor],
++    outputs=[range_out],
++    initializer=[gather_idx, unsqueeze_axes, range_start, range_delta],
++)
++
++model = helper.make_model(
++    graph,
++    opset_imports=[helper.make_operatorsetid("", 18)],
++    producer_name="onnx-example-generator",
++)
++model.ir_version = IR_VERSION
++
++checker.check_model(model)
++save(model, "test_shape_data_propagation_unsqueeze_decline.onnx")
++
++print("Model saved to test_shape_data_propagation_unsqueeze_decline.onnx")
