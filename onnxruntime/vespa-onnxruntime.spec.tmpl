@@ -38,6 +38,9 @@ Patch4:         patches.onnx-use-extra.diff
 Patch5:         patches.same-name-two-unit-tests.diff
 Patch6:         patches.avoid-sign-change.diff
 Patch7:         patches.mod-abseil-macro.diff
+Patch8:         PR.29084.diff
+Patch9:         PR.29158.diff
+Patch10:        PR.29196.diff
 
 %if ( 0%{?fedora} && !0%{?amzn} ) || 0%{?el10}
 BuildRequires: cmake
@@ -58,10 +61,10 @@ BuildRequires: gtest-devel
 BuildRequires: make
 BuildRequires: glibc-langpack-en
 BuildRequires: wget
-BuildRequires: python3.11
-BuildRequires: python3.11-devel
-BuildRequires: python3.11-numpy
-BuildRequires: python3.11-setuptools
+BuildRequires: python3.12
+BuildRequires: python3.12-devel
+BuildRequires: python3.12-numpy
+BuildRequires: python3.12-setuptools
 %global _enable_cuda 1
 %endif
 %if 0%{?el9}
@@ -71,10 +74,10 @@ BuildRequires: gcc-toolset-14-dwz
 BuildRequires: gtest-devel
 BuildRequires: make
 BuildRequires: glibc-langpack-en
-BuildRequires: python3.11
-BuildRequires: python3.11-devel
-BuildRequires: python3.11-numpy
-BuildRequires: python3.11-setuptools
+BuildRequires: python3.12
+BuildRequires: python3.12-devel
+BuildRequires: python3.12-numpy
+BuildRequires: python3.12-setuptools
 %global _enable_cuda 1
 %endif
 %if 0%{?el10}
@@ -92,9 +95,9 @@ BuildRequires: python3-setuptools
 %global _enable_cuda 1
 %endif
 %if 0%{?amzn2023}
-BuildRequires: python3.11
-BuildRequires: python3.11-devel
-BuildRequires: python3.11-setuptools
+BuildRequires: python3.12
+BuildRequires: python3.12-devel
+BuildRequires: python3.12-setuptools
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
@@ -117,7 +120,7 @@ BuildRequires: bzip2
 %global _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
 %global _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
 
-%global _cudnn_version 9.23.0.39
+%global _cudnn_version 9.23.2.1
 
 BuildRequires: cuda-toolkit-%{_cuda_version_major}-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-toolkit-config-common = %{_cuda_version_full_num}
@@ -154,6 +157,9 @@ about packaging.
 %patch -P 5 -p1
 %patch -P 6 -p1
 %patch -P 7 -p1
+%patch -P 8 -p1
+%patch -P 9 -p1
+%patch -P 10 -p1
 
 %build
 
@@ -170,8 +176,8 @@ PATH=%{_prefix}/bin:$PATH
 %global _enable_cuda_extra_defines CMAKE_CUDA_ARCHITECTURES="75;80;89" CMAKE_CUDA_FLAGS="--std c++20"
 %endif
 
-if [ -f /usr/bin/python3.11 ]; then
-    sed -i 's=^python3 =python3.11 =' build.sh
+if [ -f /usr/bin/python3.12 ]; then
+    sed -i 's=^python3 =python3.12 =' build.sh
 fi
 
 if [ $(arch) = "aarch64" ]; then
