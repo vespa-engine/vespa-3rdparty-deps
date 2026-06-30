@@ -21,6 +21,7 @@
 %global _vespa_gbenchmark_version 1.9.4
 %global _vespa_icu_version 78.3.0
 %global _vespa_re2_version 20251105
+%global _vespa_maven_version 3.9.16
 %if 0%{?fedora}
 %if %{fedora} > 43
 %global _vespa_java_version 25
@@ -102,7 +103,6 @@ Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 Requires: vespa-toolset-15-meta >= %{_vespa_toolset_version}
-Requires: maven-openjdk%{_vespa_java_version}
 %endif
 
 %if 0%{?el9}
@@ -124,7 +124,6 @@ Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 Requires: vespa-toolset-15-meta
-Requires: maven-openjdk%{_vespa_java_version}
 %endif
 
 %if 0%{?el10}
@@ -146,7 +145,6 @@ Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: abseil-cpp-devel
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
-Requires: maven-openjdk%{_vespa_java_version}
 %endif
 
 %if 0%{?fedora}
@@ -166,7 +164,6 @@ Requires: gtest-devel
 %endif
 Requires: libatomic
 Requires: llvm-devel
-Requires: maven
 Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
 Requires: openssl-devel
 %if 0%{?amzn2023}
@@ -186,8 +183,12 @@ Requires: java-17-amazon-corretto
 Requires: maven-amazon-corretto17
 Requires: vespa-xxhash-devel >= 0.8.1
 %else
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
+Requires: vespa-maven = %{_vespa_maven_version}
+%else
+Requires: maven
+%endif
 Requires: java-%{_vespa_java_version}-openjdk-devel
-Requires: maven-openjdk%{_vespa_java_version}
 Requires: xxhash-devel >= 0.8.1
 %endif
 
