@@ -3,9 +3,9 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=1
-MINOR=26
+MINOR=29
 PATCH=0
-RELEASE=4
+RELEASE=1
 
 PKGNAME=vespa-onnxruntime
 
