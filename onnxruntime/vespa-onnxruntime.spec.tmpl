@@ -36,11 +36,6 @@ Patch2:         patches.use-gradle.diff
 Patch3:         patches.reorg-provider.diff
 Patch4:         patches.onnx-use-extra.diff
 Patch5:         patches.same-name-two-unit-tests.diff
-Patch6:         patches.avoid-sign-change.diff
-Patch7:         patches.mod-abseil-macro.diff
-Patch8:         PR.29084.diff
-Patch9:         PR.29158.diff
-Patch10:        PR.29196.diff
 
 %if ( 0%{?fedora} && !0%{?amzn} ) || 0%{?el10}
 BuildRequires: cmake
@@ -155,11 +150,6 @@ about packaging.
 %patch -P 3 -p1
 %patch -P 4 -p1
 %patch -P 5 -p1
-%patch -P 6 -p1
-%patch -P 7 -p1
-%patch -P 8 -p1
-%patch -P 9 -p1
-%patch -P 10 -p1
 
 %build
 
@@ -271,6 +261,9 @@ about packaging.
 %endif
 
 %changelog
+* Tue Aug 18 2026 Arne Juul - 1.29.0
+- bump version to 1.29.0
+
 * Mon Jun  1 2026 Arne Juul - 1.26.0
 - bump version to 1.26.0
 - update CUDA to 13.3

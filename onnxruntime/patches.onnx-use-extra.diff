@@ -1,26 +1,20 @@
 diff --git a/cmake/patches/onnx/onnx.patch b/cmake/patches/onnx/onnx.patch
-index 0a56807787..38d6adb7b8 100644
+index acd5505beaf..3943c05236b 100644
 --- a/cmake/patches/onnx/onnx.patch
 +++ b/cmake/patches/onnx/onnx.patch
-@@ -51,7 +51,7 @@ diff --git a/cmake/Utils.cmake b/cmake/Utils.cmake
- index 1987edd..04b3088 100644
- --- a/cmake/Utils.cmake
- +++ b/cmake/Utils.cmake
--@@ -103,18 +103,7 @@ endfunction()
-+@@ -103,23 +103,12 @@
-  
-  function(add_onnx_compile_options target)
-    if(MSVC)
-@@ -70,6 +70,12 @@ index 1987edd..04b3088 100644
-      if(ONNX_WERROR)
-        target_compile_options(${target} PRIVATE "/WX")
-      endif()
+@@ -46,3 +46,15 @@ index 3887169..8432613 100644
+          .SetDoc(GroupNormalization_ver18_doc)
+          .Attr("epsilon", "The epsilon value to use to avoid division by zero.", AttributeProto::FLOAT, 1e-5f)
+          .Attr(
++diff --git a/cmake/Utils.cmake b/cmake/Utils.cmake
++--- a/cmake/Utils.cmake	2026-08-18 12:27:38.614572535 +0000
+++++ b/cmake/Utils.cmake	2026-08-18 12:27:18.440067020 +0000
++@@ -171,7 +171,7 @@
++       target_compile_options(${target} PRIVATE "/WX")
++     endif()
 +   else()
 +-    target_compile_options(${target} PRIVATE -Wall -Wextra)
 ++    target_compile_options(${target} PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable)
 +     if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION
 +                                     VERSION_GREATER_EQUAL 13)
 +       target_compile_options(${target} PRIVATE "-Wno-stringop-overflow")
- diff --git a/onnx/defs/nn/old.cc b/onnx/defs/nn/old.cc
- index a6a8a83..153da87 100644
- --- a/onnx/defs/nn/old.cc
