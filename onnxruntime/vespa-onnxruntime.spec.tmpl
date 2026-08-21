@@ -36,7 +36,6 @@ Patch2:         patches.use-gradle.diff
 Patch3:         patches.reorg-provider.diff
 Patch4:         patches.onnx-use-extra.diff
 Patch5:         patches.same-name-two-unit-tests.diff
-Patch6:         patches.no-fp16-gelu-fusions.diff
 Patch7:         patches.fp16-cpu-kernel-fallback.diff
 
 %if ( 0%{?fedora} && !0%{?amzn} ) || 0%{?el10}
@@ -148,11 +147,10 @@ about packaging.
 %setup -q
 %patch -P 0 -p1
 %patch -P 1 -p1
-%patch -P 2 -p0
+%patch -P 2 -p1
 %patch -P 3 -p1
 %patch -P 4 -p1
 %patch -P 5 -p1
-%patch -P 6 -p1
 %patch -P 7 -p1
 
 %build
