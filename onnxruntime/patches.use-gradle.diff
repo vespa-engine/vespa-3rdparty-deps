@@ -1,5 +1,7 @@
---- java/gradlew.orig	2023-09-28 09:06:34.000000000 +0000
-+++ java/gradlew	2023-10-08 15:58:27.416798430 +0000
+diff --git a/java/gradlew b/java/gradlew
+index 1aa94a426..a7c15f0d2 100755
+--- a/java/gradlew
++++ b/java/gradlew
 @@ -1,5 +1,7 @@
  #!/bin/sh
  

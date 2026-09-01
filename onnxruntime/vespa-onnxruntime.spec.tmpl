@@ -36,7 +36,7 @@ Patch2:         patches.use-gradle.diff
 Patch3:         patches.reorg-provider.diff
 Patch4:         patches.onnx-use-extra.diff
 Patch5:         patches.same-name-two-unit-tests.diff
-Patch6:         patches.no-fp16-gelu-fusions.diff
+Patch6:         patches.einsum-cuda.diff
 Patch7:         patches.fp16-cpu-kernel-fallback.diff
 
 %if ( 0%{?fedora} && !0%{?amzn} ) || 0%{?el10}
@@ -67,7 +67,6 @@ BuildRequires: python3.12-setuptools
 %if 0%{?el9}
 %global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: vespa-toolset-15-meta
-BuildRequires: gcc-toolset-14-dwz
 BuildRequires: gtest-devel
 BuildRequires: make
 BuildRequires: glibc-langpack-en
@@ -148,7 +147,7 @@ about packaging.
 %setup -q
 %patch -P 0 -p1
 %patch -P 1 -p1
-%patch -P 2 -p0
+%patch -P 2 -p1
 %patch -P 3 -p1
 %patch -P 4 -p1
 %patch -P 5 -p1
@@ -185,6 +184,7 @@ fi
 
 ./build.sh \
     --allow_running_as_root \
+    --no_telemetry \
     --config RelWithDebInfo \
     %{?_enable_cuda_options:%{_enable_cuda_options}} \
     --skip_tests \
