@@ -41,10 +41,8 @@ Patch7:         patches.fp16-cpu-kernel-fallback.diff
 
 %if ( 0%{?fedora} && !0%{?amzn} ) || 0%{?el10}
 BuildRequires: cmake
-BuildRequires: ccache
 %else
 BuildRequires: vespa-cmake
-BuildRequires: vespa-ccache
 %endif
 %global _cmake_prog cmake
 %global _ctest_prog ctest
@@ -162,7 +160,7 @@ source %{_devtoolset_enable}
 
 PATH=%{_prefix}/bin:$PATH
 %if 0%{?_enable_cuda:1}
-%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-%{_cuda_version_norm_num} --cudnn_home=/usr
+%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-%{_cuda_version_norm_num} --cudnn_home=/usr --nvcc_threads 1
 # 75: Tesla T4
 # 80: Ampere A100
 # 89: Ada Lovelace L40 / L40S
@@ -182,6 +180,10 @@ if [ $(arch) = "x86_64" ]; then
 	export CXXFLAGS
 fi
 
+if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
+	USE_CCACHE="CMAKE_CXX_COMPILER_LAUNCHER=ccache CMAKE_CUDA_COMPILER_LAUNCHER=ccache"
+fi
+
 ./build.sh \
     --allow_running_as_root \
     --no_telemetry \
@@ -190,15 +192,14 @@ fi
     --skip_tests \
     --build_java \
     --build_shared_lib \
-    --parallel 3 \
+    --parallel 1 \
     --cmake_path %{_cmake_prog} \
     --ctest_path %{_ctest_prog} \
     --skip_submodule_sync \
     --cmake_extra_defines \
             CMAKE_INSTALL_PREFIX=%{_prefix} \
             CMAKE_CXX_STANDARD=20 \
-            CMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            CMAKE_CUDA_COMPILER_LAUNCHER=ccache \
+            ${USE_CCACHE} \
             %{?_enable_cuda_extra_defines:%{_enable_cuda_extra_defines}} \
             %{?_toolset_compiler_cmake_args}
 
