@@ -182,6 +182,8 @@ fi
 
 if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
 	USE_CCACHE="CMAKE_CXX_COMPILER_LAUNCHER=ccache CMAKE_CUDA_COMPILER_LAUNCHER=+ccache"
+else
+	USE_CCACHE="CMAKE_CUDA_COMPILER_LAUNCHER=+/usr/bin/env"
 fi
 
 ./build.sh \
