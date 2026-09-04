@@ -160,11 +160,11 @@ source %{_devtoolset_enable}
 
 PATH=%{_prefix}/bin:$PATH
 %if 0%{?_enable_cuda:1}
-%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-%{_cuda_version_norm_num} --cudnn_home=/usr --nvcc_threads 1
+%global _enable_cuda_options --use_cuda --cuda_home=/usr/local/cuda-%{_cuda_version_norm_num} --cudnn_home=/usr --nvcc_threads 3
 # 75: Tesla T4
 # 80: Ampere A100
 # 89: Ada Lovelace L40 / L40S
-%global _enable_cuda_extra_defines CMAKE_CUDA_ARCHITECTURES="75;80;89" CMAKE_CUDA_FLAGS="--std c++20"
+%global _enable_cuda_extra_defines CMAKE_CUDA_ARCHITECTURES="75;80;89" CMAKE_CUDA_FLAGS="--std c++20 --jobserver"
 %endif
 
 if [ -f /usr/bin/python3.12 ]; then
@@ -181,7 +181,9 @@ if [ $(arch) = "x86_64" ]; then
 fi
 
 if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
-	USE_CCACHE="CMAKE_CXX_COMPILER_LAUNCHER=ccache CMAKE_CUDA_COMPILER_LAUNCHER=ccache"
+	USE_CCACHE="CMAKE_CXX_COMPILER_LAUNCHER=ccache CMAKE_CUDA_COMPILER_LAUNCHER=+ccache"
+else
+	USE_CCACHE="CMAKE_CUDA_COMPILER_LAUNCHER=+/usr/bin/env"
 fi
 
 ./build.sh \
@@ -192,7 +194,7 @@ fi
     --skip_tests \
     --build_java \
     --build_shared_lib \
-    --parallel 1 \
+    --parallel 3 \
     --cmake_path %{_cmake_prog} \
     --ctest_path %{_ctest_prog} \
     --skip_submodule_sync \
