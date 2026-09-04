@@ -36,8 +36,13 @@ Patch2:         patches.use-gradle.diff
 Patch3:         patches.reorg-provider.diff
 Patch4:         patches.onnx-use-extra.diff
 Patch5:         patches.same-name-two-unit-tests.diff
-Patch6:         patches.einsum-cuda.diff
-Patch7:         patches.fp16-cpu-kernel-fallback.diff
+Patch6:         PR.32197.diff
+Patch7:         PR.32222.diff
+Patch8:         PR.32354.diff
+Patch9:         PR.32388.diff
+Patch10:        PR.32392.diff
+Patch11:        PR.32411.diff
+Patch12:        patches.more-intermediates-stream.diff
 
 %if ( 0%{?fedora} && !0%{?amzn} ) || 0%{?el10}
 BuildRequires: cmake
@@ -151,6 +156,11 @@ about packaging.
 %patch -P 5 -p1
 %patch -P 6 -p1
 %patch -P 7 -p1
+%patch -P 8 -p1
+%patch -P 9 -p1
+%patch -P 10 -p1
+%patch -P 11 -p1
+%patch -P 12 -p1
 
 %build
 
@@ -268,6 +278,9 @@ about packaging.
 %endif
 
 %changelog
+* Fri Sep  4 2026 Arne Juul - 1.29.0
+- add patches from submitted PRs
+
 * Tue Aug 18 2026 Arne Juul - 1.29.0
 - bump version to 1.29.0
 

@@ -1,0 +1,797 @@
+commit 6cfb3b4be0bc03fc590eac6a603873adec48cf2c
+Author: Arne Juul <arnej@vespa.ai>
+Date:   Thu Sep 3 13:21:56 2026 +0000
+
+    Allocate CUDA EP intermediates on their stream
+    
+    Einsum was the call site observed corrupting concurrent requests, but it was
+    not the only one built the same way. Every Tensor::Create(type, shape,
+    allocator) for a per-run intermediate reaches allocator->Alloc() with no
+    stream, so the arena cannot associate the chunk with the stream that writes
+    it, and is free to hand the memory to another stream the moment the tensor
+    is released - possibly before queued work has completed.
+    
+    Sweep the CUDA EP and its contrib ops for that pattern and pass the stream
+    that is already in scope at 22 remaining sites:
+    
+      Softmax transpose scratch and intermediate output
+      Expand, Reshape output buffers
+      Beam search TopK values and indices
+      NCCL all-gather and sharding buffers, distributed Slice output
+      Memcpy across devices for a tensor sequence (cuda_execution_provider.cc)
+      IdentityOp and the four SequenceConstruct/Erase/Insert element copies
+    
+    The first sixteen are the hazard Einsum showed: scratch that goes out of
+    scope inside Compute() while the copy or kernel writing it is still queued,
+    so the chunk is back in the arena and reusable by another stream before the
+    work that fills it has run.
+    
+    The last six are different and are fixed for consistency rather than to
+    close a race. Their tensors are moved into the output TensorSeq, so they are
+    not released mid-Compute and the end of run synchronization covers them.
+    Tagging is still correct - a sequence output can outlive the run and be
+    released by the caller at an arbitrary point - but the window Einsum hit is
+    not open there.
+    
+    Conv and ConvTranspose PrePack are deliberately left alone: they run at
+    session initialization on the default stream, and the transposed weights
+    live as long as the kernel rather than going back to the arena between runs.
+    
+    Not covered here: generation_device_helper.cc allocates eight more per-run
+    device buffers through Tensor::InitOrtValue(type, shape, allocator,
+    ort_value) - the beam search past cache, input_ids, attention mask, cache
+    indirection and ExpandBuffer's output - and each is written by an async
+    memcpy or kernel on ort_stream, which is in scope at every one. They are the
+    same hazard as the first group and churn harder, being reallocated every
+    decode step, but there is no InitOrtValue overload that takes a stream.
+    Adding one is a separate change.
+    
+    Four call sites in this sweep (softmax.cc x2, expand.cc, reshape.cc) tagged
+    their Tensor::Create allocations with GetComputeStream() instead of
+    GetAllocationStream(). Under BUILD_CUDA_EP_AS_PLUGIN, GetComputeStream()
+    returns void* while Tensor::Create's stream-aware overload requires a
+    Stream*, so these broke that build; they now use GetAllocationStream() to
+    match einsum.cc and reduction_ops.cc. Also renamed ReduceComputeCore's
+    compute_stream parameter to alloc_stream (it's only ever used for allocation
+    tagging, never launch) so a future caller can't confuse it with the launch
+    stream, and corrected GetAllocationStream's doc comment in cuda_kernel.h,
+    which described the plugin adapter's null-return behavior rather than this
+    implementation's.
+    
+    Add tests covering the intermediates a session can reach. The Einsum device
+    helpers take their allocator and stream as arguments, so
+    einsum_stream_allocation_test.cc calls them directly. The kernels swept here
+    take theirs from OpKernelContext, so most of them can only be driven through
+    a real Run(); add the two harnesses that reach them, and the header the
+    Einsum test's recorder now lives in.
+    
+    cuda_kernel_stream_allocation_test.cc registers a cudaMalloc backed
+    recording allocator as the environment's shared CUDA allocator, points a
+    session at it with session.use_env_allocators, and records only the Run()
+    window. There is no arena underneath, so every request is a distinct call
+    and the counts are exactly the tensors the run allocated. Two cases:
+    
+      Softmax, measured differentially. The same model with the axis already
+      innermost is the baseline; the transposed run has to add exactly two
+      stream tagged allocations, the transpose scratch and the intermediate
+      output.
+    
+      A SequenceConstruct/Insert/Erase/At chain, run with and without an
+      Identity over the sequence so the difference isolates IdentityOp's element
+      copies. That loop only runs when the kernel's output is not aliased onto
+      its input, and being a graph output is what stops the planner applying the
+      alias: AllocationPlanner tests for a graph output before it consults the
+      alias map, so the output is planned kAllocateOutput and ExecutionFrame
+      hands the kernel a fresh TensorSeq. Keeping SequenceAt as a second
+      consumer of the same value is what stops EliminateIdentity rewiring the
+      node away. A zero delta would mean the alias was applied after all and the
+      case covered nothing, so it is an equality rather than a floor.
+    
+    Both cases also assert that no device allocation made during Run() came in
+    through the untagged Alloc(). That is the assertion that catches any of
+    these call sites reverting, and it reports the sizes it saw when it fails.
+    
+    beam_search_topk_stream_allocation_test.cc covers
+    GenerationCudaDeviceHelper::TopK directly, since that one does take the
+    allocator and the stream as arguments. Its two outputs are re-created every
+    decode step, so the previous pair returns to the arena while TopKImpl may
+    still be writing it.
+    
+    Left uncovered: the twelve NCCL, sharding and distributed Slice/Expand/Reshape
+    sites, which need a multi-GPU NCCL build - FuncExpand and FuncReshape are only
+    called from distributed_expand.cc and distributed_reshape.cc - and the
+    TensorSeq branch of Memcpy in cuda_execution_provider.cc.
+    
+    All of these need onnxruntime_ENABLE_CUDA_EP_INTERNAL_TESTS=ON, and skip when
+    no CUDA device is present.
+    
+    Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+
+diff --git a/include/onnxruntime/core/framework/tensor.h b/include/onnxruntime/core/framework/tensor.h
+index bd87c49d39e..6b5a5c8bed3 100644
+--- a/include/onnxruntime/core/framework/tensor.h
++++ b/include/onnxruntime/core/framework/tensor.h
+@@ -51,6 +51,12 @@ class Tensor final {
+                                         std::shared_ptr<IAllocator> allocator) {
+     return std::make_unique<Tensor>(elt_type, shape, std::move(allocator));
+   }
++
++  /// As above, but allocated on `stream`. See the matching constructor.
++  static std::unique_ptr<Tensor> Create(MLDataType elt_type, const TensorShape& shape,
++                                        std::shared_ptr<IAllocator> allocator, Stream* stream) {
++    return std::make_unique<Tensor>(elt_type, shape, std::move(allocator), stream);
++  }
+ #endif
+ 
+   Tensor() = default;  // to allow creating vector<Tensor> to support seq(tensor)
+@@ -92,6 +98,22 @@ class Tensor final {
+   /// <param name="allocator">Allocator to use to create and free buffer.</param>
+   Tensor(MLDataType elt_type, const TensorShape& shape, std::shared_ptr<IAllocator> allocator);
+ 
++  /**
++   * Create tensor with given type and shape, allocating the buffer on `stream`.
++   *
++   * A stream aware allocator only associates a buffer with a stream when it is told which one, and
++   * an unassociated buffer may be handed straight to another stream once this tensor is released.
++   * That is unsafe for an intermediate tensor whose producing or consuming work is still queued, so
++   * kernels that create one should pass the stream they queue that work on.
++   *
++   * Falls back to the plain allocation when \p stream is null or the allocator is not stream aware.
++   * \param elt_type Data type of the tensor elements.
++   * \param shape Shape of the tensor.
++   * \param allocator Allocator to use. Also used to free the buffer when the tensor is destructed.
++   * \param stream Stream the buffer will be used on. May be null.
++   */
++  Tensor(MLDataType elt_type, const TensorShape& shape, std::shared_ptr<IAllocator> allocator, Stream* stream);
++
+   ~Tensor();
+ 
+   // Move is allowed
+diff --git a/onnxruntime/core/framework/tensor.cc b/onnxruntime/core/framework/tensor.cc
+index eefd7825eca..44a23cda932 100644
+--- a/onnxruntime/core/framework/tensor.cc
++++ b/onnxruntime/core/framework/tensor.cc
+@@ -96,6 +96,18 @@ Tensor::Tensor(MLDataType elt_type, const TensorShape& shape, std::shared_ptr<IA
+   Init(elt_type, shape, p_data, std::move(allocator), 0L);
+ }
+ 
++Tensor::Tensor(MLDataType elt_type, const TensorShape& shape, std::shared_ptr<IAllocator> allocator, Stream* stream)
++    : alloc_info_(allocator->Info()) {
++  ORT_ENFORCE(elt_type != nullptr);
++  size_t len = Tensor::CalculateTensorStorageSize(elt_type, shape);
++
++  void* p_data = nullptr;
++  if (len > 0) {
++    p_data = AllocateBufferWithOptions(*allocator, len, /*use_reserve*/ false, stream);
++  }
++  Init(elt_type, shape, p_data, std::move(allocator), 0L);
++}
++
+ Tensor::Tensor(MLDataType elt_type, const TensorShape& shape, void* p_data, std::shared_ptr<IAllocator> deleter,
+                ptrdiff_t offset, gsl::span<const int64_t> strides)
+     : alloc_info_(deleter->Info()) {
+diff --git a/onnxruntime/core/providers/cuda/cuda_kernel.h b/onnxruntime/core/providers/cuda/cuda_kernel.h
+index 6152b5f888e..e560ab99976 100644
+--- a/onnxruntime/core/providers/cuda/cuda_kernel.h
++++ b/onnxruntime/core/providers/cuda/cuda_kernel.h
+@@ -124,6 +124,15 @@ class CudaKernel : public OpKernel {
+     return OrtStreamAdapter(GetComputeStream(ctx));
+   }
+ 
++  // The stream an allocation may be tagged with when the buffer outlives the call that fills it
++  // (see Tensor's stream aware constructor). A stream aware arena keeps the pointer in the chunk
++  // and later queries sync ids through it, so it has to be the framework stream - here that is the
++  // compute stream itself. The plugin build returns null when its host cannot hand out a framework
++  // stream, so callers have to treat null as "allocate untagged".
++  inline onnxruntime::Stream* GetAllocationStream(OpKernelContext* ctx) const {
++    return GetComputeStream(ctx);
++  }
++
+   inline cudaStream_t Stream(OpKernelContext* ctx) const {
+     auto* stream = ctx->GetComputeStream();
+     return stream ? static_cast<cudaStream_t>(stream->GetHandle()) : nullptr;
+diff --git a/onnxruntime/core/providers/cuda/math/einsum.cc b/onnxruntime/core/providers/cuda/math/einsum.cc
+index 648cb30f0fe..e59df0c2693 100644
+--- a/onnxruntime/core/providers/cuda/math/einsum.cc
++++ b/onnxruntime/core/providers/cuda/math/einsum.cc
+@@ -45,17 +45,27 @@ Status Einsum::ComputeInternal(OpKernelContext* context) const {
+   auto ort_stream = GetOrtStream(context);
+   EinsumOp::EinsumCudaAssets einsum_cuda_assets(
+       ort_stream,
++      GetAllocationStream(context),
+       GetDeviceProp(),
+       GetCublasHandle(context),
+       GetCudnnHandle(context),
+       allocator,
+       UseTF32());
+ 
++  // `CreateTensor` in the shared device helper interface cannot take the assets (its signature is
++  // part of the CPU provider bridge), so bind them here - the CUDA implementation needs them to
++  // allocate the intermediate on the stream that will use it.
++  EinsumOp::DeviceHelpers::CreateTensor create_tensor_func =
++      [&einsum_cuda_assets](const DataTypeImpl* type, const TensorShape& shape, AllocatorPtr allocator_ptr) {
++        return EinsumOp::DeviceHelpers::CudaDeviceHelpers::CreateTensor(type, shape, std::move(allocator_ptr),
++                                                                        &einsum_cuda_assets);
++      };
++
+   EinsumComputePreprocessor einsum_compute_preprocessor(einsum_equation_preprocessor, inputs, allocator,
+                                                         &einsum_cuda_assets);
+   einsum_compute_preprocessor.SetDeviceHelpers(EinsumOp::DeviceHelpers::CudaDeviceHelpers::Diagonal,
+                                                EinsumOp::DeviceHelpers::CudaDeviceHelpers::Transpose,
+-                                               EinsumOp::DeviceHelpers::CudaDeviceHelpers::CreateTensor);
++                                               create_tensor_func);
+ 
+   ORT_RETURN_IF_ERROR(einsum_compute_preprocessor.Run());
+ 
+@@ -68,7 +78,7 @@ Status Einsum::ComputeInternal(OpKernelContext* context) const {
+                                               EinsumOp::DeviceHelpers::CudaDeviceHelpers::ReduceSum<float>,
+                                               EinsumOp::DeviceHelpers::CudaDeviceHelpers::DataCopy,
+                                               EinsumOp::DeviceHelpers::CudaDeviceHelpers::ZeroBuffer,
+-                                              EinsumOp::DeviceHelpers::CudaDeviceHelpers::CreateTensor);
++                                              create_tensor_func);
+     return einsum_compute_processor.Run();
+ 
+   } else if (first_input_tensor->IsDataType<double>()) {
+@@ -78,7 +88,7 @@ Status Einsum::ComputeInternal(OpKernelContext* context) const {
+                                               EinsumOp::DeviceHelpers::CudaDeviceHelpers::ReduceSum<double>,
+                                               EinsumOp::DeviceHelpers::CudaDeviceHelpers::DataCopy,
+                                               EinsumOp::DeviceHelpers::CudaDeviceHelpers::ZeroBuffer,
+-                                              EinsumOp::DeviceHelpers::CudaDeviceHelpers::CreateTensor);
++                                              create_tensor_func);
+     return einsum_compute_processor.Run();
+ 
+   } else if (first_input_tensor->IsDataType<MLFloat16>()) {
+@@ -88,7 +98,7 @@ Status Einsum::ComputeInternal(OpKernelContext* context) const {
+                                               EinsumOp::DeviceHelpers::CudaDeviceHelpers::ReduceSum<MLFloat16>,
+                                               EinsumOp::DeviceHelpers::CudaDeviceHelpers::DataCopy,
+                                               EinsumOp::DeviceHelpers::CudaDeviceHelpers::ZeroBuffer,
+-                                              EinsumOp::DeviceHelpers::CudaDeviceHelpers::CreateTensor);
++                                              create_tensor_func);
+     return einsum_compute_processor.Run();
+ 
+   } else {
+diff --git a/onnxruntime/core/providers/cuda/math/einsum_utils/einsum_auxiliary_ops.cc b/onnxruntime/core/providers/cuda/math/einsum_utils/einsum_auxiliary_ops.cc
+index f26670262eb..624375f48bf 100644
+--- a/onnxruntime/core/providers/cuda/math/einsum_utils/einsum_auxiliary_ops.cc
++++ b/onnxruntime/core/providers/cuda/math/einsum_utils/einsum_auxiliary_ops.cc
+@@ -31,8 +31,15 @@ Status DataCopy(const Tensor& input, Tensor& output, void* einsum_cuda_assets) {
+   return Status::OK();
+ }
+ 
+-std::unique_ptr<Tensor> CreateTensor(const DataTypeImpl* type, const TensorShape& shape, AllocatorPtr allocator) {
+-  return Tensor::Create(type, shape, std::move(allocator));
++std::unique_ptr<Tensor> CreateTensor(const DataTypeImpl* type, const TensorShape& shape, AllocatorPtr allocator,
++                                     void* einsum_cuda_assets) {
++  // Einsum's intermediates are written and read by work queued on this stream, but they are
++  // released as soon as they go out of scope in Compute() - while that work is still queued.
++  // Allocating on the stream lets a stream aware arena tag the chunk, so it cannot be handed to
++  // another stream before this one has caught up. `alloc_stream_` is null when there is no stream
++  // to tag with, which falls back to the plain allocation.
++  return Tensor::Create(type, shape, std::move(allocator),
++                        static_cast<EinsumCudaAssets*>(einsum_cuda_assets)->alloc_stream_);
+ }
+ 
+ // CUDA EP specific Zero buffer helper
+@@ -98,6 +105,7 @@ std::unique_ptr<Tensor> ReduceSum(const Tensor& input, gsl::span<const int64_t>
+                                               allocator, input, reduce_axes,  // TODO(leca): is this allocator the same as the 1st parameter?
+                                               keep_dims, false, false, false,
+                                               true, static_cast<EinsumCudaAssets*>(einsum_cuda_assets)->ort_stream_,
++                                              static_cast<EinsumCudaAssets*>(einsum_cuda_assets)->alloc_stream_,
+                                               static_cast<EinsumCudaAssets*>(einsum_cuda_assets)->cudnn_handle_,
+                                               input_shape_override);
+ }
+@@ -128,7 +136,8 @@ std::unique_ptr<Tensor> Diagonal(const Tensor& input, int64_t dim_1, int64_t dim
+   // The diagonal values are stored along `first_dim`
+   output_dims.erase(output_dims.begin() + second_dim);
+ 
+-  auto output = Tensor::Create(input.DataType(), output_dims, allocator);
++  auto output = Tensor::Create(input.DataType(), output_dims, allocator,
++                               static_cast<EinsumCudaAssets*>(einsum_cuda_assets)->alloc_stream_);
+ 
+   TensorPitches input_strides(input.Shape().GetDims());
+   cuda::TArray<int64_t> gpu_input_strides(input_strides);
+diff --git a/onnxruntime/core/providers/cuda/math/einsum_utils/einsum_auxiliary_ops.h b/onnxruntime/core/providers/cuda/math/einsum_utils/einsum_auxiliary_ops.h
+index 18f91a954a1..be55449af2c 100644
+--- a/onnxruntime/core/providers/cuda/math/einsum_utils/einsum_auxiliary_ops.h
++++ b/onnxruntime/core/providers/cuda/math/einsum_utils/einsum_auxiliary_ops.h
+@@ -21,11 +21,13 @@ namespace EinsumOp {
+ // Holds CUDA assets required for CUDA ops that need to be executed as part of the Einsum flow
+ struct EinsumCudaAssets {
+   explicit EinsumCudaAssets(Stream* ort_stream,
++                            Stream* alloc_stream,
+                             const cudaDeviceProp& device_prop,
+                             cublasHandle_t cublas_handle,
+                             cudnnHandle_t cudnn_handle,
+                             AllocatorPtr gpu_allocator,
+                             bool use_tf32) : ort_stream_(ort_stream),
++                                             alloc_stream_(alloc_stream),
+                                              device_prop_(&device_prop),
+                                              cublas_handle_(cublas_handle),
+                                              cudnn_handle_(cudnn_handle),
+@@ -36,7 +38,15 @@ struct EinsumCudaAssets {
+     return ort_stream_ ? static_cast<cudaStream_t>(ort_stream_->GetHandle()) : nullptr;
+   }
+ 
++  // The stream Einsum's work is queued on. Used for the native CUDA handle and for the cuDNN and
++  // cuBLAS calls below - never for allocation, because in the plugin build this can be a shim that
++  // only carries that handle.
+   Stream* ort_stream_;
++
++  // The stream intermediate allocations are tagged with, or null when none is available (see
++  // CudaKernel::GetAllocationStream). Null means the intermediate is allocated untagged.
++  Stream* alloc_stream_;
++
+   const cudaDeviceProp* device_prop_;
+   cublasHandle_t cublas_handle_;
+   cudnnHandle_t cudnn_handle_;
+@@ -54,7 +64,8 @@ Status Transpose(const gsl::span<const size_t>& permutation, const Tensor& input
+ 
+ Status DataCopy(const Tensor& input, Tensor& output, void* einsum_cuda_assets);
+ 
+-std::unique_ptr<Tensor> CreateTensor(const DataTypeImpl* type, const TensorShape& shape, AllocatorPtr allocator);
++std::unique_ptr<Tensor> CreateTensor(const DataTypeImpl* type, const TensorShape& shape, AllocatorPtr allocator,
++                                     void* einsum_cuda_assets);
+ 
+ Status ZeroBuffer(Tensor& input, void* einsum_cuda_assets);
+ 
+diff --git a/onnxruntime/core/providers/cuda/plugin/cuda_kernel_adapter.h b/onnxruntime/core/providers/cuda/plugin/cuda_kernel_adapter.h
+index ed698aaf74e..3d82a903129 100644
+--- a/onnxruntime/core/providers/cuda/plugin/cuda_kernel_adapter.h
++++ b/onnxruntime/core/providers/cuda/plugin/cuda_kernel_adapter.h
+@@ -1046,6 +1046,20 @@ class CudaKernel : public OpKernel {
+     return onnxruntime::OrtStreamAdapter(cuda_stream, framework_stream);
+   }
+ 
++  // The stable framework stream of the current Compute call, or null when the host ORT predates
++  // KernelContext_GetSyncStream. This is the only stream pointer that may be handed to a stream
++  // aware allocator: the arena retains it past the call and queries sync ids through the EP stream
++  // API, which requires a real OrtSyncStream. The Stream* inside OrtStreamAdapter is not
++  // interchangeable - on an older host it is a stack owned PluginStreamShim that exists only to
++  // carry the native CUDA handle. Callers have to treat null as "allocate untagged", matching what
++  // GetScratchBuffer does through GetFrameworkStreamForStreamArg.
++  inline onnxruntime::Stream* GetAllocationStream(OpKernelContext* ctx) const {
++    if (ctx == nullptr) {
++      return nullptr;
++    }
++    return reinterpret_cast<onnxruntime::Stream*>(ctx->GetSyncStream());
++  }
++
+   static cudnnHandle_t GetCudnnHandle(cudaStream_t s) {
+     auto* sync = cuda_plugin::CudaSyncStream::FromCudaStream(s);
+     return sync ? sync->GetCudnnHandle() : nullptr;
+diff --git a/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc b/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc
+index ed6195c0bbb..b54b513b7c6 100644
+--- a/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc
++++ b/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc
+@@ -968,7 +968,8 @@ template <typename T, cudnnReduceTensorIndices_t ReduceTensorIndices>
+ std::unique_ptr<Tensor> ReduceCompute(const AllocatorPtr& gpu_allocator, cudnnReduceTensorOp_t cudnn_reduce_op, AllocatorPtr allocator,
+                                       const Tensor& input, gsl::span<const int64_t> axes,
+                                       bool keep_dims, bool calculate_log, bool calculate_sqt, bool log_sum_exp,
+-                                      bool fast_reduction, Stream* stream, cudnnHandle_t cudnn_handle,
++                                      bool fast_reduction, Stream* stream, Stream* alloc_stream,
++                                      cudnnHandle_t cudnn_handle,
+                                       const TensorShape* input_shape_override) {
+   PrepareReduceMetadata prepare_reduce_metadata;
+   auto status = PrepareForReduce(&input,
+@@ -981,12 +982,14 @@ std::unique_ptr<Tensor> ReduceCompute(const AllocatorPtr& gpu_allocator, cudnnRe
+     ORT_THROW(ONNXRUNTIME, FAIL, "Failed to perform reduce op: ", status.ErrorMessage());
+   }
+ 
+-  auto output = Tensor::Create(input.DataType(), prepare_reduce_metadata.squeezed_output_dims, allocator);
++  auto output = Tensor::Create(input.DataType(), prepare_reduce_metadata.squeezed_output_dims, allocator, alloc_stream);
+ 
++  // ReduceComputeCore only uses its `compute_stream` to tag allocations, so it gets `alloc_stream`
++  // too. The launches take the native handle off `stream`.
+   status = ReduceComputeCore<T, ReduceTensorIndices>(gpu_allocator, nullptr, input, prepare_reduce_metadata, *output, cudnn_reduce_op, axes,
+                                                      calculate_log, calculate_sqt, log_sum_exp, fast_reduction,
+                                                      stream ? static_cast<cudaStream_t>(stream->GetHandle()) : nullptr,
+-                                                     static_cast<void*>(stream), cudnn_handle,
++                                                     static_cast<void*>(alloc_stream), cudnn_handle,
+                                                      input_shape_override);
+ 
+   if (!status.IsOK()) {
+@@ -1003,21 +1006,24 @@ template std::unique_ptr<Tensor> ReduceCompute<float, CUDNN_REDUCE_TENSOR_NO_IND
+     AllocatorPtr allocator,
+     const Tensor& input, gsl::span<const int64_t> axes,
+     bool keep_dims, bool calculate_log, bool calculate_sqt, bool log_sum_exp,
+-    bool fast_reduction, Stream* stream, cudnnHandle_t cudnn_handle, const TensorShape* input_shape_override);
++    bool fast_reduction, Stream* stream, Stream* alloc_stream, cudnnHandle_t cudnn_handle,
++    const TensorShape* input_shape_override);
+ 
+ template std::unique_ptr<Tensor> ReduceCompute<double, CUDNN_REDUCE_TENSOR_NO_INDICES>(
+     const AllocatorPtr& gpu_allocator, cudnnReduceTensorOp_t cudnn_reduce_op,
+     AllocatorPtr allocator,
+     const Tensor& input, gsl::span<const int64_t> axes,
+     bool keep_dims, bool calculate_log, bool calculate_sqt, bool log_sum_exp,
+-    bool fast_reduction, Stream* stream, cudnnHandle_t cudnn_handle, const TensorShape* input_shape_override);
++    bool fast_reduction, Stream* stream, Stream* alloc_stream, cudnnHandle_t cudnn_handle,
++    const TensorShape* input_shape_override);
+ 
+ template std::unique_ptr<Tensor> ReduceCompute<MLFloat16, CUDNN_REDUCE_TENSOR_NO_INDICES>(
+     const AllocatorPtr& gpu_allocator, cudnnReduceTensorOp_t cudnn_reduce_op,
+     AllocatorPtr allocator,
+     const Tensor& input, gsl::span<const int64_t> axes,
+     bool keep_dims, bool calculate_log, bool calculate_sqt, bool log_sum_exp,
+-    bool fast_reduction, Stream* stream, cudnnHandle_t cudnn_handle, const TensorShape* input_shape_override);
++    bool fast_reduction, Stream* stream, Stream* alloc_stream, cudnnHandle_t cudnn_handle,
++    const TensorShape* input_shape_override);
+ 
+ }  // namespace ReductionOps
+ 
+diff --git a/onnxruntime/core/providers/cuda/reduction/reduction_ops.h b/onnxruntime/core/providers/cuda/reduction/reduction_ops.h
+index 5c8fd1c2711..745cdb84f24 100644
+--- a/onnxruntime/core/providers/cuda/reduction/reduction_ops.h
++++ b/onnxruntime/core/providers/cuda/reduction/reduction_ops.h
+@@ -14,12 +14,16 @@ namespace ReductionOps {
+ 
+ // Implementation that holds the core logic of reduction op processing
+ // `input_shape_override` is the input shape for compute purposes (if provided)
+-
++// `stream` is the stream the reduction is queued on. `alloc_stream` is the stream the output and
++// the scratch buffers are tagged with, which has to be a framework stream a stream aware arena can
++// query sync ids on; pass null to allocate untagged. The two differ in the plugin build, where
++// `stream` may be a shim that only carries the native CUDA handle.
+ template <typename T, cudnnReduceTensorIndices_t ReduceTensorIndices = CUDNN_REDUCE_TENSOR_NO_INDICES>
+ std::unique_ptr<Tensor> ReduceCompute(const AllocatorPtr& gpu_allocator, cudnnReduceTensorOp_t cudnn_reduce_op, AllocatorPtr allocator,
+                                       const Tensor& input, gsl::span<const int64_t> axes,
+                                       bool keep_dims, bool calculate_log, bool calculate_sqt, bool log_sum_exp,
+-                                      bool fast_reduction, Stream* stream, cudnnHandle_t cudnn_handle,
++                                      bool fast_reduction, Stream* stream, Stream* alloc_stream,
++                                      cudnnHandle_t cudnn_handle,
+                                       const TensorShape* input_shape_override = nullptr);
+ 
+ }  // namespace ReductionOps
+diff --git a/onnxruntime/core/providers/shared_library/provider_interfaces.h b/onnxruntime/core/providers/shared_library/provider_interfaces.h
+index 1faaba653fc..dc3f7c51022 100644
+--- a/onnxruntime/core/providers/shared_library/provider_interfaces.h
++++ b/onnxruntime/core/providers/shared_library/provider_interfaces.h
+@@ -1422,6 +1422,9 @@ struct ProviderHost {
+   virtual const Float8E8M0* Tensor__Data_Float8E8M0(const Tensor* p) = 0;
+   virtual bool Tensor__IsDataType_Float8E8M0(const Tensor* p) noexcept = 0;
+ #endif
++
++  // Stream aware Tensor allocation - appended at end to preserve vtable ABI compatibility
++  virtual std::unique_ptr<Tensor> Tensor__construct(MLDataType p_type, const TensorShape& shape, std::shared_ptr<IAllocator> allocator, Stream* stream) = 0;
+ };
+ 
+ #if defined(_MSC_VER) && !defined(__clang__)
+diff --git a/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h b/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h
+index 2a4ba995f7d..3284463e13d 100644
+--- a/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h
++++ b/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h
+@@ -1459,6 +1459,7 @@ class SessionState {
+ struct Tensor final {
+   static std::unique_ptr<Tensor> CreateDefault() { return g_host->Tensor__construct_default(); }
+   static std::unique_ptr<Tensor> Create(MLDataType p_type, const TensorShape& shape, std::shared_ptr<IAllocator> allocator) { return g_host->Tensor__construct(p_type, shape, std::move(allocator)); }
++  static std::unique_ptr<Tensor> Create(MLDataType p_type, const TensorShape& shape, std::shared_ptr<IAllocator> allocator, Stream* stream) { return g_host->Tensor__construct(p_type, shape, std::move(allocator), stream); }
+   static std::unique_ptr<Tensor> Create(MLDataType p_type, const TensorShape& shape, void* p_data, const OrtMemoryInfo& alloc, ptrdiff_t offset = 0) { return g_host->Tensor__construct(p_type, shape, p_data, alloc, offset); }
+ 
+   static void operator delete(void* p) noexcept { g_host->Tensor__operator_delete(reinterpret_cast<Tensor*>(p)); }
+diff --git a/onnxruntime/core/session/provider_bridge_ort.cc b/onnxruntime/core/session/provider_bridge_ort.cc
+index c45d21639c0..a0f90e7ff60 100644
+--- a/onnxruntime/core/session/provider_bridge_ort.cc
++++ b/onnxruntime/core/session/provider_bridge_ort.cc
+@@ -1649,6 +1649,10 @@ struct ProviderHostImpl : ProviderHost {
+     return std::make_unique<Tensor>(p_type, shape, std::move(allocator));
+   }
+ 
++  std::unique_ptr<Tensor> Tensor__construct(MLDataType p_type, const TensorShape& shape, std::shared_ptr<IAllocator> allocator, Stream* stream) override {
++    return std::make_unique<Tensor>(p_type, shape, std::move(allocator), stream);
++  }
++
+   std::unique_ptr<Tensor> Tensor__construct(MLDataType p_type, const TensorShape& shape, void* p_data, const OrtMemoryInfo& alloc, ptrdiff_t offset) override {
+     return std::make_unique<Tensor>(p_type, shape, p_data, alloc, offset);
+   }
+diff --git a/onnxruntime/test/framework/tensor_test.cc b/onnxruntime/test/framework/tensor_test.cc
+index 2125de0a36e..1adacd4bfeb 100644
+--- a/onnxruntime/test/framework/tensor_test.cc
++++ b/onnxruntime/test/framework/tensor_test.cc
+@@ -2,12 +2,14 @@
+ // Licensed under the MIT License.
+ 
+ #include "core/framework/tensor.h"
++#include "core/framework/stream_handles.h"
+ #include "core/framework/allocator_utils.h"
+ #include "test/unittest_util/framework_test_utils.h"
+ 
+ #include "gmock/gmock.h"
+ #include "gtest/gtest.h"
+ #include <absl/base/config.h>
++#include <cstdlib>
+ #include <sstream>
+ 
+ namespace onnxruntime {
+@@ -260,5 +262,95 @@ TEST(TensorTest, Strided) {
+ }
+ #endif
+ 
++namespace {
++
++// Records which allocation entry point a tensor used, so the stream aware constructor can be
++// distinguished from the plain one.
++class StreamRecordingAllocator : public IAllocator {
++ public:
++  StreamRecordingAllocator()
++      : IAllocator(OrtMemoryInfo("StreamRecording", OrtAllocatorType::OrtDeviceAllocator)) {}
++
++  bool IsStreamAware() const override { return stream_aware_; }
++  void SetStreamAware(bool stream_aware) { stream_aware_ = stream_aware; }
++
++  void* Alloc(size_t size) override {
++    ++plain_allocs;
++    return std::malloc(size);
++  }
++
++  void* AllocOnStream(size_t size, Stream* stream) override {
++    ++stream_allocs;
++    last_stream = stream;
++    return std::malloc(size);
++  }
++
++  void Free(void* p) override {
++    ++frees;
++    std::free(p);
++  }
++
++  int plain_allocs = 0;
++  int stream_allocs = 0;
++  int frees = 0;
++  Stream* last_stream = nullptr;
++
++ private:
++  bool stream_aware_ = true;
++};
++
++}  // namespace
++
++// An intermediate tensor is released while the work that writes it may still be queued, so its
++// buffer has to be associated with the stream that work runs on. Without that association a
++// stream aware arena is free to hand the memory to another stream immediately.
++TEST(TensorTest, AllocatesOnTheGivenStream) {
++  auto alloc = std::make_shared<StreamRecordingAllocator>();
++  TensorShape shape({4, 8});
++  OrtDevice device;  // Stream keeps a reference to this, so it has to outlive the stream
++  Stream stream(nullptr, device);
++
++  {
++    Tensor t(DataTypeImpl::GetType<float>(), shape, alloc, &stream);
++    EXPECT_EQ(alloc->stream_allocs, 1);
++    EXPECT_EQ(alloc->plain_allocs, 0);
++    EXPECT_EQ(alloc->last_stream, &stream);
++    EXPECT_NE(t.DataRaw(), nullptr);
++  }
++  EXPECT_EQ(alloc->frees, 1);
++}
++
++TEST(TensorTest, FallsBackToPlainAllocation) {
++  TensorShape shape({4, 8});
++  OrtDevice device;  // Stream keeps a reference to this, so it has to outlive the stream
++  Stream stream(nullptr, device);
++
++  // No stream to bind to.
++  {
++    auto alloc = std::make_shared<StreamRecordingAllocator>();
++    Tensor t(DataTypeImpl::GetType<float>(), shape, alloc, nullptr);
++    EXPECT_EQ(alloc->stream_allocs, 0);
++    EXPECT_EQ(alloc->plain_allocs, 1);
++  }
++
++  // Allocator does not implement stream handling.
++  {
++    auto alloc = std::make_shared<StreamRecordingAllocator>();
++    alloc->SetStreamAware(false);
++    Tensor t(DataTypeImpl::GetType<float>(), shape, alloc, &stream);
++    EXPECT_EQ(alloc->stream_allocs, 0);
++    EXPECT_EQ(alloc->plain_allocs, 1);
++  }
++
++  // An empty tensor allocates nothing at all.
++  {
++    auto alloc = std::make_shared<StreamRecordingAllocator>();
++    Tensor t(DataTypeImpl::GetType<float>(), TensorShape({0}), alloc, &stream);
++    EXPECT_EQ(alloc->stream_allocs, 0);
++    EXPECT_EQ(alloc->plain_allocs, 0);
++    EXPECT_EQ(t.DataRaw(), nullptr);
++  }
++}
++
+ }  // namespace test
+ }  // namespace onnxruntime
+diff --git a/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc b/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc
+new file mode 100644
+index 00000000000..2b04e05c8cc
+--- /dev/null
++++ b/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc
+@@ -0,0 +1,192 @@
++// Copyright (c) Microsoft Corporation. All rights reserved.
++// Licensed under the MIT License.
++
++// Regression tests for the intermediate tensors that Einsum's CUDA device helpers allocate.
++//
++// Those intermediates are filled by work queued on the run's stream, but they are released as soon
++// as they go out of scope in Compute() - while that work may still be in flight. A stream aware
++// arena can only keep such a buffer away from another stream if the allocation was tagged with the
++// stream that uses it, which means the helpers have to allocate through IAllocator::AllocOnStream
++// rather than the plain Alloc(). These tests wrap the device allocator in a recorder and assert
++// that every intermediate is tagged with the stream in the Einsum assets, so a helper that goes
++// back to an untagged allocation is caught here.
++//
++// This is a provider-world translation unit: it reaches into CUDA EP internals through the shared
++// provider bridge, so it must not include the core framework headers.
++
++#include "gtest/gtest.h"
++
++#include <memory>
++#include <vector>
++
++#include "core/providers/shared_library/provider_api.h"
++#include "core/framework/stream_handles.h"
++#include "core/providers/cuda/cuda_allocator.h"
++#include "core/providers/cuda/math/einsum_utils/einsum_auxiliary_ops.h"
++
++namespace onnxruntime {
++namespace test {
++
++namespace {
++
++// Forwards to a real device allocator and records which entry point each allocation came in on.
++class StreamRecordingAllocator : public IAllocator {
++ public:
++  explicit StreamRecordingAllocator(AllocatorPtr inner)
++      : IAllocator(inner->Info()), inner_(std::move(inner)) {}
++
++  bool IsStreamAware() const override { return true; }
++
++  void* Alloc(size_t size) override {
++    ++untagged_allocs;
++    return inner_->Alloc(size);
++  }
++
++  void* AllocOnStream(size_t size, Stream* stream) override {
++    ++stream_allocs;
++    last_stream = stream;
++    return inner_->AllocOnStream(size, stream);
++  }
++
++  void Free(void* p) override { inner_->Free(p); }
++
++  int untagged_allocs = 0;
++  int stream_allocs = 0;
++  Stream* last_stream = nullptr;
++
++ private:
++  AllocatorPtr inner_;
++};
++
++}  // namespace
++
++class EinsumCudaIntermediateTest : public ::testing::Test {
++ protected:
++  void SetUp() override {
++    int device_count = 0;
++    if (cudaGetDeviceCount(&device_count) != cudaSuccess || device_count == 0) {
++      GTEST_SKIP() << "No CUDA device available";
++    }
++
++    CUDA_CALL_THROW(cudaSetDevice(0));
++    CUDA_CALL_THROW(cudaGetDeviceProperties(&device_prop_, 0));
++    CUDA_CALL_THROW(cudaStreamCreate(&cuda_stream_));
++
++    device_allocator_ = std::make_shared<CUDAAllocator>(0, CUDA);
++    recording_allocator_ = std::make_shared<StreamRecordingAllocator>(device_allocator_);
++
++    device_ = device_allocator_->Info().device;  // Stream holds a reference to this
++    stream_ = std::make_unique<Stream>(cuda_stream_, device_);
++
++    assets_ = MakeAssets(stream_.get());
++  }
++
++  // The allocation stream is tracked separately from the stream the work is queued on, because a
++  // plugin build hosted by an ORT that cannot hand out its framework stream has no stream to tag
++  // allocations with. Passing null for `alloc_stream` models that host.
++  //
++  // The cuBLAS and cuDNN handles are left null: none of the helpers exercised here use them.
++  std::unique_ptr<EinsumOp::EinsumCudaAssets> MakeAssets(Stream* alloc_stream) {
++    return std::make_unique<EinsumOp::EinsumCudaAssets>(stream_.get(), alloc_stream, device_prop_,
++                                                        nullptr, nullptr, device_allocator_, false);
++  }
++
++  void TearDown() override {
++    assets_.reset();
++    stream_.reset();
++    if (cuda_stream_ != nullptr) {
++      cudaStreamDestroy(cuda_stream_);
++      cuda_stream_ = nullptr;
++    }
++  }
++
++  // Uploads `values` into a fresh device tensor of the given shape.
++  std::unique_ptr<Tensor> DeviceTensor(const TensorShape& shape, const std::vector<float>& values) {
++    auto tensor = Tensor::Create(DataTypeImpl::GetType<float>(), shape, device_allocator_);
++    CUDA_CALL_THROW(cudaMemcpy(tensor->MutableDataRaw(), values.data(), values.size() * sizeof(float),
++                               cudaMemcpyHostToDevice));
++    return tensor;
++  }
++
++  std::vector<float> ReadBack(const Tensor& tensor) {
++    std::vector<float> values(static_cast<size_t>(tensor.Shape().Size()));
++    CUDA_CALL_THROW(cudaStreamSynchronize(cuda_stream_));
++    CUDA_CALL_THROW(cudaMemcpy(values.data(), tensor.DataRaw(), values.size() * sizeof(float),
++                               cudaMemcpyDeviceToHost));
++    return values;
++  }
++
++  cudaDeviceProp device_prop_{};
++  cudaStream_t cuda_stream_ = nullptr;
++  OrtDevice device_;
++  AllocatorPtr device_allocator_;
++  std::shared_ptr<StreamRecordingAllocator> recording_allocator_;
++  std::unique_ptr<Stream> stream_;
++  std::unique_ptr<EinsumOp::EinsumCudaAssets> assets_;
++};
++
++// The helper every Transpose and MatMul intermediate goes through.
++TEST_F(EinsumCudaIntermediateTest, CreateTensorAllocatesOnTheRunStream) {
++  auto tensor = EinsumOp::DeviceHelpers::CudaDeviceHelpers::CreateTensor(
++      DataTypeImpl::GetType<float>(), TensorShape({2, 3}), recording_allocator_, assets_.get());
++
++  ASSERT_NE(tensor, nullptr);
++  EXPECT_EQ(recording_allocator_->stream_allocs, 1);
++  EXPECT_EQ(recording_allocator_->untagged_allocs, 0);
++  EXPECT_EQ(recording_allocator_->last_stream, stream_.get());
++}
++
++// With no stream to tag allocations with, the intermediate has to fall back to the plain
++// allocation rather than tagging it with the stream the work is queued on - in a plugin build that
++// stream can be a shim that a stream aware arena must never be handed.
++TEST_F(EinsumCudaIntermediateTest, CreateTensorAllocatesUntaggedWithoutAnAllocationStream) {
++  auto assets = MakeAssets(/*alloc_stream*/ nullptr);
++
++  auto tensor = EinsumOp::DeviceHelpers::CudaDeviceHelpers::CreateTensor(
++      DataTypeImpl::GetType<float>(), TensorShape({2, 3}), recording_allocator_, assets.get());
++
++  ASSERT_NE(tensor, nullptr);
++  EXPECT_EQ(recording_allocator_->stream_allocs, 0);
++  EXPECT_EQ(recording_allocator_->untagged_allocs, 1);
++}
++
++// Diagonal allocates its output itself instead of going through CreateTensor.
++TEST_F(EinsumCudaIntermediateTest, DiagonalAllocatesOnTheRunStream) {
++  auto input = DeviceTensor(TensorShape({3, 3}), {0.f, 1.f, 2.f,
++                                                  3.f, 4.f, 5.f,
++                                                  6.f, 7.f, 8.f});
++
++  auto output = EinsumOp::DeviceHelpers::CudaDeviceHelpers::Diagonal(*input, 0, 1, recording_allocator_,
++                                                                     assets_.get());
++
++  ASSERT_NE(output, nullptr);
++  EXPECT_EQ(recording_allocator_->stream_allocs, 1);
++  EXPECT_EQ(recording_allocator_->untagged_allocs, 0);
++  EXPECT_EQ(recording_allocator_->last_stream, stream_.get());
++
++  EXPECT_EQ(output->Shape(), TensorShape({3}));
++  EXPECT_EQ(ReadBack(*output), std::vector<float>({0.f, 4.f, 8.f}));
++}
++
++// The reduce path allocates inside cuda::ReductionOps::ReduceCompute. The reduction itself is a
++// matrix reduction over the trailing axis, so it stays on the fast path and needs no cuDNN handle.
++TEST_F(EinsumCudaIntermediateTest, ReduceSumAllocatesOnTheRunStream) {
++  auto input = DeviceTensor(TensorShape({2, 3}), {0.f, 1.f, 2.f,
++                                                  3.f, 4.f, 5.f});
++
++  const std::vector<int64_t> reduce_axes{1};
++  auto output = EinsumOp::DeviceHelpers::CudaDeviceHelpers::ReduceSum<float>(
++      *input, reduce_axes, /*keep_dims*/ true, recording_allocator_, /*input_shape_override*/ nullptr,
++      /*tp*/ nullptr, assets_.get());
++
++  ASSERT_NE(output, nullptr);
++  EXPECT_EQ(recording_allocator_->stream_allocs, 1);
++  EXPECT_EQ(recording_allocator_->untagged_allocs, 0);
++  EXPECT_EQ(recording_allocator_->last_stream, stream_.get());
++
++  EXPECT_EQ(output->Shape(), TensorShape({2, 1}));
++  EXPECT_EQ(ReadBack(*output), std::vector<float>({3.f, 12.f}));
++}
++
++}  // namespace test
++}  // namespace onnxruntime

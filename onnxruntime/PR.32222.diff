@@ -1,0 +1,124 @@
+From ecd749df2903d0c45f64ed28020825f899aca4b9 Mon Sep 17 00:00:00 2001
+From: Arne Juul <arnej@vespa.ai>
+Date: Sun, 23 Aug 2026 08:24:32 +0000
+Subject: [PATCH 1/2] Fix Softsign for large inputs on x86 builds with AVX/FMA
+ enabled
+
+Softsign was computed as (1 + |x|).inverse() * x. Eigen maps the
+packet version of inverse() to internal::preciprocal(), which on x86
+with EIGEN_FAST_MATH (the default) and AVX/FMA available is not a
+division at all but rcp_ps() plus one Newton-Raphson refinement step.
+
+rcp_ps() never produces subnormal results: for x = FLT_MAX the true
+reciprocal 1/(1 + FLT_MAX) ~= 2.94e-39 is subnormal, so the instruction
+returns 0, and the Newton-Raphson step (x * (2 - a * x)) cannot recover
+from a zero estimate. Softsign(FLT_MAX) therefore came out as 0 instead
+of 1. Which elements are affected depends on whether they land in the
+vectorized body or in the scalar prologue/epilogue, since the scalar
+functor still does a real 1/a division.
+
+This only shows up when the build targets a CPU with FMA, e.g.
+-march=haswell, or on distributions whose compiler defaults to
+x86-64-v3; a plain SSE2 build uses pdiv() and is unaffected. It made
+ActivationOpNoInfTest.Softsign fail on the FLT_MAX/-FLT_MAX inputs.
+
+Compute x / (1 + |x|) directly instead. That maps to pdiv(), an
+IEEE-correct division in both the vectorized and the scalar path, and
+gives exactly +/-1 for +/-FLT_MAX. It is also the formula the test and
+the ONNX spec state, and avoids the subnormal intermediate entirely.
+---
+ onnxruntime/core/providers/cpu/activation/activations.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/onnxruntime/core/providers/cpu/activation/activations.h b/onnxruntime/core/providers/cpu/activation/activations.h
+index f387b333aba2e..fce2ba539456e 100644
+--- a/onnxruntime/core/providers/cpu/activation/activations.h
++++ b/onnxruntime/core/providers/cpu/activation/activations.h
+@@ -170,7 +170,7 @@ struct Softsign : public ElementWiseRangedTransform<T> {
+     T* output_ptr = this->output + first;
+     ConstEigenVectorArrayMap<T> xm(this->input + first, len);
+     EigenVectorArrayMap<T> ym(output_ptr, len);
+-    ym = (1 + xm.abs()).inverse() * xm;
++    ym = xm / (1 + xm.abs());
+   }
+ };
+ 
+
+From ba8452cc26754bfaf657ad59194c3a9bd53529af Mon Sep 17 00:00:00 2001
+From: Arne Juul <arnej@vespa.ai>
+Date: Sun, 23 Aug 2026 09:38:03 +0000
+Subject: [PATCH 2/2] Drop the ARM32 Softsign test workaround and document why
+ inverse() is unusable
+
+ActivationOpNoInfTest.Softsign special-cased +/-FLT_MAX on ARM32 because
+the kernel used Eigen's inverse(), which flushed the subnormal reciprocal
+of 1 + FLT_MAX to zero on NEON. The kernel now divides instead, and
+Eigen's NEON pdiv() explicitly rescales its operands to avoid that
+underflow ("if b is large, NEON intrinsics will flush preciprocal(b) to
+zero" in Eigen/src/Core/arch/NEON/PacketMath.h), so ARM32 produces the
+same +/-1 as every other platform and the workaround is obsolete.
+
+Add a comment on the kernel recording why the reciprocal-and-multiply
+form must not be reintroduced, since it is the faster-looking spelling
+and the failure only appears at the extremes of the input range.
+---
+ .../providers/cpu/activation/activations.h    |  7 +++++
+ .../cpu/activation/activation_op_test.cc      | 27 +------------------
+ 2 files changed, 8 insertions(+), 26 deletions(-)
+
+diff --git a/onnxruntime/core/providers/cpu/activation/activations.h b/onnxruntime/core/providers/cpu/activation/activations.h
+index fce2ba539456e..1487d76c198f1 100644
+--- a/onnxruntime/core/providers/cpu/activation/activations.h
++++ b/onnxruntime/core/providers/cpu/activation/activations.h
+@@ -170,6 +170,13 @@ struct Softsign : public ElementWiseRangedTransform<T> {
+     T* output_ptr = this->output + first;
+     ConstEigenVectorArrayMap<T> xm(this->input + first, len);
+     EigenVectorArrayMap<T> ym(output_ptr, len);
++    // Do not rewrite this as (1 + xm.abs()).inverse() * xm. Eigen's packet version of inverse() is
++    // internal::preciprocal(), which is a reciprocal estimate instruction plus a Newton-Raphson step
++    // rather than a real division on both x86 (rcp_ps, when built with FMA available) and ARM32
++    // (NEON). Those instructions do not produce subnormal results, so for x = +/-FLT_MAX, where
++    // 1 / (1 + |x|) ~= 2.94e-39 is subnormal, the estimate is 0 and Newton-Raphson cannot recover
++    // from it. That yields +/-0 instead of +/-1. pdiv(), which this expression maps to, is a true
++    // IEEE division on x86 and rescales its operands to avoid the same underflow on NEON.
+     ym = xm / (1 + xm.abs());
+   }
+ };
+diff --git a/onnxruntime/test/providers/cpu/activation/activation_op_test.cc b/onnxruntime/test/providers/cpu/activation/activation_op_test.cc
+index f635f50f7c5a6..b541d8a0de499 100644
+--- a/onnxruntime/test/providers/cpu/activation/activation_op_test.cc
++++ b/onnxruntime/test/providers/cpu/activation/activation_op_test.cc
+@@ -800,32 +800,7 @@ TEST_F(ActivationOpNoInfTest, Softsign) {
+   TestActivationOp<float>(
+       "Softsign",
+       input_values,
+-      [](float x) {
+-        auto result = x / (1 + std::abs(x));
+-
+-#if defined(__arm__)
+-        // Softsign uses Eigen inverse(), which on ARM32 results in a different value when x is FLT_MAX or -FLT_MAX
+-        // 3.40282347e+38 -> 0 with ARM32 inverse() vs something like 2.939e-39#DEN with other platforms.
+-        //
+-        // Possibly explained by https://en.wikipedia.org/wiki/ARM_architecture#Advanced_SIMD_(Neon)
+-        // 'A quirk of Neon in Armv7 devices is that it flushes all subnormal numbers to zero'
+-        //
+-        // c.f.
+-        // cmake\external\eigen\Eigen\src\Core\arch\SSE\PacketMath.h uses _mm_div_ps for 'pdiv<Packet4f>'
+-        // cmake\external\eigen\Eigen\src\Core\arch\NEON\PacketMath.h uses a custom implementation for 'pdiv<Packet4f>'
+-        //
+-        // Special case the expected values to allow for that. If handling FLT_MAX more consistently is required
+-        // we'd need to not use Eigen for Softsign on ARM32.
+-        //
+-        if (x == FLT_MAX) {
+-          result = 0.;
+-        } else if (x == -FLT_MAX) {
+-          result = -0.;
+-        }
+-#endif
+-
+-        return result;
+-      },
++      [](float x) { return x / (1 + std::abs(x)); },
+       {}, {}, false);  // Disable TensorRT because result mismatches
+ }
+ 

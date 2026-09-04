@@ -1,0 +1,39 @@
+From 0cb240d045112ce52a00a3b00da97371bb7c548b Mon Sep 17 00:00:00 2001
+From: Arne Juul <arnej@vespa.ai>
+Date: Wed, 2 Sep 2026 23:04:44 +0000
+Subject: [PATCH] Guard the <ciso646> include so it is skipped in C++20
+
+cuda_common.h includes <ciso646> (a trick copied from ABSL) so that the
+alternative operator spellings "and"/"or" used by CUTLASS headers are
+available. That header was deprecated in C++17 and removed in C++20, and
+onnxruntime now requires C++20 (onnxruntime_MINIMUM_CXX_STANDARD_VERSION
+in cmake/onnxruntime_language_standard_versions.cmake), so every
+translation unit pulling in cuda_common.h gets the standard library
+diagnostic "<ciso646> is not a standard header since C++20" - an error
+in builds that treat warnings as errors.
+
+Wrap the include  so it is still picked up by any toolchain that reports
+a pre-C++20 language level; from CI output it is always needed for MSVC.
+---
+ onnxruntime/core/providers/cuda/cuda_common.h | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/onnxruntime/core/providers/cuda/cuda_common.h b/onnxruntime/core/providers/cuda/cuda_common.h
+index f90eb2813afc4..74efd1524c22c 100644
+--- a/onnxruntime/core/providers/cuda/cuda_common.h
++++ b/onnxruntime/core/providers/cuda/cuda_common.h
+@@ -5,11 +5,13 @@
+ 
+ #ifndef BUILD_CUDA_EP_AS_PLUGIN
+ 
+-// The following three lines were copied from ABSL
++// The following lines were copied from ABSL
+ // cutlass needs them, because cutlass uses "and"/"or" keywords
+ #ifdef __cplusplus
++#if defined(_MSVC_LANG) || (__cplusplus < 202002L)
+ #include <ciso646>
+ #endif
++#endif
+ 
+ #if defined(ENABLE_FP4) && !defined(DISABLE_FLOAT4_TYPES)
+ 

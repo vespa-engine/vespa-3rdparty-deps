@@ -1,0 +1,327 @@
+From 7b95d3dbf1a14328d486739382b3367b5e59ef50 Mon Sep 17 00:00:00 2001
+From: Arne Juul <arnej@vespa.ai>
+Date: Wed, 2 Sep 2026 11:16:08 +0000
+Subject: [PATCH 1/2] Give the CUDA plugin build the CUDA 13 CCCL include path
+
+CUDA 13.0 moved libcu++, CUB and Thrust from <toolkit>/include to
+<toolkit>/include/cccl. onnxruntime_providers_cuda.cmake compensates
+for that inside config_cuda_provider_shared_module, but the plugin EP's
+cmake never did.  The plugin target globs the same host .cc files that
+include CUTLASS headers (contrib_ops/cuda/llm/cutlass_heuristic.cc and
+others), and those reach <cuda/std/utility>, so on a CUDA 13 toolkit
+they failed with
+
+  cutlass/cutlass.h:40:33: fatal error: cuda/std/utility: No such file or directory
+
+Move the include handling - and the CUDA 13.3 cudafe++ header workaround it
+depends on - out of onnxruntime_providers_cuda.cmake and into the new shared
+cmake/onnxruntime_cuda_cccl.cmake, then call it from both provider cmakes.
+
+The include flags of the in-tree provider build are unchanged. The only
+adjustments made while extracting the code are:
+
+  * The 13.0 version check becomes an early return instead of wrapping the
+    function body.
+  * The generated-header directory is pinned to ${CMAKE_BINARY_DIR} rather
+    than ${CMAKE_CURRENT_BINARY_DIR}, which in a function expands in the
+    caller's directory scope. Both are the same directory for the two call
+    sites (cmake/CMakeLists.txt is the top-level list file), but a shared
+    module should not generate files in a caller-dependent location. This
+    matches op_reduction_root in onnxruntime_providers.cmake, the closest
+    analogue: a configure-time generated header tree injected per target.
+  * The entry point is named ort_configure_cuda_cccl, since it generates
+    files in the build tree as well as adding include directories.
+
+Comments record the two things that are easy to break later: the SM-specific
+OBJECT libraries of the plugin target inherit these include directories
+through a generator expression, which is why calling the function after they
+are created still covers them; and the CUDA 13.3 workaround is UNIX-only
+because it is untested on Windows, not because MSVC is known to be
+unaffected.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ cmake/onnxruntime_cuda_cccl.cmake             | 95 +++++++++++++++++++
+ cmake/onnxruntime_providers_cuda.cmake        | 66 +------------
+ cmake/onnxruntime_providers_cuda_plugin.cmake | 13 +++
+ 3 files changed, 110 insertions(+), 64 deletions(-)
+ create mode 100644 cmake/onnxruntime_cuda_cccl.cmake
+
+diff --git a/cmake/onnxruntime_cuda_cccl.cmake b/cmake/onnxruntime_cuda_cccl.cmake
+new file mode 100644
+index 0000000000000..f0588b763e0c9
+--- /dev/null
++++ b/cmake/onnxruntime_cuda_cccl.cmake
+@@ -0,0 +1,95 @@
++# Copyright (c) Microsoft Corporation. All rights reserved.
++# Licensed under the MIT License.
++
++# CCCL (libcu++/CUB/Thrust) header handling shared by the in-tree CUDA provider
++# (onnxruntime_providers_cuda.cmake) and the CUDA plugin EP (onnxruntime_providers_cuda_plugin.cmake).
++# Both compile host C++ translation units that include CUTLASS headers, which pull in <cuda/std/...>,
++# so both need the same include path handling.
++
++include_guard(GLOBAL)
++
++# Work around a CUDA 13.3 cudafe++ (EDG front-end) regression that mis-parses CCCL's
++# global-qualified partial specializations, e.g. in <cub/device/device_transform.cuh>:
++#   template <typename T>
++#   struct ::cuda::proclaims_copyable_arguments<...> : ::cuda::std::true_type {};
++# nvcc fails with "global qualification of class name is invalid before ':' token".
++# The fix is to write the specialization with the namespace reopened instead of using a
++# global-qualified name. We cannot edit the (often read-only) toolkit headers, so generate
++# corrected copies of the affected headers into the build tree and place that directory
++# ahead of the toolkit cccl include path. This is a no-op on toolkits whose headers do not
++# contain the offending pattern (e.g. once NVIDIA fixes it), so it is safe to keep enabled.
++function(ort_cuda133_patch_cccl_header src dst)
++  if (NOT EXISTS "${src}")
++    return()
++  endif()
++  file(READ "${src}" _content)
++  set(_orig "${_content}")
++  # <cub/device/device_transform.cuh>
++  string(REPLACE
++    "template <typename T>\nstruct ::cuda::proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::__return_constant<T>> : ::cuda::std::true_type\n{};"
++    "_CCCL_BEGIN_NAMESPACE_CUDA\ntemplate <typename T>\nstruct proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::__return_constant<T>> : ::cuda::std::true_type\n{};\n_CCCL_END_NAMESPACE_CUDA"
++    _content "${_content}")
++  # <cub/device/dispatch/tuning/tuning_transform.cuh>
++  string(REPLACE
++    "template <>\nstruct ::cuda::proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::transform::always_true_predicate>\n    : ::cuda::std::true_type\n{};"
++    "_CCCL_BEGIN_NAMESPACE_CUDA\ntemplate <>\nstruct proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::transform::always_true_predicate>\n    : ::cuda::std::true_type\n{};\n_CCCL_END_NAMESPACE_CUDA"
++    _content "${_content}")
++  if (NOT _content STREQUAL _orig)
++    get_filename_component(_dst_dir "${dst}" DIRECTORY)
++    file(MAKE_DIRECTORY "${_dst_dir}")
++    file(WRITE "${dst}" "${_content}")
++  elseif (EXISTS "${dst}")
++    # The toolkit header no longer matches the offending pattern (e.g. after a CUDA
++    # upgrade in an existing build tree). Remove any previously generated copy so a
++    # stale patched header does not keep shadowing the toolkit header.
++    file(REMOVE "${dst}")
++  endif()
++endfunction()
++
++# Give ${target} everything it needs to compile against the CCCL headers of a CUDA 13 toolkit:
++#
++#  * Handle the CUDA 13.0 CCCL header directory move: libcu++, CUB and Thrust moved from
++#    <toolkit>/include to <toolkit>/include/cccl, so <cuda/std/utility> - reached from the CUTLASS
++#    headers that host .cc files include - is no longer on the default include path of the host
++#    compiler. nvcc adds it by itself, so this only matters for targets that compile host C++.
++#  * On CUDA 13.3, generate the patched CCCL headers described above into ${CMAKE_BINARY_DIR}
++#    (and remove stale ones), then put that directory first on the include path.
++#
++# Note that this generates files in the build tree as a side effect, not just include flags.
++# It must be called for every target that compiles CUDA or CUTLASS-including host sources;
++# targets that inherit $<TARGET_PROPERTY:...,INCLUDE_DIRECTORIES> from such a target are
++# covered by the parent call, but only because that generator expression is evaluated after
++# configuration - see the call in onnxruntime_providers_cuda_plugin.cmake.
++function(ort_configure_cuda_cccl target)
++  if (CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 13.0)
++    return()
++  endif()
++
++  foreach(inc_dir ${CUDAToolkit_INCLUDE_DIRS})
++    if (EXISTS "${inc_dir}/cccl")
++      # The UNIX guard is not a statement about MSVC being unaffected: the cudafe++ regression
++      # is simply untested on Windows, where no CUDA 13.3 build has been run. If a Windows
++      # CUDA 13.3 build hits the same "global qualification of class name is invalid" error,
++      # dropping UNIX from this condition is expected to be all that is needed.
++      if (UNIX AND CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 13.3 AND CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 13.4)
++        # Generate cudafe++-parseable copies of the CCCL headers that contain global-qualified
++        # partial specializations (see ort_cuda133_patch_cccl_header above) and put the fixed
++        # directory ahead of the toolkit cccl include so the corrected headers win.
++        set(_ort_cccl_fix_dir "${CMAKE_BINARY_DIR}/cccl_cuda13_fix")
++        ort_cuda133_patch_cccl_header(
++          "${inc_dir}/cccl/cub/device/device_transform.cuh"
++          "${_ort_cccl_fix_dir}/cub/device/device_transform.cuh")
++        ort_cuda133_patch_cccl_header(
++          "${inc_dir}/cccl/cub/device/dispatch/tuning/tuning_transform.cuh"
++          "${_ort_cccl_fix_dir}/cub/device/dispatch/tuning/tuning_transform.cuh")
++        if (EXISTS "${_ort_cccl_fix_dir}/cub/device/device_transform.cuh" OR
++            EXISTS "${_ort_cccl_fix_dir}/cub/device/dispatch/tuning/tuning_transform.cuh")
++          target_include_directories(${target} BEFORE PRIVATE "${_ort_cccl_fix_dir}")
++        endif()
++      endif()
++
++      # Add the cccl subdirectory to the include path so <cuda/std/utility> can be found
++      target_include_directories(${target} PRIVATE "${inc_dir}/cccl")
++    endif()
++  endforeach()
++endfunction()
+diff --git a/cmake/onnxruntime_providers_cuda.cmake b/cmake/onnxruntime_providers_cuda.cmake
+index 5deb723303c63..6cab6bf1c2844 100644
+--- a/cmake/onnxruntime_providers_cuda.cmake
++++ b/cmake/onnxruntime_providers_cuda.cmake
+@@ -66,6 +66,7 @@
+   )
+ 
+   include(onnxruntime_cuda_source_filters.cmake)
++  include(onnxruntime_cuda_cccl.cmake)
+   onnxruntime_filter_cuda_cu_sources(onnxruntime_cuda_contrib_ops_cu_srcs)
+ 
+   if (NOT onnxruntime_USE_TRT_FUSED_ATTENTION)
+@@ -217,44 +218,6 @@
+     target_compile_definitions(onnxruntime_providers_cuda PRIVATE FILE_NAME=\"onnxruntime_providers_cuda.dll\")
+   endif()
+ 
+-  # Work around a CUDA 13.3 cudafe++ (EDG front-end) regression that mis-parses CCCL's
+-  # global-qualified partial specializations, e.g. in <cub/device/device_transform.cuh>:
+-  #   template <typename T>
+-  #   struct ::cuda::proclaims_copyable_arguments<...> : ::cuda::std::true_type {};
+-  # nvcc fails with "global qualification of class name is invalid before ':' token".
+-  # The fix is to write the specialization with the namespace reopened instead of using a
+-  # global-qualified name. We cannot edit the (often read-only) toolkit headers, so generate
+-  # corrected copies of the affected headers into the build tree and place that directory
+-  # ahead of the toolkit cccl include path. This is a no-op on toolkits whose headers do not
+-  # contain the offending pattern (e.g. once NVIDIA fixes it), so it is safe to keep enabled.
+-  function(ort_cuda133_patch_cccl_header src dst)
+-    if (NOT EXISTS "${src}")
+-      return()
+-    endif()
+-    file(READ "${src}" _content)
+-    set(_orig "${_content}")
+-    # <cub/device/device_transform.cuh>
+-    string(REPLACE
+-      "template <typename T>\nstruct ::cuda::proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::__return_constant<T>> : ::cuda::std::true_type\n{};"
+-      "_CCCL_BEGIN_NAMESPACE_CUDA\ntemplate <typename T>\nstruct proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::__return_constant<T>> : ::cuda::std::true_type\n{};\n_CCCL_END_NAMESPACE_CUDA"
+-      _content "${_content}")
+-    # <cub/device/dispatch/tuning/tuning_transform.cuh>
+-    string(REPLACE
+-      "template <>\nstruct ::cuda::proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::transform::always_true_predicate>\n    : ::cuda::std::true_type\n{};"
+-      "_CCCL_BEGIN_NAMESPACE_CUDA\ntemplate <>\nstruct proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::transform::always_true_predicate>\n    : ::cuda::std::true_type\n{};\n_CCCL_END_NAMESPACE_CUDA"
+-      _content "${_content}")
+-    if (NOT _content STREQUAL _orig)
+-      get_filename_component(_dst_dir "${dst}" DIRECTORY)
+-      file(MAKE_DIRECTORY "${_dst_dir}")
+-      file(WRITE "${dst}" "${_content}")
+-    elseif (EXISTS "${dst}")
+-      # The toolkit header no longer matches the offending pattern (e.g. after a CUDA
+-      # upgrade in an existing build tree). Remove any previously generated copy so a
+-      # stale patched header does not keep shadowing the toolkit header.
+-      file(REMOVE "${dst}")
+-    endif()
+-  endfunction()
+-
+   # config_cuda_provider_shared_module can be used to config onnxruntime_providers_cuda_obj, onnxruntime_providers_cuda & onnxruntime_providers_cuda_ut.
+   # This function guarantees that all 3 targets have the same configurations.
+   function(config_cuda_provider_shared_module target)
+@@ -422,32 +385,7 @@
+     target_link_libraries(${target} PRIVATE Eigen3::Eigen)
+     target_include_directories(${target} PRIVATE ${ONNXRUNTIME_ROOT} ${CMAKE_CURRENT_BINARY_DIR} PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
+ 
+-    # Handle CUDA 13.0 CCCL header directory move
+-    if (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 13.0)
+-      foreach(inc_dir ${CUDAToolkit_INCLUDE_DIRS})
+-        if (EXISTS "${inc_dir}/cccl")
+-          if (UNIX AND CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 13.3 AND CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 13.4)
+-            # Generate cudafe++-parseable copies of the CCCL headers that contain global-qualified
+-            # partial specializations (see ort_cuda133_patch_cccl_header above) and put the fixed
+-            # directory ahead of the toolkit cccl include so the corrected headers win.
+-            set(_ort_cccl_fix_dir "${CMAKE_CURRENT_BINARY_DIR}/cccl_cuda13_fix")
+-            ort_cuda133_patch_cccl_header(
+-              "${inc_dir}/cccl/cub/device/device_transform.cuh"
+-              "${_ort_cccl_fix_dir}/cub/device/device_transform.cuh")
+-            ort_cuda133_patch_cccl_header(
+-              "${inc_dir}/cccl/cub/device/dispatch/tuning/tuning_transform.cuh"
+-              "${_ort_cccl_fix_dir}/cub/device/dispatch/tuning/tuning_transform.cuh")
+-            if (EXISTS "${_ort_cccl_fix_dir}/cub/device/device_transform.cuh" OR
+-                EXISTS "${_ort_cccl_fix_dir}/cub/device/dispatch/tuning/tuning_transform.cuh")
+-              target_include_directories(${target} BEFORE PRIVATE "${_ort_cccl_fix_dir}")
+-            endif()
+-          endif()
+-
+-          # Add the cccl subdirectory to the include path so <cuda/std/utility> can be found
+-          target_include_directories(${target} PRIVATE "${inc_dir}/cccl")
+-        endif()
+-      endforeach()
+-    endif()
++    ort_configure_cuda_cccl(${target})
+ 
+     # ${CMAKE_CURRENT_BINARY_DIR} is so that #include "onnxruntime_config.h" inside tensor_shape.h is found
+     set_target_properties(${target} PROPERTIES LINKER_LANGUAGE CUDA)
+diff --git a/cmake/onnxruntime_providers_cuda_plugin.cmake b/cmake/onnxruntime_providers_cuda_plugin.cmake
+index f7032d8bcc4b7..dd5d25639b70f 100644
+--- a/cmake/onnxruntime_providers_cuda_plugin.cmake
++++ b/cmake/onnxruntime_providers_cuda_plugin.cmake
+@@ -111,6 +111,7 @@ list(FILTER CUDA_PLUGIN_EP_CU_SRCS EXCLUDE REGEX ".*/contrib_ops/cuda/transforme
+ 
+ # Apply shared CUDA .cu source filtering (flash attention quick build, MoE GEMM FP4/FP8).
+ include(onnxruntime_cuda_source_filters.cmake)
++include(onnxruntime_cuda_cccl.cmake)
+ onnxruntime_filter_cuda_cu_sources(CUDA_PLUGIN_EP_CU_SRCS)
+ onnxruntime_extract_sm_specific_cuda_sources(CUDA_PLUGIN_EP_CU_SRCS
+   SM90_SOURCES _cuda_plugin_sm90_tma_srcs
+@@ -447,6 +448,18 @@ target_include_directories(onnxruntime_providers_cuda_plugin PRIVATE
+     ${cutlass_SOURCE_DIR}/tools/util/include
+ )
+ 
++# The host .cc files globbed into this target (contrib_ops/cuda/llm/*.cc and friends) include
++# CUTLASS headers, which reach <cuda/std/...>. In the non-plugin build the same files are part
++# of onnxruntime_providers_cuda, which gets this from config_cuda_provider_shared_module.
++#
++# The SM-specific OBJECT libraries created above are covered by this call even though they
++# already exist: onnxruntime_add_cuda_plugin_object_library gives them this target's includes
++# as $<TARGET_PROPERTY:onnxruntime_providers_cuda_plugin,INCLUDE_DIRECTORIES>, which is
++# evaluated after configuration and so picks up whatever is added here - order included, so
++# the CUDA 13.3 patched-header directory keeps shadowing the toolkit CCCL headers for their
++# .cu sources. Keep that indirection in mind before making the inheritance eager.
++ort_configure_cuda_cccl(onnxruntime_providers_cuda_plugin)
++
+ onnxruntime_add_include_to_target(
+     onnxruntime_providers_cuda_plugin
+     onnxruntime_common
+
+From cf7e4e8061f66dcfb7276955745cf8355e341c95 Mon Sep 17 00:00:00 2001
+From: Arne Juul <arnej@vespa.ai>
+Date: Wed, 2 Sep 2026 15:11:40 +0000
+Subject: [PATCH 2/2] Track cmake/onnxruntime_cuda_cccl.cmake in the CUDA path
+ lists
+
+The previous commit added cmake/onnxruntime_cuda_cccl.cmake as a build
+input shared by the in-tree CUDA provider and the CUDA plugin EP.
+Add it to:
+plugin-ep-cuda/paths.txt (release-change detection for the plugin),
+paths filters of linux_cuda_no_cudnn.yml and windows_cuda_no_cudnn.yml
+decide whether those builds run on a PR.
+---
+ .github/workflows/linux_cuda_no_cudnn.yml   | 1 +
+ .github/workflows/windows_cuda_no_cudnn.yml | 1 +
+ plugin-ep-cuda/paths.txt                    | 1 +
+ 3 files changed, 3 insertions(+)
+
+diff --git a/.github/workflows/linux_cuda_no_cudnn.yml b/.github/workflows/linux_cuda_no_cudnn.yml
+index 005d39147a83a..ce0a7d701dc17 100644
+--- a/.github/workflows/linux_cuda_no_cudnn.yml
++++ b/.github/workflows/linux_cuda_no_cudnn.yml
+@@ -5,6 +5,7 @@ on:
+     branches: [main, 'rel-*']
+     paths:
+       - '.github/workflows/linux_cuda_no_cudnn.yml'
++      - 'cmake/onnxruntime_cuda_cccl.cmake'
+       - 'cmake/onnxruntime_providers_cuda.cmake'
+       - 'cmake/onnxruntime_python.cmake'
+       - 'onnxruntime/__init__.py'
+diff --git a/.github/workflows/windows_cuda_no_cudnn.yml b/.github/workflows/windows_cuda_no_cudnn.yml
+index 4c37320f74254..3ef1db73a0e1c 100644
+--- a/.github/workflows/windows_cuda_no_cudnn.yml
++++ b/.github/workflows/windows_cuda_no_cudnn.yml
+@@ -5,6 +5,7 @@ on:
+     branches: [main, 'rel-*']
+     paths:
+       - '.github/workflows/windows_cuda_no_cudnn.yml'
++      - 'cmake/onnxruntime_cuda_cccl.cmake'
+       - 'cmake/onnxruntime_providers_cuda.cmake'
+       - 'cmake/onnxruntime_providers_cuda_plugin.cmake'
+       - 'cmake/onnxruntime_python.cmake'
+diff --git a/plugin-ep-cuda/paths.txt b/plugin-ep-cuda/paths.txt
+index b39da54676e30..4d9cf8c2b108e 100644
+--- a/plugin-ep-cuda/paths.txt
++++ b/plugin-ep-cuda/paths.txt
+@@ -11,6 +11,7 @@
+ :(top)cmake/external/cutlass.cmake
+ :(top)cmake/patches/cudnn_frontend
+ :(top)cmake/patches/cutlass
++:(top)cmake/onnxruntime_cuda_cccl.cmake
+ :(top)cmake/onnxruntime_cuda_source_filters.cmake
+ :(top)cmake/onnxruntime_providers_cuda.cmake
+ :(top)cmake/onnxruntime_providers_cuda_plugin.cmake
