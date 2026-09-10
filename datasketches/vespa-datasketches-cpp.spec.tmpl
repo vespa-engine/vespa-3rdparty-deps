@@ -58,6 +58,8 @@ PATH=%{_prefix}/bin:$PATH
 # use ccache if available
 if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
 	wcc="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+else
+	wcc=""
 fi
 
 cmake $wcc -S . -B build \

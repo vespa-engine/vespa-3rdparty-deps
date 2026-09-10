@@ -62,6 +62,8 @@ PATH=%{_prefix}/bin:$PATH
 
 if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
 	wcc="--enable-ccache"
+else
+	wcc=""
 fi
 
 ./bootstrap $wcc --prefix=/opt/vespa-deps --parallel=8

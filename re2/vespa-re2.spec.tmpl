@@ -79,7 +79,14 @@ PATH=%{_prefix}/bin:$PATH
 %define _arch_cmake_options -march=armv8.2-a+dotprod+crypto+crc -mtune=neoverse-n1
 %endif
 
-cmake -S . -B build \
+# use ccache if available
+if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
+	wcc="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+else
+	wcc=""
+fi
+
+cmake $wcc -S . -B build \
     -DCMAKE_PREFIX_PATH=%{_prefix} \
     -DCMAKE_INSTALL_PREFIX=%{_prefix}     \
     -DCMAKE_INSTALL_DO_STRIP=OFF \
@@ -111,6 +118,9 @@ DESTDIR="%{buildroot}" cmake --install build
 %{_libdir}/*.so
 
 %changelog
+* Thu Sep 10 2026 Arne Juul
+- use ccache if present
+
 * Wed May 27 2026 Arne Juul
 - use 2025-11-05 version
 * Tue Aug 12 2025 Arne Juul

@@ -101,6 +101,8 @@ PATH=%{_prefix}/bin:$PATH
 # use ccache if available
 if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
 	wcc="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+else
+	wcc=""
 fi
 
 mkdir build
@@ -155,4 +157,3 @@ cd build
 
 * Fri Sep 12 2025 Tor Brede Vekterli <vekterli@vespa.ai> - 1.9.4
 - Initial version of Google Benchmark Vespa C++ RPM
-

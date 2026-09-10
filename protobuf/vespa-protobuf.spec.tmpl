@@ -143,8 +143,15 @@ source %{_devtoolset_enable} || true
 # PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:$PATH
 
+# use ccache if available
+if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
+	wcc="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+else
+	wcc=""
+fi
+
 mkdir build
-%{_cmake_prog} \
+%{_cmake_prog} $wcc \
    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
    -DCMAKE_INSTALL_RPATH='$ORIGIN' \
    -DCMAKE_PREFIX_PATH=%{_prefix} \
@@ -205,6 +212,9 @@ DESTDIR="%{buildroot}" %{_cmake_prog} --install build
 %license LICENSE
 
 %changelog
+* Thu Sep 10 2026 Arne Juul
+- use ccache if present
+
 * Thu Mar 26 2026 Arne Juul - 6.34.1
 - Track upstream release of protobuf 34.1
 
