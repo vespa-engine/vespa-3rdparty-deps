@@ -88,8 +88,16 @@ source %{_devtoolset_enable} || true
 %endif
 # PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:$PATH
+
+# use ccache if available
+if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
+	wcc="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+else
+	wcc=""
+fi
+
 mkdir build
-%{?_cmake_prog}%{!?_cmake_prog:cmake} \
+%{?_cmake_prog}%{!?_cmake_prog:cmake} $wcc \
    -DBUILD_SHARED_LIBS=ON \
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3" \
@@ -142,5 +150,8 @@ cd build
 %{_libdir}/libgmock*.so
 
 %changelog
+* Thu Sep 10 2026 Arne Juul
+- use ccache if present
+
 * Tue Mar 18 2025 Tor Egge <Tor.Egge@online.no> - 1.16.0
 - Track upstream release of googletest 1.16.0

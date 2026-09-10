@@ -77,8 +77,15 @@ source %{_devtoolset_enable} || true
 %endif
 
 %global common_cmake_args -DUSE_OPENMP=0 -DINTERFACE64=0 -DNOFORTRAN=1 -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=OFF -DDYNAMIC_ARCH=1 -DTARGET=%{_openblas_target} -DCMAKE_C_FLAGS_RELWITHDEBINFO='-g -O3 -DNDEBUG -Wno-error=incompatible-pointer-types' -DNUM_THREADS=64 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=%{_prefix}
-cmake -S . -B multithreaded -DUSE_THREAD=1 -DLIBNAMESUFFIX="p" %common_cmake_args
-cmake -S . -B singlethreaded -DUSE_THREAD=0 -DLIBNAMESUFFIX="" %common_cmake_args
+# use ccache if available
+if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
+	wcc="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+else
+	wcc=""
+fi
+
+cmake $wcc -S . -B multithreaded -DUSE_THREAD=1 -DLIBNAMESUFFIX="p" %common_cmake_args
+cmake $wcc -S . -B singlethreaded -DUSE_THREAD=0 -DLIBNAMESUFFIX="" %common_cmake_args
 cmake --build multithreaded -j `nproc`
 cmake --build singlethreaded -j `nproc`
 
@@ -111,5 +118,8 @@ ln -s openblas/openblas_config.h %{buildroot}%{_prefix}/include/openblas_config.
 %{_libdir}/pkgconfig
 
 %changelog
+* Thu Sep 10 2026 Arne Juul
+- use ccache if present
+
 * Thu Jul  3 12:31:41 UTC 2025 - arnej
 - update to openblas 0.3.30
