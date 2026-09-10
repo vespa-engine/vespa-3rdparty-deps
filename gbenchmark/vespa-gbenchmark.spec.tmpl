@@ -97,8 +97,14 @@ source %{_devtoolset_enable} || true
 %endif
 # PATH to vespa-cmake etc
 PATH=%{_prefix}/bin:$PATH
+
+# use ccache if available
+if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
+	wcc="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+fi
+
 mkdir build
-%{_cmake_prog} \
+%{_cmake_prog} $wcc \
    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
    -DCMAKE_INSTALL_RPATH=%{_libdir} \
    -DCMAKE_PREFIX_PATH=%{_prefix} \
@@ -144,6 +150,9 @@ cd build
 %license LICENSE
 
 %changelog
+* Thu Sep 10 2026 Arne Juul
+- use ccache if present
+
 * Fri Sep 12 2025 Tor Brede Vekterli <vekterli@vespa.ai> - 1.9.4
 - Initial version of Google Benchmark Vespa C++ RPM
 
