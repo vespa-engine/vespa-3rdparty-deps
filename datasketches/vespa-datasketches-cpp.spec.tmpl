@@ -55,7 +55,12 @@ source %{_devtoolset_enable}
 
 PATH=%{_prefix}/bin:$PATH
 
-cmake -S . -B build \
+# use ccache if available
+if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
+	wcc="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+fi
+
+cmake $wcc -S . -B build \
     -DCMAKE_INSTALL_PREFIX=%{_prefix}     \
     -DCMAKE_INSTALL_RPATH=\$ORIGIN        \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
@@ -75,6 +80,9 @@ mv %{buildroot}/%{_prefix}/lib %{buildroot}/%{_libdir}
 %{_includedir}
 
 %changelog
+* Thu Sep 10 2026 Arne Juul
+- use ccache if present
+
 * Mon Aug 18 2025 - Tor Egge <Tor.Egge@online.no> - 5.2.0-2
 - Include cstdint to get declaration of uint32_t when using libstdc++ 15.
 * Wed Aug 13 2025 - arnej
