@@ -91,7 +91,7 @@ BuildRequires: git
 %global _cuda_version_pkg_name %{_cuda_version_major}-%{_cuda_version_minor}
 %global _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
 %global _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
-%global _cudnn_version 9.23.0.39
+%global _cudnn_version 9.25.1.1
 BuildRequires: cuda-toolkit-%{_cuda_version_major}-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-toolkit-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-libraries-devel-%{_cuda_version_pkg_name}
@@ -150,8 +150,14 @@ mvn compile
     -DGGML_NATIVE=OFF \
     -DLLAMA_NATIVE=OFF
 
+if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
+	USE_CCACHE="-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_CUDA_COMPILER_LAUNCHER=+ccache"
+else
+	USE_CCACHE="-DCMAKE_CUDA_COMPILER_LAUNCHER=+/usr/bin/env"
+fi
+
 cmake -S . -B build %{shrink:%{_common_cmake_options}} %{shrink:%{_arch_cmake_options}} \
-    -DGGML_CUDA=OFF
+    -DGGML_CUDA=OFF ${USE_CCACHE}
 
 VERBOSE=1 cmake --build build --config RelWithDebInfo -j 4
 
@@ -162,7 +168,7 @@ cmake -S . -B build-cuda %{shrink:%{_common_cmake_options}} \
     -DCMAKE_C_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
     -DCMAKE_CUDA_ARCHITECTURES="75;80;89" \
-    -DCMAKE_CUDA_FLAGS="--std c++20"
+    -DCMAKE_CUDA_FLAGS="--std c++20 --jobserver"
 
 VERBOSE=1 cmake --build build-cuda -j 4
 %endif

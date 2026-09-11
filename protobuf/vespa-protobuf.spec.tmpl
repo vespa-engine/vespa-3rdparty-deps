@@ -47,7 +47,7 @@ License:        BSD
 URL:            https://github.com/protocolbuffers/protobuf
 Source0:        https://github.com/protocolbuffers/protobuf/releases/download/v%{ver_minor}.%{ver_patch}/protobuf-%{ver_minor}.%{ver_patch}.tar.gz
 
-%if 0%{?el8} || 0%{?el9}
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
 %define _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: vespa-toolset-15-meta
 BuildRequires: gcc-toolset-15-gcc-c++
@@ -56,7 +56,7 @@ BuildRequires: vespa-cmake
 %else
 BuildRequires: cmake
 %endif
-%if 0%{?el10} || 0%{?fedora}
+%if 0%{?fedora}
 %if 0%{?amzn2023}
 BuildRequires: gcc14-c++
 BuildRequires: vespa-gcc14-annobin-plugin
