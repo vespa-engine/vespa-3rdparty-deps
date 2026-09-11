@@ -31,16 +31,12 @@ Source0:        https://github.com/google/re2/archive/%{ver_major_long}.tar.gz
 %define _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: vespa-toolset-15-meta
 BuildRequires: vespa-icu-devel
+BuildRequires: vespa-cmake
+BuildRequires: vespa-abseil-cpp-devel
 %else
 BuildRequires: icu-devel
 BuildRequires: gcc
 BuildRequires: gcc-c++
-%endif
-
-%if 0%{?el8} || 0%{?el9}
-BuildRequires: vespa-cmake
-BuildRequires: vespa-abseil-cpp-devel
-%else
 BuildRequires: cmake
 BuildRequires: abseil-cpp-devel
 %endif
