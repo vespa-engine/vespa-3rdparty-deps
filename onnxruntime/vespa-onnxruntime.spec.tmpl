@@ -194,6 +194,14 @@ else
 	USE_CCACHE="CMAKE_CUDA_COMPILER_LAUNCHER=+/usr/bin/env"
 fi
 
+numcpus=3
+h=$(hostname)
+case $h in
+    *.vespa.ai) numcpus=7 ;;
+    *.devcloud) numcpus=9 ;;
+    3rdparty-*) numcpus=15 ;;
+esac
+
 ./build.sh \
     --allow_running_as_root \
     --no_telemetry \
@@ -202,7 +210,7 @@ fi
     --skip_tests \
     --build_java \
     --build_shared_lib \
-    --parallel 8 \
+    --parallel ${numcpus} \
     --cmake_path %{_cmake_prog} \
     --ctest_path %{_ctest_prog} \
     --skip_submodule_sync \
