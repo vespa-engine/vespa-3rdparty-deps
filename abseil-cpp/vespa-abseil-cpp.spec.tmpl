@@ -38,13 +38,13 @@ Patch1:         skip-2-stack-frames.diff
 
 %global _cmake_prog cmake
 %global _ctest_prog ctest
-%if 0%{?el8} || 0%{?el9}
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
 BuildRequires: vespa-toolset-15-meta
 %global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: make
 BuildRequires: vespa-cmake
 %endif
-%if 0%{?el10} || 0%{?fedora}
+%if 0%{?fedora}
 %if 0%{?amzn2023}
 BuildRequires: gcc14-c++
 BuildRequires: vespa-gcc14-annobin-plugin

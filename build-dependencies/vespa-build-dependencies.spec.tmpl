@@ -112,7 +112,6 @@ Requires: gcc-toolset-15-gcc-c++
 Requires: gcc-toolset-15-binutils
 Requires: gcc-toolset-15-libatomic-devel
 # Note: gcc-toolset-15-dwz is not available for some reason.
-Requires: gcc-toolset-14-dwz
 Requires: glibc-langpack-en
 Requires: vespa-gmock-devel = %{_vespa_gtest_version}
 Requires: vespa-gtest-devel = %{_vespa_gtest_version}
@@ -136,14 +135,14 @@ Requires: vespa-toolset-15-meta
 Requires: gcc-c++
 Requires: libatomic
 Requires: glibc-langpack-en
-Requires: gmock-devel
-Requires: gtest-devel
+Requires: vespa-gmock-devel = %{_vespa_gtest_version}
+Requires: vespa-gtest-devel = %{_vespa_gtest_version}
 Requires: llvm-devel
 Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
 Requires: openssl-devel
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
-Requires: abseil-cpp-devel
+Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 %endif
 

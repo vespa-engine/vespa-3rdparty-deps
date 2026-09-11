@@ -3,7 +3,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR_LONG=2025-11-05
-RELEASE=2
+RELEASE=3
 MAJOR = $(subst -,,$(MAJOR_LONG))
 
 PKGNAME=vespa-re2
