@@ -20,7 +20,7 @@
 # Don't enable LTO
 %global _lto_cflags %{nil}
 
- Libraries use shared libraries in /opt/vespa-deps/lib64
+# Libraries use shared libraries in /opt/vespa-deps/lib64
 %global __brp_check_rpaths %{nil}
 
 %if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
