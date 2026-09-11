@@ -23,7 +23,7 @@
 # Libraries use shared libraries in /opt/vespa-deps/lib64
 %global __brp_check_rpaths %{nil}
 
-%if 0%{?el8} || 0%{?el9} || 0%{?amzn2023}
+%if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
 %global _use_vespa_gtest 1
 %global _vespa_gtest_version 1.16.0
 %global _use_vespa_abseil_cpp 1
