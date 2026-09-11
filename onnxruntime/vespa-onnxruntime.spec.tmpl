@@ -114,7 +114,7 @@ BuildRequires: bzip2
 %global _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
 %global _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
 
-%global _cudnn_version 9.23.2.1
+%global _cudnn_version 9.25.1.1
 
 BuildRequires: cuda-toolkit-%{_cuda_version_major}-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-toolkit-config-common = %{_cuda_version_full_num}
@@ -194,7 +194,7 @@ fi
     --skip_tests \
     --build_java \
     --build_shared_lib \
-    --parallel 3 \
+    --parallel 8 \
     --cmake_path %{_cmake_prog} \
     --ctest_path %{_ctest_prog} \
     --skip_submodule_sync \
