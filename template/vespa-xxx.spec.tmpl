@@ -38,7 +38,7 @@ Source0:        https://github.com/xxx-home/%{orig_name}/archive/refs/tags/v%{ve
 # stuff needed just for EPEL8 build
 %endif
 # Some common things, may need to change
-%if 0%{?el8}%{?el9}
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
 BuildRequires: vespa-toolset-15-meta
 %global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: vespa-cmake
