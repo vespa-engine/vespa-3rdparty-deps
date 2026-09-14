@@ -1,0 +1,58 @@
+diff --git a/onnxruntime/core/providers/cpu/activation/activations.h b/onnxruntime/core/providers/cpu/activation/activations.h
+index f387b333a..1487d76c1 100644
+--- a/onnxruntime/core/providers/cpu/activation/activations.h
++++ b/onnxruntime/core/providers/cpu/activation/activations.h
+@@ -170,7 +170,14 @@ struct Softsign : public ElementWiseRangedTransform<T> {
+     T* output_ptr = this->output + first;
+     ConstEigenVectorArrayMap<T> xm(this->input + first, len);
+     EigenVectorArrayMap<T> ym(output_ptr, len);
+-    ym = (1 + xm.abs()).inverse() * xm;
++    // Do not rewrite this as (1 + xm.abs()).inverse() * xm. Eigen's packet version of inverse() is
++    // internal::preciprocal(), which is a reciprocal estimate instruction plus a Newton-Raphson step
++    // rather than a real division on both x86 (rcp_ps, when built with FMA available) and ARM32
++    // (NEON). Those instructions do not produce subnormal results, so for x = +/-FLT_MAX, where
++    // 1 / (1 + |x|) ~= 2.94e-39 is subnormal, the estimate is 0 and Newton-Raphson cannot recover
++    // from it. That yields +/-0 instead of +/-1. pdiv(), which this expression maps to, is a true
++    // IEEE division on x86 and rescales its operands to avoid the same underflow on NEON.
++    ym = xm / (1 + xm.abs());
+   }
+ };
+ 
+diff --git a/onnxruntime/test/providers/cpu/activation/activation_op_test.cc b/onnxruntime/test/providers/cpu/activation/activation_op_test.cc
+index f635f50f7..b541d8a0d 100644
+--- a/onnxruntime/test/providers/cpu/activation/activation_op_test.cc
++++ b/onnxruntime/test/providers/cpu/activation/activation_op_test.cc
+@@ -800,32 +800,7 @@ TEST_F(ActivationOpNoInfTest, Softsign) {
+   TestActivationOp<float>(
+       "Softsign",
+       input_values,
+-      [](float x) {
+-        auto result = x / (1 + std::abs(x));
+-
+-#if defined(__arm__)
+-        // Softsign uses Eigen inverse(), which on ARM32 results in a different value when x is FLT_MAX or -FLT_MAX
+-        // 3.40282347e+38 -> 0 with ARM32 inverse() vs something like 2.939e-39#DEN with other platforms.
+-        //
+-        // Possibly explained by https://en.wikipedia.org/wiki/ARM_architecture#Advanced_SIMD_(Neon)
+-        // 'A quirk of Neon in Armv7 devices is that it flushes all subnormal numbers to zero'
+-        //
+-        // c.f.
+-        // cmake\external\eigen\Eigen\src\Core\arch\SSE\PacketMath.h uses _mm_div_ps for 'pdiv<Packet4f>'
+-        // cmake\external\eigen\Eigen\src\Core\arch\NEON\PacketMath.h uses a custom implementation for 'pdiv<Packet4f>'
+-        //
+-        // Special case the expected values to allow for that. If handling FLT_MAX more consistently is required
+-        // we'd need to not use Eigen for Softsign on ARM32.
+-        //
+-        if (x == FLT_MAX) {
+-          result = 0.;
+-        } else if (x == -FLT_MAX) {
+-          result = -0.;
+-        }
+-#endif
+-
+-        return result;
+-      },
++      [](float x) { return x / (1 + std::abs(x)); },
+       {}, {}, false);  // Disable TensorRT because result mismatches
+ }
+ 

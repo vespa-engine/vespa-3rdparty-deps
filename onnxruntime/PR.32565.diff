@@ -1,0 +1,63 @@
+commit 79ccae37b8ad50dc8f7023245c44159a127804d0
+Author: Arne Juul <arnej@vespa.ai>
+Date:   Fri Sep 11 19:29:18 2026 +0000
+
+    [CUDA] Fix sm_75 build of the FP8 block-scaled GEMV
+    
+    The tensor-core GEMV has two entry points over one body: a plain one and
+    MatMulBlockScaledFp8MmaGemvKernelPinned, which carries
+    __launch_bounds__(32 * KSplit, 3). For its only instantiation (KSplit = 16)
+    that asks for 512 * 3 = 1536 resident threads per SM -- exactly what Ada
+    offers, and what Fp8MmaGemvPinsResidency gates the entry point to (SM89+),
+    where pinning three blocks per SM turns a 1.21-wave grid into a single wave.
+    
+    nvcc, however, codegens every instantiation for every architecture in
+    --generate-code, not just the ones that can launch it. On Turing (sm_75,
+    1024 threads/SM) 1536 is out of range and ptxas aborts, so any build whose
+    architecture list includes sm_75 fails to compile the file even though the
+    kernel is unreachable there at runtime.
+    
+    Make the min-blocks hint architecture-conditional through __CUDA_ARCH__,
+    which nvcc redefines on each per-architecture device pass: 3 on SM89+, 1
+    (an inert occupancy hint) below it, where the code is dead anyway. The
+    alternative -- compiling the entry point away below SM89 -- does not work,
+    because the host pass still needs the symbol to form the launch.
+    
+    Verified by emitting PTX per target: the kernel keeps .minnctapersm 3 at
+    compute_89 and gets .minnctapersm 1 at compute_75, and the file now builds
+    clean for 75/80/89. No change on SM89+, and no dispatch or shape selection
+    is affected.
+    
+    Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+    Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+
+diff --git a/onnxruntime/contrib_ops/cuda/math/matmul_block_scaled_fp8.cu b/onnxruntime/contrib_ops/cuda/math/matmul_block_scaled_fp8.cu
+index d04551962..637ce5e93 100644
+--- a/onnxruntime/contrib_ops/cuda/math/matmul_block_scaled_fp8.cu
++++ b/onnxruntime/contrib_ops/cuda/math/matmul_block_scaled_fp8.cu
+@@ -713,11 +713,24 @@ __global__ void MatMulBlockScaledFp8MmaGemvKernel(ORT_FP8_MMA_GEMV_PARAMS) {
+   Fp8MmaGemvBody<KSplit, MTiles, AType>(ORT_FP8_MMA_GEMV_ARGS);
+ }
+ 
++// The residency hint below only pays off on SM89+ (see `Fp8MmaGemvPinsResidency`), where 3 blocks
++// of 32 * KSplit = 512 threads fit the 1536 max resident threads/SM. Pre-Ada targets are never
++// dispatched to this entry point, but nvcc still codegens it for every requested arch, and 1536
++// exceeds Turing's 1024-thread/SM cap, so ptxas rejects the min-blocks hint there. Drop the hint
++// to 1 outside SM89+ so those dead codegen passes stay valid.
++#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 890
++#define ORT_FP8_GEMV_PINNED_MIN_BLOCKS 1
++#else
++#define ORT_FP8_GEMV_PINNED_MIN_BLOCKS 3
++#endif
++
+ template <int KSplit, int MTiles, typename AType>
+-__global__ __launch_bounds__(32 * KSplit, 3) void MatMulBlockScaledFp8MmaGemvKernelPinned(ORT_FP8_MMA_GEMV_PARAMS) {
++__global__ __launch_bounds__(32 * KSplit, ORT_FP8_GEMV_PINNED_MIN_BLOCKS) void MatMulBlockScaledFp8MmaGemvKernelPinned(ORT_FP8_MMA_GEMV_PARAMS) {
+   Fp8MmaGemvBody<KSplit, MTiles, AType>(ORT_FP8_MMA_GEMV_ARGS);
+ }
+ 
++#undef ORT_FP8_GEMV_PINNED_MIN_BLOCKS
++
+ #undef ORT_FP8_MMA_GEMV_ARGS
+ #undef ORT_FP8_MMA_GEMV_PARAMS
+ 

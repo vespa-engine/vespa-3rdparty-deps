@@ -1,0 +1,1131 @@
+diff --git a/onnxruntime/contrib_ops/cuda/collective/distributed_slice.cc b/onnxruntime/contrib_ops/cuda/collective/distributed_slice.cc
+index 5768dba79..92aa6f193 100644
+--- a/onnxruntime/contrib_ops/cuda/collective/distributed_slice.cc
++++ b/onnxruntime/contrib_ops/cuda/collective/distributed_slice.cc
+@@ -95,7 +95,8 @@ Status DistributedSlice<T, Tind>::ComputeInternal(OpKernelContext* context) cons
+     } else {
+       AllocatorPtr alloc;
+       ORT_ENFORCE(context->GetTempSpaceAllocator(&alloc) == Status::OK());
+-      auto dst_tensor = Tensor::Create(tensor_data->DataType(), output_shape, alloc);
++      auto dst_tensor = Tensor::Create(tensor_data->DataType(), output_shape, alloc,
++                                       GetComputeStream(context));
+       ORT_RETURN_IF_ERROR(FuncSlice(this,
+                                     context,
+                                     tensor_data.get(),
+@@ -128,7 +129,8 @@ Status DistributedSlice<T, Tind>::ComputeInternal(OpKernelContext* context) cons
+     } else {
+       AllocatorPtr alloc;
+       ORT_ENFORCE(context->GetTempSpaceAllocator(&alloc) == Status::OK());
+-      auto dst_tensor = Tensor::Create(tensor_shard_data->DataType(), output_shape, alloc);
++      auto dst_tensor = Tensor::Create(tensor_shard_data->DataType(), output_shape, alloc,
++                                       GetComputeStream(context));
+       ORT_RETURN_IF_ERROR(FuncSlice(this,
+                                     context,
+                                     tensor_shard_data,
+diff --git a/onnxruntime/contrib_ops/cuda/collective/nccl_kernels.cc b/onnxruntime/contrib_ops/cuda/collective/nccl_kernels.cc
+index 770a0f699..ba563e0c2 100644
+--- a/onnxruntime/contrib_ops/cuda/collective/nccl_kernels.cc
++++ b/onnxruntime/contrib_ops/cuda/collective/nccl_kernels.cc
+@@ -305,7 +305,8 @@ Status AllGather::ComputeInternal(OpKernelContext* context) const {
+     }
+ 
+     // Allocate a temporary tensor to hold transposed input
+-    auto temp_input = Tensor::Create(input_tensor->DataType(), TensorShape(transposed_input_dims), alloc);
++    auto temp_input = Tensor::Create(input_tensor->DataType(), TensorShape(transposed_input_dims), alloc,
++                                     GetComputeStream(context));
+ 
+     // Perform the transpose
+     ORT_RETURN_IF_ERROR(onnxruntime::cuda::Transpose::DoTranspose(cuda_ep_->GetDeviceProp(),
+@@ -315,7 +316,8 @@ Status AllGather::ComputeInternal(OpKernelContext* context) const {
+     // Allocate a tempoarary buffer for all gather
+     TensorShape all_gather_out_shape(transposed_input_dims);
+     all_gather_out_shape[0] = group_size_ * all_gather_out_shape[0];
+-    auto all_gather_output = Tensor::Create(temp_input->DataType(), all_gather_out_shape, alloc);
++    auto all_gather_output = Tensor::Create(temp_input->DataType(), all_gather_out_shape, alloc,
++                                            GetComputeStream(context));
+     ncclDataType_t dtype = GetNcclDataType(temp_input->DataType());
+     NCCL_RETURN_IF_ERROR(ncclAllGather(temp_input->DataRaw(),
+                                        all_gather_output->MutableDataRaw(),
+@@ -523,7 +525,8 @@ void FuncAllGather(
+     transposed_shape[0] = source_shape[axis];
+     transposed_shape[axis] = source_shape[0];
+ 
+-    auto transposed_buffer = Tensor::Create(input->DataType(), transposed_shape, alloc);
++    auto transposed_buffer = Tensor::Create(input->DataType(), transposed_shape, alloc,
++                                            nccl_kernel->GetComputeStream(ctx));
+ 
+     // swap axis 0 and axis axis
+     std::vector<size_t> perm = CalculatePermToSwapAxes(0, axis, source_shape.NumDimensions());
+@@ -535,7 +538,8 @@ void FuncAllGather(
+ 
+     TensorShape gathered_shape(transposed_shape);
+     gathered_shape[0] = group_size * transposed_shape[0];
+-    auto gathered_buffer = Tensor::Create(input->DataType(), gathered_shape, alloc);
++    auto gathered_buffer = Tensor::Create(input->DataType(), gathered_shape, alloc,
++                                          nccl_kernel->GetComputeStream(ctx));
+ 
+     ncclAllGather(
+         transposed_buffer->DataRaw(),
+@@ -565,7 +569,7 @@ std::unique_ptr<Tensor> FuncAllGather(
+   ORT_ENFORCE(ctx->GetTempSpaceAllocator(&alloc) == Status::OK());
+   TensorShape output_shape(input->Shape());
+   output_shape[axis] = group_size * output_shape[axis];
+-  auto output = Tensor::Create(input->DataType(), output_shape, alloc);
++  auto output = Tensor::Create(input->DataType(), output_shape, alloc, nccl_kernel->GetComputeStream(ctx));
+   FuncAllGather(nccl_kernel, ctx, input, group_size, axis, output.get());
+   return output;
+ }
+diff --git a/onnxruntime/contrib_ops/cuda/collective/sharding.cc b/onnxruntime/contrib_ops/cuda/collective/sharding.cc
+index 1b4cc4502..d5f05e894 100644
+--- a/onnxruntime/contrib_ops/cuda/collective/sharding.cc
++++ b/onnxruntime/contrib_ops/cuda/collective/sharding.cc
+@@ -57,7 +57,7 @@ std::unique_ptr<Tensor> GatherTensor(
+ 
+   AllocatorPtr alloc;
+   ORT_ENFORCE(ctx->GetTempSpaceAllocator(&alloc) == Status::OK());
+-  auto gathered = Tensor::Create(tensor->DataType(), gathered_shape, alloc);
++  auto gathered = Tensor::Create(tensor->DataType(), gathered_shape, alloc, nccl_kernel->GetComputeStream(ctx));
+ 
+   FuncAllGather(
+       nccl_kernel,
+@@ -119,7 +119,7 @@ std::unique_ptr<Tensor> ShardTensor(
+       tensor->Shape(),
+       spec.GetPartitionAxis(),
+       spec.GetUniqueDeviceCount(spec.GetPartitionAxis()));
+-  auto shard_buffer = Tensor::Create(tensor->DataType(), shard_shape, alloc);
++  auto shard_buffer = Tensor::Create(tensor->DataType(), shard_shape, alloc, nccl_kernel->GetComputeStream(ctx));
+ 
+   // Shard with pre-allocated buffer.
+   ShardTensor(
+@@ -202,7 +202,7 @@ std::unique_ptr<Tensor> ReshardTensor(
+ 
+   AllocatorPtr alloc;
+   ORT_ENFORCE(ctx->GetTempSpaceAllocator(&alloc) == Status::OK());
+-  auto dst = Tensor::Create(src->DataType(), dst_shape, alloc);
++  auto dst = Tensor::Create(src->DataType(), dst_shape, alloc, nccl_kernel->GetComputeStream(ctx));
+   ReshardTensor(
+       nccl_kernel,
+       ctx,
+diff --git a/onnxruntime/contrib_ops/cuda/transformers/generation_device_helper.cc b/onnxruntime/contrib_ops/cuda/transformers/generation_device_helper.cc
+index dd5958e1d..caf6caf54 100644
+--- a/onnxruntime/contrib_ops/cuda/transformers/generation_device_helper.cc
++++ b/onnxruntime/contrib_ops/cuda/transformers/generation_device_helper.cc
+@@ -135,8 +135,9 @@ Status TopK(const Tensor* input, const int axis, const unsigned k, bool largest,
+   int64_t dimension = input_shape[axis];
+   int64_t N = elem_nums_cuda[0] / dimension;
+ 
+-  output_values = std::move(*Tensor::Create(input->DataType(), output_shape, allocator));
+-  output_indices = std::move(*Tensor::Create(DataTypeImpl::GetType<int64_t>(), output_shape, std::move(allocator)));
++  output_values = std::move(*Tensor::Create(input->DataType(), output_shape, allocator, stream));
++  output_indices = std::move(*Tensor::Create(DataTypeImpl::GetType<int64_t>(), output_shape, std::move(allocator),
++                                             stream));
+ 
+   Status result;
+   auto cuda_stream = stream ? static_cast<cudaStream_t>(stream->GetHandle()) : nullptr;
+diff --git a/onnxruntime/core/providers/cuda/cuda_execution_provider.cc b/onnxruntime/core/providers/cuda/cuda_execution_provider.cc
+index 6ee39bfd6..b28e61f7c 100755
+--- a/onnxruntime/core/providers/cuda/cuda_execution_provider.cc
++++ b/onnxruntime/core/providers/cuda/cuda_execution_provider.cc
+@@ -114,7 +114,8 @@ class Memcpy final : public OpKernel {
+         Y->Reserve(X_size);
+         for (size_t i = 0; i < X_size; ++i) {
+           const Tensor& source_tensor = X->Get(i);
+-          std::unique_ptr<Tensor> target_tensor = Tensor::Create(source_tensor.DataType(), source_tensor.Shape(), alloc);
++          std::unique_ptr<Tensor> target_tensor = Tensor::Create(source_tensor.DataType(), source_tensor.Shape(),
++                                                                 alloc, ctx->GetComputeStream());
+           auto* gpu_data_transfer = Info().GetDataTransferManager().GetDataTransfer(source_tensor.Location().device,
+                                                                                     target_tensor->Location().device);
+           ORT_RETURN_IF_ERROR(gpu_data_transfer->CopyTensorAsync(source_tensor, *target_tensor, *ctx->GetComputeStream()));
+diff --git a/onnxruntime/core/providers/cuda/cuda_kernel.h b/onnxruntime/core/providers/cuda/cuda_kernel.h
+index 9776f1395..a771e0235 100644
+--- a/onnxruntime/core/providers/cuda/cuda_kernel.h
++++ b/onnxruntime/core/providers/cuda/cuda_kernel.h
+@@ -138,8 +138,9 @@ class CudaKernel : public OpKernel {
+   // The stream an allocation may be tagged with when the buffer outlives the call that fills it
+   // (see Tensor's stream aware constructor). A stream aware arena keeps the pointer in the chunk
+   // and later queries sync ids through it, so it has to be the framework stream - here that is the
+-  // compute stream itself. The plugin build returns null when its host cannot hand out a framework
+-  // stream, so callers have to treat null as "allocate untagged".
++  // compute stream itself, which is null only when ctx is null. (The plugin build's adapter
++  // overrides this and can return null when its host cannot hand out a framework stream; callers
++  // have to treat null as "allocate untagged" there.)
+   inline onnxruntime::Stream* GetAllocationStream(OpKernelContext* ctx) const {
+     return GetComputeStream(ctx);
+   }
+diff --git a/onnxruntime/core/providers/cuda/math/softmax.cc b/onnxruntime/core/providers/cuda/math/softmax.cc
+index 609f17891..f57bf0c3f 100644
+--- a/onnxruntime/core/providers/cuda/math/softmax.cc
++++ b/onnxruntime/core/providers/cuda/math/softmax.cc
+@@ -149,7 +149,8 @@ Status Softmax<T>::ComputeInternal(OpKernelContext* ctx) const {
+     }
+ 
+     // Allocate a temporary tensor to hold transposed input
+-    auto temp_input = Tensor::Create(X->DataType(), TensorShape(transposed_input_dims), alloc);
++    auto temp_input = Tensor::Create(X->DataType(), TensorShape(transposed_input_dims), alloc,
++                                     GetAllocationStream(ctx));
+ 
+     // Perform the transpose
+     ORT_RETURN_IF_ERROR(Transpose::DoTranspose(GetDeviceProp(),
+@@ -159,7 +160,8 @@ Status Softmax<T>::ComputeInternal(OpKernelContext* ctx) const {
+     transposed_input = std::move(temp_input);
+ 
+     // Allocate memory for the intermediate output
+-    intermediate_output = Tensor::Create(Y->DataType(), TensorShape(transposed_input_dims), alloc);
++    intermediate_output = Tensor::Create(Y->DataType(), TensorShape(transposed_input_dims), alloc,
++                                         GetAllocationStream(ctx));
+   }
+ 
+   const T* X_data = nullptr;
+diff --git a/onnxruntime/core/providers/cuda/nn/conv.cc b/onnxruntime/core/providers/cuda/nn/conv.cc
+index bf3aeb44f..86b4d1638 100644
+--- a/onnxruntime/core/providers/cuda/nn/conv.cc
++++ b/onnxruntime/core/providers/cuda/nn/conv.cc
+@@ -81,6 +81,9 @@ Status Conv<T, NHWC>::PrePack(const Tensor& tensor, int input_idx, AllocatorPtr
+         nhwc_dims.push_back(orig_shape[perm[i]]);
+       }
+ 
++      // No stream to allocate on: this runs at session initialization, on the default
++      // stream, and the buffer lives as long as the kernel rather than being returned to
++      // the arena between runs.
+       W_ = Tensor::Create(tensor.DataType(), TensorShape(nhwc_dims), std::move(alloc));
+ 
+       auto status = cuda::Transpose::DoTranspose(GetDeviceProp(),
+diff --git a/onnxruntime/core/providers/cuda/nn/conv_transpose.cc b/onnxruntime/core/providers/cuda/nn/conv_transpose.cc
+index f1e7e5c41..83168e65a 100644
+--- a/onnxruntime/core/providers/cuda/nn/conv_transpose.cc
++++ b/onnxruntime/core/providers/cuda/nn/conv_transpose.cc
+@@ -70,6 +70,9 @@ Status ConvTranspose<T, NHWC>::PrePack(const Tensor& tensor, int input_idx, Allo
+         nhwc_dims.push_back(orig_shape[perm[i]]);
+       }
+ 
++      // No stream to allocate on: this runs at session initialization, on the default
++      // stream, and the buffer lives as long as the kernel rather than being returned to
++      // the arena between runs.
+       W_ = Tensor::Create(tensor.DataType(), TensorShape(nhwc_dims), std::move(alloc));
+ 
+       auto status = cuda::Transpose::DoTranspose(GetDeviceProp(),
+diff --git a/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc b/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc
+index 89cd2452d..9a787f459 100644
+--- a/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc
++++ b/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc
+@@ -357,12 +357,12 @@ Status PrepareForReduce(const Tensor* X,
+ // allocator. Otherwise fall back to IAllocator::MakeUniquePtr (in-tree path).
+ template <typename T>
+ inline IAllocatorUniquePtr<T> AllocateScratchBuffer(
+-    const AllocatorPtr& gpu_allocator, const CudaKernel* kernel, size_t count, void* compute_stream) {
++    const AllocatorPtr& gpu_allocator, const CudaKernel* kernel, size_t count, void* alloc_stream) {
+   if (count == 0) return nullptr;
+   if (kernel) {
+-    return kernel->GetScratchBuffer<T>(count, compute_stream);
++    return kernel->GetScratchBuffer<T>(count, alloc_stream);
+   }
+-  return IAllocator::MakeUniquePtr<T>(gpu_allocator, count, false, static_cast<onnxruntime::Stream*>(compute_stream));
++  return IAllocator::MakeUniquePtr<T>(gpu_allocator, count, false, static_cast<onnxruntime::Stream*>(alloc_stream));
+ }
+ 
+ // `input_shape_override` is the input shape for compute purposes (if provided)
+@@ -371,7 +371,7 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+                          /*out*/ Tensor& output, cudnnReduceTensorOp_t cudnn_reduce_op,
+                          gsl::span<const int64_t> axes,
+                          bool calculate_log, bool calculate_sqt, bool log_sum_exp, bool fast_reduction,
+-                         cudaStream_t cuda_stream, void* compute_stream, cudnnHandle_t cudnn_handle,
++                         cudaStream_t cuda_stream, void* alloc_stream, cudnnHandle_t cudnn_handle,
+                          const TensorShape* input_shape_override) {
+   typedef typename ToCudaType<T>::MappedType CudaT;
+   const TensorShape& input_shape = input_shape_override ? *input_shape_override : input.Shape();
+@@ -432,7 +432,7 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+       IAllocatorUniquePtr<T> input_data_buffer(nullptr, [](T*) {});
+       const CudaT* input_data = reinterpret_cast<const CudaT*>(input.Data<T>());
+       if (calculate_sqt) {
+-        input_data_buffer = AllocateScratchBuffer<T>(gpu_allocator, kernel, input_count, compute_stream);
++        input_data_buffer = AllocateScratchBuffer<T>(gpu_allocator, kernel, input_count, alloc_stream);
+         input_data = reinterpret_cast<CudaT*>(input_data_buffer.get());
+         fast_divmod tmp_div;
+         Impl_Mul<CudaT>(stream, static_cast<int32_t>(SimpleBroadcast::NoBroadcast), nullptr,
+@@ -451,7 +451,7 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+           const auto buffer_size_bytes = compute_reduce_matrix_columns_buffer_size<CudaT>(m, n);
+           auto buffer = buffer_size_bytes == 0
+                             ? nullptr
+-                            : AllocateScratchBuffer<void>(gpu_allocator, kernel, buffer_size_bytes, compute_stream);
++                            : AllocateScratchBuffer<void>(gpu_allocator, kernel, buffer_size_bytes, alloc_stream);
+           ORT_RETURN_IF_ERROR(reduce_matrix_columns(stream, input_data,
+                                                     reinterpret_cast<CudaT*>(output.MutableData<T>()), m, n,
+                                                     buffer.get(), buffer_size_bytes));
+@@ -493,7 +493,7 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+           const auto buffer_size_bytes = compute_arg_min_max_last_axis_buffer_size<CudaT>(rows, cols);
+           auto buffer = buffer_size_bytes == 0
+                             ? nullptr
+-                            : AllocateScratchBuffer<void>(gpu_allocator, kernel, buffer_size_bytes, compute_stream);
++                            : AllocateScratchBuffer<void>(gpu_allocator, kernel, buffer_size_bytes, alloc_stream);
+           if (cudnn_reduce_op == CUDNN_REDUCE_TENSOR_MAX) {
+             return arg_min_max_last_axis<CudaT, true>(stream, reinterpret_cast<const CudaT*>(input.Data<T>()),
+                                                       output.MutableData<int64_t>(), rows, cols,
+@@ -530,7 +530,7 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+   if ((ReduceTensorIndices == CUDNN_REDUCE_TENSOR_FLATTENED_INDICES && std::is_same<T, MLFloat16>::value) ||
+       (ReduceTensorIndices == CUDNN_REDUCE_TENSOR_NO_INDICES && std::is_same<T, BFloat16>::value)) {
+     // ArgMax/ArgMin with FP16 are not supported by cudnn, so convert input to fp32 then call cudnn
+-    temp_X = AllocateScratchBuffer<float>(gpu_allocator, kernel, input_count, compute_stream);
++    temp_X = AllocateScratchBuffer<float>(gpu_allocator, kernel, input_count, alloc_stream);
+     Impl_Cast<CudaT, float>(stream, reinterpret_cast<const CudaT*>(input.Data<T>()), temp_X.get(), input_shape.Size());
+   } else {
+     cudnn_type_X = CudnnTensor::GetDataType<CudaT>();
+@@ -555,20 +555,20 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+                                                        input_tensor, output_tensor, &workspace_bytes));
+   auto workspace_cuda = workspace_bytes == 0
+                             ? nullptr
+-                            : AllocateScratchBuffer<void>(gpu_allocator, kernel, workspace_bytes, compute_stream);
++                            : AllocateScratchBuffer<void>(gpu_allocator, kernel, workspace_bytes, alloc_stream);
+ 
+   size_t indices_bytes = 0;
+   CUDNN_RETURN_IF_ERROR(cudnnGetReductionIndicesSize(cudnn_handle, reduce_desc,
+                                                      input_tensor, output_tensor, &indices_bytes));
+   auto indices_cuda = indices_bytes == 0
+                           ? nullptr
+-                          : AllocateScratchBuffer<void>(gpu_allocator, kernel, indices_bytes, compute_stream);
++                          : AllocateScratchBuffer<void>(gpu_allocator, kernel, indices_bytes, alloc_stream);
+ 
+   if (ReduceTensorIndices == CUDNN_REDUCE_TENSOR_NO_INDICES) {
+     IAllocatorUniquePtr<T> input_data_buffer(nullptr, [](T*) {});
+     CudaT* input_data = nullptr;
+     if (calculate_sqt) {
+-      input_data_buffer = AllocateScratchBuffer<T>(gpu_allocator, kernel, input_count, compute_stream);
++      input_data_buffer = AllocateScratchBuffer<T>(gpu_allocator, kernel, input_count, alloc_stream);
+       input_data = reinterpret_cast<CudaT*>(input_data_buffer.get());
+       fast_divmod tmp_div;
+       Impl_Mul<CudaT>(stream,
+@@ -597,7 +597,7 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+                                                            input_tensor, output_tensor, &indices_bytes_max));
+         auto indices_cuda_max = indices_bytes_max == 0
+                                     ? nullptr
+-                                    : AllocateScratchBuffer<void>(gpu_allocator, kernel, indices_bytes_max, compute_stream);
++                                    : AllocateScratchBuffer<void>(gpu_allocator, kernel, indices_bytes_max, alloc_stream);
+         auto* p_output = reinterpret_cast<CudaT*>(output.template MutableData<T>());
+         CUDNN_RETURN_IF_ERROR(cudnnReduceTensor(
+             cudnn_handle, reduce_max_desc, indices_cuda_max.get(), indices_bytes_max,
+@@ -608,11 +608,11 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+ 
+       // Exp(X-ReduceMax)
+       const TensorShape output_shape(output_dims);
+-      auto exp_result_buffer = AllocateScratchBuffer<T>(gpu_allocator, kernel, input_count, compute_stream);
++      auto exp_result_buffer = AllocateScratchBuffer<T>(gpu_allocator, kernel, input_count, alloc_stream);
+       auto exp_result = exp_result_buffer.get();
+       auto log_sum_result_buffer = output_count == 0
+                                        ? nullptr
+-                                       : AllocateScratchBuffer<T>(gpu_allocator, kernel, output_count, compute_stream);
++                                       : AllocateScratchBuffer<T>(gpu_allocator, kernel, output_count, alloc_stream);
+       auto log_sum_result = log_sum_result_buffer.get();
+       BinaryElementwisePreparation prepare;
+       ORT_RETURN_IF_ERROR(prepare.BinaryElementwiseBroadcastPrepareHelper(input_shape, output_shape, input_shape));
+@@ -692,7 +692,7 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+         if (temp_X) {
+           auto temp_output = output_count == 0
+                                  ? nullptr
+-                                 : AllocateScratchBuffer<float>(gpu_allocator, kernel, output_count, compute_stream);
++                                 : AllocateScratchBuffer<float>(gpu_allocator, kernel, output_count, alloc_stream);
+           CUDNN_RETURN_IF_ERROR(cudnnReduceTensor(
+               cudnn_handle, reduce_desc, indices_cuda.get(), indices_bytes,
+               workspace_cuda.get(), workspace_bytes,
+@@ -720,7 +720,7 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+       if (temp_X) {
+         auto temp_output = output_count == 0
+                                ? nullptr
+-                               : AllocateScratchBuffer<float>(gpu_allocator, kernel, output_count, compute_stream);
++                               : AllocateScratchBuffer<float>(gpu_allocator, kernel, output_count, alloc_stream);
+         CUDNN_RETURN_IF_ERROR(cudnnReduceTensor(
+             cudnn_handle, reduce_desc, indices_cuda.get(), indices_bytes,
+             workspace_cuda.get(), workspace_bytes,
+@@ -729,7 +729,7 @@ Status ReduceComputeCore(const AllocatorPtr& gpu_allocator, const CudaKernel* ke
+       } else {
+         auto temp_output = output_count == 0
+                                ? nullptr
+-                               : AllocateScratchBuffer<CudaT>(gpu_allocator, kernel, output_count, compute_stream);
++                               : AllocateScratchBuffer<CudaT>(gpu_allocator, kernel, output_count, alloc_stream);
+         CUDNN_RETURN_IF_ERROR(cudnnReduceTensor(
+             cudnn_handle, reduce_desc, indices_cuda.get(), indices_bytes,
+             workspace_cuda.get(), workspace_bytes,
+@@ -758,7 +758,7 @@ template Status ReduceComputeCore<float, CUDNN_REDUCE_TENSOR_NO_INDICES>(
+     /*out*/ Tensor& output, cudnnReduceTensorOp_t cudnn_reduce_op,
+     gsl::span<const int64_t> axes,
+     bool calculate_log, bool calculate_sqt, bool log_sum_exp, bool fast_reduction,
+-    cudaStream_t cuda_stream, void* compute_stream, cudnnHandle_t cudnn_handle,
++    cudaStream_t cuda_stream, void* alloc_stream, cudnnHandle_t cudnn_handle,
+     const TensorShape* input_shape_override);
+ 
+ template Status ReduceComputeCore<double, CUDNN_REDUCE_TENSOR_NO_INDICES>(
+@@ -766,7 +766,7 @@ template Status ReduceComputeCore<double, CUDNN_REDUCE_TENSOR_NO_INDICES>(
+     /*out*/ Tensor& output, cudnnReduceTensorOp_t cudnn_reduce_op,
+     gsl::span<const int64_t> axes,
+     bool calculate_log, bool calculate_sqt, bool log_sum_exp, bool fast_reduction,
+-    cudaStream_t cuda_stream, void* compute_stream, cudnnHandle_t cudnn_handle,
++    cudaStream_t cuda_stream, void* alloc_stream, cudnnHandle_t cudnn_handle,
+     const TensorShape* input_shape_override);
+ 
+ template Status ReduceComputeCore<MLFloat16, CUDNN_REDUCE_TENSOR_NO_INDICES>(
+@@ -774,7 +774,7 @@ template Status ReduceComputeCore<MLFloat16, CUDNN_REDUCE_TENSOR_NO_INDICES>(
+     /*out*/ Tensor& output, cudnnReduceTensorOp_t cudnn_reduce_op,
+     gsl::span<const int64_t> axes,
+     bool calculate_log, bool calculate_sqt, bool log_sum_exp, bool fast_reduction,
+-    cudaStream_t cuda_stream, void* compute_stream, cudnnHandle_t cudnn_handle,
++    cudaStream_t cuda_stream, void* alloc_stream, cudnnHandle_t cudnn_handle,
+     const TensorShape* input_shape_override);
+ 
+ template <bool allow_multi_axes>
+@@ -991,8 +991,6 @@ std::unique_ptr<Tensor> ReduceCompute(const AllocatorPtr& gpu_allocator, cudnnRe
+ 
+   auto output = Tensor::Create(input.DataType(), prepare_reduce_metadata.squeezed_output_dims, allocator, alloc_stream);
+ 
+-  // ReduceComputeCore only uses its `compute_stream` to tag allocations, so it gets `alloc_stream`
+-  // too. The launches take the native handle off `stream`.
+   status = ReduceComputeCore<T, ReduceTensorIndices>(gpu_allocator, nullptr, input, prepare_reduce_metadata, *output, cudnn_reduce_op, axes,
+                                                      calculate_log, calculate_sqt, log_sum_exp, fast_reduction,
+                                                      stream ? static_cast<cudaStream_t>(stream->GetHandle()) : nullptr,
+diff --git a/onnxruntime/core/providers/cuda/reduction/reduction_ops.h b/onnxruntime/core/providers/cuda/reduction/reduction_ops.h
+index 745cdb84f..6b59407ed 100644
+--- a/onnxruntime/core/providers/cuda/reduction/reduction_ops.h
++++ b/onnxruntime/core/providers/cuda/reduction/reduction_ops.h
+@@ -244,7 +244,7 @@ Status ReduceComputeCore(const AllocatorPtr& allocator, const CudaKernel* kernel
+                          /*out*/ Tensor& output, cudnnReduceTensorOp_t cudnn_reduce_op,
+                          gsl::span<const int64_t> axes,
+                          bool calculate_log, bool calculate_sqt, bool log_sum_exp, bool fast_reduction,
+-                         cudaStream_t cuda_stream, void* compute_stream, cudnnHandle_t cudnn_handle,
++                         cudaStream_t cuda_stream, void* alloc_stream, cudnnHandle_t cudnn_handle,
+                          const TensorShape* input_shape_override = nullptr);
+ 
+ // CUDA's reduction descriptor cudnnReduceTensorDescriptor_t is a pointer so
+diff --git a/onnxruntime/core/providers/cuda/tensor/expand.cc b/onnxruntime/core/providers/cuda/tensor/expand.cc
+index 60e219e6d..ff4eb067f 100644
+--- a/onnxruntime/core/providers/cuda/tensor/expand.cc
++++ b/onnxruntime/core/providers/cuda/tensor/expand.cc
+@@ -211,7 +211,8 @@ std::unique_ptr<Tensor> FuncExpand(
+   // Pre-allocate output.
+   AllocatorPtr alloc;
+   ORT_ENFORCE(ctx->GetTempSpaceAllocator(&alloc).IsOK());
+-  auto output_tensor = Tensor::Create(input_data_tensor->DataType(), output_shape, alloc);
++  auto output_tensor = Tensor::Create(input_data_tensor->DataType(), output_shape, alloc,
++                                      cuda_kernel->GetAllocationStream(ctx));
+ 
+   // Only assign output values when output tensor is non-empty
+   // because empty tensor doesn't own any data.
+diff --git a/onnxruntime/core/providers/cuda/tensor/identity_op.h b/onnxruntime/core/providers/cuda/tensor/identity_op.h
+index de338f611..ed1946e58 100644
+--- a/onnxruntime/core/providers/cuda/tensor/identity_op.h
++++ b/onnxruntime/core/providers/cuda/tensor/identity_op.h
+@@ -75,7 +75,8 @@ class IdentityOp final : public CudaKernel {
+       for (size_t i = 0; i < X_size; ++i) {
+         const Tensor& source_tensor = X->Get(i);
+         std::unique_ptr<Tensor> target_tensor = Tensor::Create(source_tensor.DataType(),
+-                                                               source_tensor.Shape(), alloc);
++                                                               source_tensor.Shape(), alloc,
++                                                               GetComputeStream(context));
+         CUDA_RETURN_IF_ERROR(cudaMemcpyAsync(target_tensor->MutableDataRaw(),
+                                              source_tensor.DataRaw(),
+                                              source_tensor.SizeInBytes(),
+diff --git a/onnxruntime/core/providers/cuda/tensor/reshape.cc b/onnxruntime/core/providers/cuda/tensor/reshape.cc
+index 7bf3da419..5798fa918 100644
+--- a/onnxruntime/core/providers/cuda/tensor/reshape.cc
++++ b/onnxruntime/core/providers/cuda/tensor/reshape.cc
+@@ -79,7 +79,7 @@ std::unique_ptr<Tensor> FuncReshape(
+   // Pre-allocate output.
+   AllocatorPtr alloc;
+   ORT_ENFORCE(ctx->GetTempSpaceAllocator(&alloc).IsOK());
+-  auto Y = Tensor::Create(X->DataType(), dst_shape, alloc);
++  auto Y = Tensor::Create(X->DataType(), dst_shape, alloc, cuda_kernel->GetAllocationStream(ctx));
+ 
+   // Do reshape. It's equivalent to memcpy.
+   ORT_ENFORCE(FuncReshape(cuda_kernel, ctx, X, shape, allow_zero, Y.get()).IsOK());
+diff --git a/onnxruntime/core/providers/cuda/tensor/sequence_op.h b/onnxruntime/core/providers/cuda/tensor/sequence_op.h
+index acec26195..a85c2ed4c 100644
+--- a/onnxruntime/core/providers/cuda/tensor/sequence_op.h
++++ b/onnxruntime/core/providers/cuda/tensor/sequence_op.h
+@@ -68,7 +68,8 @@ class SequenceConstruct final : public CudaKernel {
+       const auto* source_tensor = context->Input<Tensor>(input_idx);
+ 
+       std::unique_ptr<Tensor> target_tensor = Tensor::Create(source_tensor->DataType(),
+-                                                             source_tensor->Shape(), alloc);
++                                                             source_tensor->Shape(), alloc,
++                                                             GetComputeStream(context));
+ 
+       CUDA_RETURN_IF_ERROR(cudaMemcpyAsync(target_tensor->MutableDataRaw(),
+                                            source_tensor->DataRaw(),
+@@ -195,7 +196,8 @@ class SequenceErase final : public CudaKernel {
+       }
+       const Tensor& source_tensor = X->Get(i);
+       std::unique_ptr<Tensor> target_tensor = Tensor::Create(source_tensor.DataType(),
+-                                                             source_tensor.Shape(), alloc);
++                                                             source_tensor.Shape(), alloc,
++                                                             GetComputeStream(context));
+ 
+       CUDA_RETURN_IF_ERROR(cudaMemcpyAsync(target_tensor->MutableDataRaw(),
+                                            source_tensor.DataRaw(),
+@@ -236,7 +238,8 @@ class SequenceInsert final : public CudaKernel {
+                 "SequenceInsert GPU: Unable to get an allocator.");
+ 
+     std::unique_ptr<Tensor> tensor_to_be_inserted = Tensor::Create(X->DataType(),
+-                                                                   X->Shape(), alloc);
++                                                                   X->Shape(), alloc,
++                                                                   GetComputeStream(context));
+     CUDA_RETURN_IF_ERROR(cudaMemcpyAsync(tensor_to_be_inserted->MutableDataRaw(),
+                                          X->DataRaw(), X->SizeInBytes(),
+                                          cudaMemcpyDeviceToDevice, Stream(context)));
+@@ -251,7 +254,8 @@ class SequenceInsert final : public CudaKernel {
+       }
+       const Tensor& source_tensor = S->Get(i);
+       std::unique_ptr<Tensor> target_tensor = Tensor::Create(source_tensor.DataType(),
+-                                                             source_tensor.Shape(), alloc);
++                                                             source_tensor.Shape(), alloc,
++                                                             GetComputeStream(context));
+       CUDA_RETURN_IF_ERROR(cudaMemcpyAsync(target_tensor->MutableDataRaw(),
+                                            source_tensor.DataRaw(),
+                                            source_tensor.SizeInBytes(),
+diff --git a/onnxruntime/test/providers/cuda/test_cases/beam_search_topk_stream_allocation_test.cc b/onnxruntime/test/providers/cuda/test_cases/beam_search_topk_stream_allocation_test.cc
+new file mode 100644
+index 000000000..8b2e9ec76
+--- /dev/null
++++ b/onnxruntime/test/providers/cuda/test_cases/beam_search_topk_stream_allocation_test.cc
+@@ -0,0 +1,111 @@
++// Copyright (c) Microsoft Corporation. All rights reserved.
++// Licensed under the MIT License.
++
++// Regression test for the two per-step tensors that beam search's CUDA TopK device helper allocates.
++//
++// GenerationCudaDeviceHelper::TopK is called once per decode step and hands its two outputs to
++// TopKImpl, which fills them with work queued on `stream`. They are re-created on the next step, so
++// the previous pair goes straight back to the arena while that work may still be in flight - the
++// same hazard the Einsum intermediates had (see einsum_stream_allocation_test.cc). The helper has
++// to allocate through IAllocator::AllocOnStream so the arena can keep the chunks away from another
++// stream until the work completes.
++//
++// This is a provider-world translation unit: it reaches into CUDA EP internals through the shared
++// provider bridge, so it must not include the core framework headers.
++
++#include "gtest/gtest.h"
++
++#ifndef DISABLE_CONTRIB_OPS
++
++#include <memory>
++#include <vector>
++
++#include "core/providers/shared_library/provider_api.h"
++#include "core/framework/stream_handles.h"
++#include "core/providers/cuda/cuda_allocator.h"
++#include "contrib_ops/cuda/transformers/generation_device_helper.h"
++#include "test/providers/cuda/test_cases/stream_recording_allocator.h"
++
++namespace onnxruntime {
++namespace test {
++
++class BeamSearchTopKStreamAllocationTest : public ::testing::Test {
++ protected:
++  void SetUp() override {
++    int device_count = 0;
++    if (cudaGetDeviceCount(&device_count) != cudaSuccess || device_count == 0) {
++      GTEST_SKIP() << "No CUDA device available";
++    }
++
++    CUDA_CALL_THROW(cudaSetDevice(0));
++    CUDA_CALL_THROW(cudaStreamCreate(&cuda_stream_));
++
++    device_allocator_ = std::make_shared<CUDAAllocator>(0, CUDA);
++    recording_allocator_ = std::make_shared<StreamRecordingAllocator>(device_allocator_);
++
++    device_ = device_allocator_->Info().device;  // Stream holds a reference to this
++    stream_ = std::make_unique<Stream>(cuda_stream_, device_);
++  }
++
++  void TearDown() override {
++    stream_.reset();
++    if (cuda_stream_ != nullptr) {
++      cudaStreamDestroy(cuda_stream_);
++      cuda_stream_ = nullptr;
++    }
++  }
++
++  std::unique_ptr<Tensor> DeviceTensor(const TensorShape& shape, const std::vector<float>& values) {
++    auto tensor = Tensor::Create(DataTypeImpl::GetType<float>(), shape, device_allocator_);
++    CUDA_CALL_THROW(cudaMemcpy(tensor->MutableDataRaw(), values.data(), values.size() * sizeof(float),
++                               cudaMemcpyHostToDevice));
++    return tensor;
++  }
++
++  template <typename T>
++  std::vector<T> ReadBack(const Tensor& tensor) {
++    std::vector<T> values(static_cast<size_t>(tensor.Shape().Size()));
++    CUDA_CALL_THROW(cudaStreamSynchronize(cuda_stream_));
++    CUDA_CALL_THROW(cudaMemcpy(values.data(), tensor.DataRaw(), values.size() * sizeof(T),
++                               cudaMemcpyDeviceToHost));
++    return values;
++  }
++
++  cudaStream_t cuda_stream_ = nullptr;
++  OrtDevice device_;
++  AllocatorPtr device_allocator_;
++  std::shared_ptr<StreamRecordingAllocator> recording_allocator_;
++  std::unique_ptr<Stream> stream_;
++};
++
++// Both the values and the indices tensor have to be tagged: TopKImpl writes both on `stream`.
++TEST_F(BeamSearchTopKStreamAllocationTest, TopKAllocatesBothOutputsOnTheRunStream) {
++  auto input = DeviceTensor(TensorShape({2, 4}), {1.f, 3.f, 2.f, 4.f,
++                                                  8.f, 5.f, 7.f, 6.f});
++
++  auto output_values = Tensor::CreateDefault();
++  auto output_indices = Tensor::CreateDefault();
++
++  // k is well under the 256 beam limit, so TopK takes the branch that passes a null kernel and needs
++  // no allocator of its own beyond the one handed in here.
++  auto status = contrib::GenerationCudaDeviceHelper::TopK(input.get(), /*axis*/ 1, /*k*/ 2,
++                                                          /*largest*/ true, /*sorted*/ true,
++                                                          recording_allocator_, stream_.get(),
++                                                          /*threadpool*/ nullptr,
++                                                          *output_values, *output_indices);
++  ASSERT_TRUE(status.IsOK()) << status.ErrorMessage();
++
++  EXPECT_EQ(recording_allocator_->stream_allocs, 2);
++  EXPECT_EQ(recording_allocator_->untagged_allocs, 0);
++  EXPECT_EQ(recording_allocator_->last_stream, stream_.get());
++
++  EXPECT_EQ(output_values->Shape(), TensorShape({2, 2}));
++  EXPECT_EQ(output_indices->Shape(), TensorShape({2, 2}));
++  EXPECT_EQ(ReadBack<float>(*output_values), std::vector<float>({4.f, 3.f, 8.f, 7.f}));
++  EXPECT_EQ(ReadBack<int64_t>(*output_indices), std::vector<int64_t>({3, 1, 0, 2}));
++}
++
++}  // namespace test
++}  // namespace onnxruntime
++
++#endif  // DISABLE_CONTRIB_OPS
+diff --git a/onnxruntime/test/providers/cuda/test_cases/cuda_kernel_stream_allocation_test.cc b/onnxruntime/test/providers/cuda/test_cases/cuda_kernel_stream_allocation_test.cc
+new file mode 100644
+index 000000000..04af27e5d
+--- /dev/null
++++ b/onnxruntime/test/providers/cuda/test_cases/cuda_kernel_stream_allocation_test.cc
+@@ -0,0 +1,405 @@
++// Copyright (c) Microsoft Corporation. All rights reserved.
++// Licensed under the MIT License.
++
++// Regression tests for the per-run intermediates that CUDA EP kernels allocate inside Compute().
++//
++// A kernel that builds an intermediate with Tensor::Create(type, shape, allocator) reaches
++// IAllocator::Alloc() with no stream, so a stream aware arena cannot associate the chunk with the
++// stream that writes it and is free to hand it to another stream the moment the tensor is released
++// - which happens at the end of Compute(), while the copy or kernel filling it may still be queued.
++// The fix is to pass the run's stream so the allocation goes through IAllocator::AllocOnStream.
++//
++// einsum_stream_allocation_test.cc covers the Einsum device helpers by calling them directly,
++// because they take the allocator and the stream as arguments. The kernels here get theirs from
++// OpKernelContext, so they can only be driven through a real Run(). These tests register a
++// recording allocator as the environment's shared CUDA allocator, point a session at it with
++// session.use_env_allocators, and assert that no device allocation made during Run() arrived
++// through the untagged Alloc().
++//
++// This translation unit runs a real InferenceSession, so it includes the core framework headers and
++// must not include the shared-provider-bridge ones.
++
++#include "gtest/gtest.h"
++
++#include <memory>
++#include <string>
++#include <vector>
++
++#include <cuda_runtime_api.h>
++
++#include "core/common/logging/logging.h"
++#include "core/common/logging/sinks/clog_sink.h"
++#include "core/common/span_utils.h"
++#include "core/framework/allocator.h"
++#include "core/framework/TensorSeq.h"
++#include "core/graph/graph.h"
++#include "core/graph/onnx_protobuf.h"
++#include "core/providers/cuda/cuda_execution_provider.h"
++#include "core/providers/cuda/cuda_execution_provider_info.h"
++#include "core/session/allocator_adapters.h"
++#include "core/session/environment.h"
++#include "core/session/onnxruntime_session_options_config_keys.h"
++
++#include "test/unittest_util/framework_test_utils.h"
++#include "test/util/include/asserts.h"
++#include "test/util/include/inference_session_wrapper.h"
++
++namespace onnxruntime {
++namespace test {
++
++namespace {
++
++// A device allocator over raw cudaMalloc/cudaFree that records, for the allocations made while it
++// is recording, which entry point each one came in on. There is no arena underneath: every request
++// is a distinct call, so the counts below are exactly the number of tensors the run allocated.
++class StreamTaggingRecorder : public IAllocator {
++ public:
++  StreamTaggingRecorder()
++      : IAllocator(OrtMemoryInfo(onnxruntime::CUDA, OrtAllocatorType::OrtDeviceAllocator,
++                                 OrtDevice(OrtDevice::GPU, OrtDevice::MemType::DEFAULT,
++                                           OrtDevice::VendorIds::NVIDIA, 0),
++                                 OrtMemTypeDefault)) {}
++
++  bool IsStreamAware() const override { return true; }
++
++  void* Alloc(size_t size) override {
++    if (recording_) {
++      ++untagged_allocs_;
++      untagged_sizes_.push_back(size);
++    }
++    return RawAlloc(size);
++  }
++
++  void* AllocOnStream(size_t size, Stream* /*stream*/) override {
++    if (recording_) {
++      ++stream_allocs_;
++    }
++    return RawAlloc(size);
++  }
++
++  // Reserve() is the deliberate arena-bypassing entry point (GetTransientScratchBuffer), not an
++  // untagged Alloc(). Overridden so the IAllocator default of forwarding to Alloc() does not report
++  // one of those as a missing stream tag.
++  void* Reserve(size_t size) override { return RawAlloc(size); }
++
++  void Free(void* p) override {
++    if (p != nullptr) {
++      cudaSetDevice(0);
++      cudaFree(p);
++    }
++  }
++
++  // Session initialization allocates through this allocator too; only Run() is of interest here.
++  void StartRecording() {
++    untagged_allocs_ = 0;
++    stream_allocs_ = 0;
++    untagged_sizes_.clear();
++    recording_ = true;
++  }
++  void StopRecording() { recording_ = false; }
++
++  int untagged_allocs() const { return untagged_allocs_; }
++  int stream_allocs() const { return stream_allocs_; }
++
++  // Renders the untagged allocation sizes so a failure names what was missed rather than just
++  // reporting a count.
++  std::string UntaggedSummary() const {
++    std::string out = "untagged device allocations during Run(), sizes in bytes:";
++    for (size_t size : untagged_sizes_) {
++      out += " " + std::to_string(size);
++    }
++    return out;
++  }
++
++ private:
++  // CUDAAllocator selects the device on every call for the same reason: ORT calls in on several
++  // threads and the current device is per thread.
++  static void* RawAlloc(size_t size) {
++    if (size == 0) {
++      return nullptr;
++    }
++    void* p = nullptr;
++    if (cudaSetDevice(0) != cudaSuccess || cudaMalloc(&p, size) != cudaSuccess) {
++      return nullptr;
++    }
++    return p;
++  }
++
++  bool recording_ = false;
++  int untagged_allocs_ = 0;
++  int stream_allocs_ = 0;
++  std::vector<size_t> untagged_sizes_;
++};
++
++void AddFloatValueInfo(ONNX_NAMESPACE::ValueInfoProto* vi, const char* name,
++                       std::initializer_list<int64_t> dims) {
++  vi->set_name(name);
++  auto* tensor_type = vi->mutable_type()->mutable_tensor_type();
++  tensor_type->set_elem_type(ONNX_NAMESPACE::TensorProto_DataType_FLOAT);
++  auto* shape = tensor_type->mutable_shape();
++  for (int64_t dim : dims) {
++    shape->add_dim()->set_dim_value(dim);
++  }
++}
++
++// The element shape is left unset: it is whatever the sequence ops infer, and declaring one here
++// would only give graph resolution a chance to disagree with that.
++void AddFloatSequenceValueInfo(ONNX_NAMESPACE::ValueInfoProto* vi, const char* name) {
++  vi->set_name(name);
++  vi->mutable_type()->mutable_sequence_type()->mutable_elem_type()->mutable_tensor_type()->set_elem_type(
++      ONNX_NAMESPACE::TensorProto_DataType_FLOAT);
++}
++
++// Single Softmax node over X[2,3,4]. With opset >= 13 the kernel transposes `axis` to the innermost
++// dim first, and that transpose is what allocates the two intermediates; when `axis` is already the
++// innermost dim the kernel works in place on the input and output and allocates nothing.
++std::string BuildSoftmaxModelBytes(int64_t axis) {
++  ONNX_NAMESPACE::ModelProto model;
++  model.set_ir_version(ONNX_NAMESPACE::IR_VERSION);
++  auto* opset = model.add_opset_import();
++  opset->set_domain("");
++  opset->set_version(13);
++
++  auto* graph = model.mutable_graph();
++  graph->set_name("softmax_stream_allocation");
++  AddFloatValueInfo(graph->add_input(), "X", {2, 3, 4});
++  AddFloatValueInfo(graph->add_output(), "Y", {2, 3, 4});
++
++  auto* node = graph->add_node();
++  node->set_name("softmax");
++  node->set_op_type("Softmax");
++  node->add_input("X");
++  node->add_output("Y");
++  auto* attr = node->add_attribute();
++  attr->set_name("axis");
++  attr->set_type(ONNX_NAMESPACE::AttributeProto_AttributeType_INT);
++  attr->set_i(axis);
++
++  return model.SerializeAsString();
++}
++
++// A chain that copies tensors into and out of a TensorSeq: SequenceConstruct copies A and B,
++// SequenceInsert copies C plus the two elements it carries over, SequenceErase copies the two it
++// keeps, and SequenceAt returns the last one. Every one of those copies is a Tensor::Create in the
++// CUDA EP followed by a cudaMemcpyAsync on the run's stream.
++//
++// `with_identity` appends an Identity over the sequence and makes *that* the sequence shaped graph
++// output, instead of the SequenceErase result. IdentityOp's copy loop needs the node's output to be
++// a distinct OrtValue from its input, and the Identity kernel def aliases output 0 to input 0 - so
++// the loop only runs when something stops the planner applying that alias. Being a graph output is
++// what does it: AllocationPlanner tests for a graph output (allocation_planner.cc, "node_output is
++// graph's output, so we can't reuse intermediate buffer") before it consults the alias map, so the
++// output is planned kAllocateOutput and ExecutionFrame hands the kernel a fresh TensorSeq. Both
++// variants are run so the difference between them isolates the Identity copies.
++std::string BuildSequenceModelBytes(bool with_identity) {
++  ONNX_NAMESPACE::ModelProto model;
++  model.set_ir_version(ONNX_NAMESPACE::IR_VERSION);
++  auto* opset = model.add_opset_import();
++  opset->set_domain("");
++  opset->set_version(17);
++
++  auto* graph = model.mutable_graph();
++  graph->set_name("sequence_stream_allocation");
++  AddFloatValueInfo(graph->add_input(), "A", {2, 3});
++  AddFloatValueInfo(graph->add_input(), "B", {2, 3});
++  AddFloatValueInfo(graph->add_input(), "C", {2, 3});
++  AddFloatValueInfo(graph->add_output(), "Y", {2, 3});
++  AddFloatSequenceValueInfo(graph->add_output(), with_identity ? "S3" : "S2");
++
++  // Scalar int64 positions. Both are CPU inputs in the CUDA kernel defs, so they never reach the
++  // device allocator being recorded.
++  auto add_position = [graph](const char* name, int64_t value) {
++    auto* init = graph->add_initializer();
++    init->set_name(name);
++    init->set_data_type(ONNX_NAMESPACE::TensorProto_DataType_INT64);
++    init->add_int64_data(value);
++  };
++  add_position("erase_pos", 0);
++  add_position("at_pos", 1);
++
++  auto add_node = [graph](const char* name, const char* op_type,
++                          std::initializer_list<const char*> inputs, const char* output) {
++    auto* node = graph->add_node();
++    node->set_name(name);
++    node->set_op_type(op_type);
++    for (const char* input : inputs) {
++      node->add_input(input);
++    }
++    node->add_output(output);
++  };
++
++  add_node("construct", "SequenceConstruct", {"A", "B"}, "S0");   // [A, B]
++  add_node("insert", "SequenceInsert", {"S0", "C"}, "S1");        // [A, B, C]
++  add_node("erase", "SequenceErase", {"S1", "erase_pos"}, "S2");  // [B, C]
++  add_node("at", "SequenceAt", {"S2", "at_pos"}, "Y");            // C
++  if (with_identity) {
++    add_node("identity", "Identity", {"S2"}, "S3");  // [B, C]
++  }
++
++  return model.SerializeAsString();
++}
++
++}  // namespace
++
++class CudaKernelStreamAllocationTest : public ::testing::Test {
++ protected:
++  void SetUp() override {
++    int device_count = 0;
++    if (cudaGetDeviceCount(&device_count) != cudaSuccess || device_count == 0) {
++      GTEST_SKIP() << "No CUDA device available";
++    }
++
++    // A private environment: registering a shared allocator is process wide, and the recorder must
++    // not be handed to any other test's session.
++    auto logging_manager = std::make_unique<logging::LoggingManager>(
++        std::unique_ptr<logging::ISink>(new logging::CLogSink()), logging::Severity::kWARNING, false,
++        logging::LoggingManager::InstanceType::Temporal);
++    ASSERT_STATUS_OK(Environment::Create(std::move(logging_manager), env_));
++
++    recorder_ = std::make_shared<StreamTaggingRecorder>();
++    ort_allocator_ = std::make_unique<OrtAllocatorImplWrappingIAllocator>(AllocatorPtr(recorder_));
++    ASSERT_STATUS_OK(env_->RegisterAllocator(ort_allocator_.get()));
++  }
++
++  // Loads `model_bytes` onto the CUDA EP with the recorder as the device allocator, runs it once
++  // with recording on, and returns the fetches.
++  void RunRecorded(const std::string& model_bytes, const NameMLValMap& feeds,
++                   const std::vector<std::string>& output_names, std::vector<OrtValue>& fetches) {
++    SessionOptions so;
++    so.session_logid = "CudaKernelStreamAllocation";
++    // Keep the graph as written, and keep every tensor an individual allocation: the memory pattern
++    // planner would otherwise satisfy them out of one pre-planned block and hide the counts.
++    so.graph_optimization_level = TransformerLevel::Default;
++    so.enable_mem_pattern = false;
++    ASSERT_STATUS_OK(so.config_options.AddConfigEntry(kOrtSessionOptionsConfigUseEnvAllocators, "1"));
++
++    InferenceSessionWrapper session(so, *env_);
++    ASSERT_STATUS_OK(session.RegisterExecutionProvider(
++        std::make_shared<CUDAExecutionProvider>(CUDAExecutionProviderInfo{})));
++    ASSERT_STATUS_OK(session.Load(model_bytes.data(), static_cast<int>(model_bytes.size())));
++    ASSERT_STATUS_OK(session.Initialize());
++
++    // A node that fell back to the CPU EP would allocate nothing on the device and make the
++    // assertions below vacuously true.
++    for (const auto& node : session.GetGraph().Nodes()) {
++      if (node.OpType() == "MemcpyFromHost" || node.OpType() == "MemcpyToHost") {
++        continue;
++      }
++      ASSERT_EQ(node.GetExecutionProviderType(), onnxruntime::kCudaExecutionProvider)
++          << "Node '" << node.Name() << "' (" << node.OpType() << ") was not assigned to the CUDA EP.";
++    }
++
++    recorder_->StartRecording();
++    Status run_status = session.Run(feeds, output_names, &fetches);
++    recorder_->StopRecording();
++    ASSERT_STATUS_OK(run_status);
++  }
++
++  static OrtValue CpuInput(std::vector<float>& data, std::initializer_list<int64_t> dims) {
++    OrtValue value;
++    CreateMLValue<float>(AsSpan(dims), data.data(), OrtMemoryInfo(), &value);
++    return value;
++  }
++
++  static std::vector<float> ReadTensor(const Tensor& tensor) {
++    auto span = tensor.DataAsSpan<float>();
++    return std::vector<float>(span.begin(), span.end());
++  }
++
++  static std::vector<float> ReadFetch(const OrtValue& value) { return ReadTensor(value.Get<Tensor>()); }
++
++  static std::vector<float> ReadSeqElement(const OrtValue& value, size_t index) {
++    return ReadTensor(value.Get<TensorSeq>().Get(index));
++  }
++
++  std::shared_ptr<StreamTaggingRecorder> recorder_;
++  std::unique_ptr<OrtAllocatorImplWrappingIAllocator> ort_allocator_;
++  // Declared last so it is destroyed first, before the allocator it holds a reference to.
++  std::unique_ptr<Environment> env_;
++};
++
++// Softmax's transpose scratch and intermediate output. Running the same model with the axis already
++// innermost gives the baseline the transposed run is measured against: the difference has to be
++// exactly the two intermediates, and all of them have to be tagged.
++TEST_F(CudaKernelStreamAllocationTest, SoftmaxTransposeIntermediatesAreOnTheRunStream) {
++  std::vector<float> x_data(24);
++  for (size_t i = 0; i < x_data.size(); ++i) {
++    x_data[i] = static_cast<float>(i);
++  }
++
++  NameMLValMap feeds;
++  feeds.emplace("X", CpuInput(x_data, {2, 3, 4}));
++  const std::vector<std::string> output_names{"Y"};
++
++  // axis == rank - 1: no transpose, so the kernel allocates no intermediates at all.
++  std::vector<OrtValue> baseline_fetches;
++  RunRecorded(BuildSoftmaxModelBytes(/*axis*/ 2), feeds, output_names, baseline_fetches);
++  ASSERT_EQ(recorder_->untagged_allocs(), 0) << recorder_->UntaggedSummary();
++  const int baseline_tagged = recorder_->stream_allocs();
++
++  std::vector<OrtValue> fetches;
++  RunRecorded(BuildSoftmaxModelBytes(/*axis*/ 1), feeds, output_names, fetches);
++  EXPECT_EQ(recorder_->untagged_allocs(), 0) << recorder_->UntaggedSummary();
++  EXPECT_EQ(recorder_->stream_allocs(), baseline_tagged + 2)
++      << "The transposed Softmax path should add exactly two stream tagged allocations - the "
++         "transpose scratch and the intermediate output.";
++
++  // X[b,i,j] == b*12 + i*4 + j, so along axis 1 every one of the 8 columns holds {0,4,8} plus a
++  // constant and softmaxes to the same three increasing values that sum to 1.
++  const std::vector<float> y = ReadFetch(fetches[0]);
++  ASSERT_EQ(y.size(), static_cast<size_t>(24));
++  for (int b = 0; b < 2; ++b) {
++    for (int i = 0; i < 3; ++i) {
++      for (int j = 0; j < 4; ++j) {
++        EXPECT_NEAR(y[b * 12 + i * 4 + j], y[i * 4], 1e-6f) << "at [" << b << "," << i << "," << j << "]";
++      }
++    }
++  }
++  EXPECT_NEAR(y[0] + y[4] + y[8], 1.0f, 1e-5f);
++  EXPECT_LT(y[0], y[4]);
++  EXPECT_LT(y[4], y[8]);
++}
++
++// The element copies in SequenceConstruct, SequenceInsert, SequenceErase and IdentityOp. Unlike the
++// Softmax scratch these tensors are moved into the output TensorSeq rather than released inside
++// Compute(), so the race Einsum hit is not open here - but a sequence output can outlive the run
++// and be released at an arbitrary point, so the tagging still has to be right.
++TEST_F(CudaKernelStreamAllocationTest, SequenceElementCopiesAreOnTheRunStream) {
++  std::vector<float> a_data{1.f, 2.f, 3.f, 4.f, 5.f, 6.f};
++  std::vector<float> b_data{10.f, 20.f, 30.f, 40.f, 50.f, 60.f};
++  std::vector<float> c_data{100.f, 200.f, 300.f, 400.f, 500.f, 600.f};
++
++  NameMLValMap feeds;
++  feeds.emplace("A", CpuInput(a_data, {2, 3}));
++  feeds.emplace("B", CpuInput(b_data, {2, 3}));
++  feeds.emplace("C", CpuInput(c_data, {2, 3}));
++
++  // Without Identity: 2 (construct) + 3 (insert) + 2 (erase) element copies, plus the graph's own
++  // tensors. The exact total depends on how the inputs reach the device, so the baseline is
++  // measured rather than predicted, and only the floor the element copies establish is asserted.
++  const std::vector<std::string> baseline_names{"Y", "S2"};
++  std::vector<OrtValue> baseline_fetches;
++  RunRecorded(BuildSequenceModelBytes(/*with_identity*/ false), feeds, baseline_names, baseline_fetches);
++  ASSERT_EQ(recorder_->untagged_allocs(), 0) << recorder_->UntaggedSummary();
++  ASSERT_GE(recorder_->stream_allocs(), 7);
++  const int baseline_tagged = recorder_->stream_allocs();
++
++  const std::vector<std::string> output_names{"Y", "S3"};
++  std::vector<OrtValue> fetches;
++  RunRecorded(BuildSequenceModelBytes(/*with_identity*/ true), feeds, output_names, fetches);
++  EXPECT_EQ(recorder_->untagged_allocs(), 0) << recorder_->UntaggedSummary();
++  // Two elements in the sequence, so Identity copies exactly two tensors. A zero delta would mean
++  // the planner aliased its output onto its input after all and the copy loop never ran, which
++  // would make this case cover nothing.
++  EXPECT_EQ(recorder_->stream_allocs(), baseline_tagged + 2)
++      << "The Identity node should add exactly one stream tagged allocation per sequence element.";
++
++  // SequenceAt(1) of [B, C] is C, and the sequence output is [B, C] either way.
++  EXPECT_EQ(ReadFetch(fetches[0]), c_data);
++  ASSERT_EQ(fetches[1].Get<TensorSeq>().Size(), static_cast<size_t>(2));
++  EXPECT_EQ(ReadSeqElement(fetches[1], 0), b_data);
++  EXPECT_EQ(ReadSeqElement(fetches[1], 1), c_data);
++}
++
++}  // namespace test
++}  // namespace onnxruntime
+diff --git a/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc b/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc
+index 2b04e05c8..1396ed35e 100644
+--- a/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc
++++ b/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc
+@@ -7,9 +7,9 @@
+ // as they go out of scope in Compute() - while that work may still be in flight. A stream aware
+ // arena can only keep such a buffer away from another stream if the allocation was tagged with the
+ // stream that uses it, which means the helpers have to allocate through IAllocator::AllocOnStream
+-// rather than the plain Alloc(). These tests wrap the device allocator in a recorder and assert
+-// that every intermediate is tagged with the stream in the Einsum assets, so a helper that goes
+-// back to an untagged allocation is caught here.
++// rather than the plain Alloc(). These tests wrap the device allocator in a
++// StreamRecordingAllocator and assert that every intermediate is tagged with the stream in the
++// Einsum assets, so a helper that goes back to an untagged allocation is caught here.
+ //
+ // This is a provider-world translation unit: it reaches into CUDA EP internals through the shared
+ // provider bridge, so it must not include the core framework headers.
+@@ -23,43 +23,11 @@
+ #include "core/framework/stream_handles.h"
+ #include "core/providers/cuda/cuda_allocator.h"
+ #include "core/providers/cuda/math/einsum_utils/einsum_auxiliary_ops.h"
++#include "test/providers/cuda/test_cases/stream_recording_allocator.h"
+ 
+ namespace onnxruntime {
+ namespace test {
+ 
+-namespace {
+-
+-// Forwards to a real device allocator and records which entry point each allocation came in on.
+-class StreamRecordingAllocator : public IAllocator {
+- public:
+-  explicit StreamRecordingAllocator(AllocatorPtr inner)
+-      : IAllocator(inner->Info()), inner_(std::move(inner)) {}
+-
+-  bool IsStreamAware() const override { return true; }
+-
+-  void* Alloc(size_t size) override {
+-    ++untagged_allocs;
+-    return inner_->Alloc(size);
+-  }
+-
+-  void* AllocOnStream(size_t size, Stream* stream) override {
+-    ++stream_allocs;
+-    last_stream = stream;
+-    return inner_->AllocOnStream(size, stream);
+-  }
+-
+-  void Free(void* p) override { inner_->Free(p); }
+-
+-  int untagged_allocs = 0;
+-  int stream_allocs = 0;
+-  Stream* last_stream = nullptr;
+-
+- private:
+-  AllocatorPtr inner_;
+-};
+-
+-}  // namespace
+-
+ class EinsumCudaIntermediateTest : public ::testing::Test {
+  protected:
+   void SetUp() override {
+diff --git a/onnxruntime/test/providers/cuda/test_cases/stream_recording_allocator.h b/onnxruntime/test/providers/cuda/test_cases/stream_recording_allocator.h
+new file mode 100644
+index 000000000..ff2352c9c
+--- /dev/null
++++ b/onnxruntime/test/providers/cuda/test_cases/stream_recording_allocator.h
+@@ -0,0 +1,56 @@
++// Copyright (c) Microsoft Corporation. All rights reserved.
++// Licensed under the MIT License.
++
++// Shared helper for the CUDA EP "intermediates are allocated on their stream" regression tests.
++//
++// A stream aware arena can only keep a buffer away from a second stream if the allocation was
++// tagged with the stream that uses it, and the only way it learns that is IAllocator::AllocOnStream.
++// A per-run intermediate that goes back to the arena through the plain Alloc() may be handed to
++// another stream while the work writing it is still queued. The tests wrap the real device
++// allocator in this recorder and assert that each intermediate arrived through AllocOnStream with
++// the run's stream, so a call site that reverts to an untagged allocation is caught.
++//
++// This is a provider-world header: it is only usable from a translation unit that includes the
++// shared provider bridge headers rather than the core framework ones.
++
++#pragma once
++
++#include <utility>
++
++#include "core/providers/shared_library/provider_api.h"
++#include "core/framework/stream_handles.h"
++
++namespace onnxruntime {
++namespace test {
++
++// Forwards to a real device allocator and records which entry point each allocation came in on.
++class StreamRecordingAllocator : public IAllocator {
++ public:
++  explicit StreamRecordingAllocator(AllocatorPtr inner)
++      : IAllocator(inner->Info()), inner_(std::move(inner)) {}
++
++  bool IsStreamAware() const override { return true; }
++
++  void* Alloc(size_t size) override {
++    ++untagged_allocs;
++    return inner_->Alloc(size);
++  }
++
++  void* AllocOnStream(size_t size, Stream* stream) override {
++    ++stream_allocs;
++    last_stream = stream;
++    return inner_->AllocOnStream(size, stream);
++  }
++
++  void Free(void* p) override { inner_->Free(p); }
++
++  int untagged_allocs = 0;
++  int stream_allocs = 0;
++  Stream* last_stream = nullptr;
++
++ private:
++  AllocatorPtr inner_;
++};
++
++}  // namespace test
++}  // namespace onnxruntime

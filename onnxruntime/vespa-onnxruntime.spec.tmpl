@@ -36,8 +36,12 @@ Patch2:         patches.use-gradle.diff
 Patch3:         patches.reorg-provider.diff
 Patch4:         patches.onnx-use-extra.diff
 Patch5:         patches.same-name-two-unit-tests.diff
-Patch6:         patches.einsum-cuda.diff
-Patch7:         patches.fp16-cpu-kernel-fallback.diff
+Patch6:         PR.32565.diff
+Patch7:         PR.32222.diff
+Patch8:         PR.32354.diff
+Patch9:         PR.32388.diff
+Patch11:        PR.32411.diff
+Patch12:        patches.more-intermediates-stream.diff
 
 %if ( 0%{?fedora} && !0%{?amzn} ) || 0%{?el10}
 BuildRequires: cmake
@@ -151,6 +155,10 @@ about packaging.
 %patch -P 5 -p1
 %patch -P 6 -p1
 %patch -P 7 -p1
+%patch -P 8 -p1
+%patch -P 9 -p1
+%patch -P 11 -p1
+%patch -P 12 -p1
 
 %build
 
@@ -186,6 +194,14 @@ else
 	USE_CCACHE="CMAKE_CUDA_COMPILER_LAUNCHER=+/usr/bin/env"
 fi
 
+numcpus=3
+h=$(hostname)
+case $h in
+    *.vespa.ai) numcpus=7 ;;
+    *.devcloud) numcpus=9 ;;
+    3rdparty-*) numcpus=15 ;;
+esac
+
 ./build.sh \
     --allow_running_as_root \
     --no_telemetry \
@@ -194,7 +210,7 @@ fi
     --skip_tests \
     --build_java \
     --build_shared_lib \
-    --parallel 8 \
+    --parallel ${numcpus} \
     --cmake_path %{_cmake_prog} \
     --ctest_path %{_ctest_prog} \
     --skip_submodule_sync \
@@ -268,6 +284,13 @@ about packaging.
 %endif
 
 %changelog
+* Fri Sep 11 2026 Arne Juul - 1.30.0
+- one more patch from submitted PR
+- drop patches no longer needed
+
+* Fri Sep  4 2026 Arne Juul - 1.29.0
+- add patches from submitted PRs
+
 * Tue Aug 18 2026 Arne Juul - 1.29.0
 - bump version to 1.29.0
 
