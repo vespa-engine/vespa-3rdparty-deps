@@ -195,7 +195,7 @@ else
 fi
 
 numcpus=3
-h=$(hostname)
+h=$(hostname || echo none)
 case $h in
     *.vespa.ai) numcpus=7 ;;
     *.devcloud) numcpus=9 ;;
