@@ -20,6 +20,12 @@
 # Don't enable LTO
 %global _lto_cflags %{nil}
 
+%if 0%{?amzn2027}
+# Disable hardened package build.
+%global _preprocessor_defines %{nil}
+%undefine _hardened_build
+%endif
+
 # Libraries use shared libraries in /opt/vespa-deps/lib64
 %global __brp_check_rpaths %{nil}
 
