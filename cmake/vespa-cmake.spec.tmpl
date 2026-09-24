@@ -33,7 +33,7 @@ BuildRequires: gcc-c++
 
 %if 0%{?fedora}
 BuildRequires: gcc-c++
-%if %{fedora} > 40
+%if %{fedora} > 40 && ! 0%{?amzn2027}
 BuildRequires: openssl-devel-engine
 %endif
 %endif

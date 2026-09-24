@@ -22,16 +22,16 @@
 %define ver_patch _TMPL_VER_PATCH
 %define ver_release _TMPL_VER_RELEASE
 
-%if 0%{?fedora}
-%if %{fedora} > 43
+%if 0%{?fedora} && ! 0%{?amzn2023} && ! 0%{?amzn2027}
 %global _vespa_java_version 25
-%else
-%if %{fedora} > 39
-%global _vespa_java_version 21
 %endif
+%if 0%{?amzn2027}
+%global _vespa_java_version 25
 %endif
+%if 0%{?el10}
+%global _vespa_java_version 25
 %endif
-%if 0%{?el9} || 0%{?el10}
+%if 0%{?el9}
 %global _vespa_java_version 21
 %endif
 %if ! 0%{?_vespa_java_version:1}
@@ -46,11 +46,10 @@ License:        MIT
 URL:            https://github.com/kherud/
 Source0:        https://github.com/arnej27959/java-llama.cpp/archive/refs/tags/v%{version}.tar.gz
 
-%if 0%{?amzn2023}
-BuildRequires: java-17-amazon-corretto-devel
-BuildRequires: java-17-amazon-corretto
-BuildRequires: maven-amazon-corretto17
-BuildRequires: vespa-ccache
+%if 0%{?amzn2023} || 0%{?amzn2027}
+BuildRequires: java-%{_vespa_java_version}-amazon-corretto-devel
+BuildRequires: java-%{_vespa_java_version}-amazon-corretto
+BuildRequires: maven-amazon-corretto%{_vespa_java_version}
 %else
 %if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?fedora}
 BuildRequires: java-%{_vespa_java_version}-openjdk-devel
@@ -62,7 +61,7 @@ BuildRequires: maven
 %endif
 %endif
 
-%if 0%{?el8} || 0%{?el9} || 0%{?amzn2023}
+%if 0%{?el8} || 0%{?el9} || 0%{?amzn2023} || 0%{?amzn2027}
 BuildRequires: vespa-ccache
 %else
 BuildRequires: ccache

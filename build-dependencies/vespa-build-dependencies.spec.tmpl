@@ -22,14 +22,11 @@
 %global _vespa_icu_version 78.3.0
 %global _vespa_re2_version 20251105
 %global _vespa_maven_version 3.9.16
-%if 0%{?fedora}
-%if %{fedora} > 43
+%if 0%{?fedora} && ! 0%{?amzn2023} && ! 0%{?amzn2027}
 %global _vespa_java_version 25
-%else
-%if %{fedora} > 39
-%global _vespa_java_version 21
 %endif
-%endif
+%if 0%{?amzn2027}
+%global _vespa_java_version 25
 %endif
 %if 0%{?el10}
 %global _vespa_java_version 25
@@ -175,12 +172,11 @@ Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 %endif
 
-# For Amazon Linux 2023 fedora is also defined
-%if 0%{?amzn2023}
-Requires: java-17-amazon-corretto-devel
-Requires: java-17-amazon-corretto
-Requires: maven-amazon-corretto17
-Requires: vespa-xxhash-devel >= 0.8.1
+# For Amazon Linux 2023 and Amazon Linux 2027 fedora is also defined
+%if 0%{?amzn2023} || 0%{?amzn2027}
+Requires: java-%{_vespa_java_version}-amazon-corretto-devel
+Requires: java-%{_vespa_java_version}-amazon-corretto
+Requires: maven-amazon-corretto%{_vespa_java_version}
 %else
 %if 0%{?el8} || 0%{?el9} || 0%{?el10}
 Requires: vespa-maven = %{_vespa_maven_version}
@@ -188,6 +184,10 @@ Requires: vespa-maven = %{_vespa_maven_version}
 Requires: maven
 %endif
 Requires: java-%{_vespa_java_version}-openjdk-devel
+%endif
+%if 0%{?amzn2023}
+Requires: vespa-xxhash-devel >= 0.8.1
+%else
 Requires: xxhash-devel >= 0.8.1
 %endif
 

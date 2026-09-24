@@ -13,12 +13,11 @@ BuildArchitectures: noarch
 %define ver_patch _TMPL_VER_PATCH
 %define ver_release _TMPL_VER_RELEASE
 
-%if 0%{?fedora} && ! 0%{?amzn2023}
-%if %{fedora} > 43
+%if 0%{?fedora} && ! 0%{?amzn2023} && ! 0%{?amzn2027}
 %global _vespa_java_version 25
-%else
-%global _vespa_java_version 21
 %endif
+%if 0%{?amzn2027}
+%global _vespa_java_version 25
 %endif
 %if 0%{?el10}
 %global _vespa_java_version 25
@@ -39,9 +38,9 @@ URL:            https://gradle.org/
 Source0:        https://services.gradle.org/distributions/gradle-%{version}-bin.zip
 Source1:        script.sh
 
-%if 0%{?amzn2023}
-Requires: java-17-amazon-corretto-devel
-Requires: java-17-amazon-corretto
+%if 0%{?amzn2023} || 0%{?amzn2027}
+Requires: java-%{_vespa_java_version}-amazon-corretto-devel
+Requires: java-%{_vespa_java_version}-amazon-corretto
 %else
 %if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?fedora}
 Requires: java-%{_vespa_java_version}-openjdk-devel

@@ -12,6 +12,12 @@
 # Don't enable LTO
 %global _lto_cflags %{nil}
 
+%if 0%{?amzn2027}
+# Disable hardened package build.
+%global _preprocessor_defines %{nil}
+%undefine _hardened_build
+%endif
+
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so(\\.[0-9.]*)?\\([A-Z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
 
@@ -96,6 +102,11 @@ BuildRequires: python3-setuptools
 BuildRequires: python3.12
 BuildRequires: python3.12-devel
 BuildRequires: python3.12-setuptools
+%endif
+%if 0%{?amzn2027}
+BuildRequires: python3
+BuildRequires: python3-devel
+BuildRequires: python3-setuptools
 %endif
 %if 0%{?fedora}
 BuildRequires: gcc-c++
