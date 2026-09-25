@@ -118,15 +118,27 @@ This package contains protobuf compiler for C++ and C++ headers and libraries.
 %{_vespa_3rdparty_deps_packaging_notice}
 
 %package upb
-Summary:        micro-protobuf library
+Summary:        micro-protobuf compiler
 Requires:       %{name}%{?_isa} = %{version}-%{release}
+%if 0%{?_use_vespa_abseil_cpp}
+Requires:       vespa-abseil-cpp%{?_isa} = %{_vespa_abseil_cpp_version}
+%else
+Requires:       abseil-cpp%{?_isa}
+%endif
+
+%description upb
+This package contains the micro-protobuf compiler.
+
+%package upb-devel
+Summary:        micro-protobuf library
+Requires:       %{name}-upb%{?_isa} = %{version}-%{release}
 %if 0%{?_use_vespa_abseil_cpp}
 Requires:       vespa-abseil-cpp-devel%{?_isa} = %{_vespa_abseil_cpp_version}
 %else
 Requires:       abseil-cpp-devel%{?_isa}
 %endif
 
-%description upb
+%description upb-devel
 This package contains the micro-protobuf library (libupb) for static linking.
 
 %prep
@@ -212,6 +224,9 @@ DESTDIR="%{buildroot}" %{_cmake_prog} --install build
 
 %files upb
 %{_bindir}/protoc-gen-upb*
+%license LICENSE
+
+%files upb-devel
 %{_libdir}/libupb.a
 %{_includedir}/upb
 %license LICENSE
