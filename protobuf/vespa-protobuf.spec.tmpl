@@ -212,6 +212,7 @@ DESTDIR="%{buildroot}" %{_cmake_prog} --install build
 %{_includedir}/utf8_validity.h
 %{_libdir}/cmake
 %{_libdir}/pkgconfig
+%exclude %{_libdir}/pkgconfig/upb.pc
 %{_libdir}/libprotobuf.so
 %{_libdir}/libprotobuf-lite.so
 %{_libdir}/libprotoc.so
@@ -224,11 +225,12 @@ DESTDIR="%{buildroot}" %{_cmake_prog} --install build
 
 %files upb
 %{_bindir}/protoc-gen-upb*
+%{_libdir}/libupb.a
 %license LICENSE
 
 %files upb-devel
-%{_libdir}/libupb.a
 %{_includedir}/upb
+%{_libdir}/pkgconfig/upb.pc
 %license LICENSE
 
 %changelog
