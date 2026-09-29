@@ -1,0 +1,253 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
+# Version
+%global ver_major _TMPL_VER_MAJOR
+%global ver_minor _TMPL_VER_MINOR
+%global ver_patch _TMPL_VER_PATCH
+%global ver_release _TMPL_VER_RELEASE
+
+# Disable build id note requirement for now
+%undefine _missing_build_ids_terminate_build
+
+# Force special prefix for Vespa
+%define _prefix /opt/vespa-deps
+
+# Only strip debug info
+%global _find_debuginfo_opts -g
+
+# Don't enable LTO
+%global _lto_cflags %{nil}
+
+# Disable hardened package build.
+%global _preprocessor_defines %{nil}
+%undefine _hardened_build
+
+# Libraries use shared libraries in /opt/vespa-deps/lib64
+%global __brp_check_rpaths %{nil}
+
+%global _vespa_abseil_excludes |absl_[a-z_0-9]*
+
+%global _vespa_abseil_cpp_version 20260107.1.1
+%global _vespa_grpc_version 1.84.0
+%global _vespa_gtest_version 1.16.0
+%global _vespa_openssl_version 3.5.7
+%global _vespa_protobuf_version 6.34.1
+%global _vespa_gbenchmark_version 1.9.4
+%global _vespa_re2_version 20251105
+
+%if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
+%global _use_vespa_gtest 1
+%global _vespa_gtest_excludes |(gtest|gmock)(_main)?
+%global _use_vespa_abseil_cpp 1
+%global _vespa_abseil_excludes |absl_[a-z_0-9]*
+%endif
+%if 0%{?el8}
+%global _use_vespa_openssl 1
+%global _vespa_openssl_excludes |crypto|ssl
+%endif
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
+%global _use_vespa_re2 1
+%global _vespa_re2_excludes |re2
+%endif
+%global _vespa_protobuf_excludes |protobuf|protoc|utf8_validity|utf8_range
+%global _vespa_grpc_excludes1 address_sorting|gpr
+%global _vespa_grpc_excludes2 grpc\\+\\+(_(alts|error_details|reflection|unsecure))?
+%global _vespa_grpc_excludes3 grpc(_(authorization_provider|plugin_support|unsecure))?
+%global _vespa_grpc_excludes4 grpcpp_channelz
+%global _vespa_grpc_excludes5 (upb_.*|utf8_(range|validity))_lib
+%global _vespa_grpc_excludes %{_vespa_grpc_excludes1}|%{_vespa_grpc_excludes2}|%{_vespa_grpc_excludes3}|%{_vespa_grpc_excludes4}|%{_vespa_grpc_excludes5}
+%global _vespa_opentelemetry_excludes opentelemetry_[a-z_0-9]*
+
+# Don't provide shared library or pkgconfig
+%global __provides_exclude ^(lib.*\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|(cmake|pkgconfig)\\(.*)$
+
+# Exclude automated requires for libraries in /opt/vespa-deps/lib64.
+%global __requires_exclude ^(lib(%{_vespa_opentelemetry_excludes}|%{_vespa_grpc_excludes}%{?_vespa_protobuf_excludes}%{?_vespa_abseil_excludes}%{?_vespa_gtest_excludes}%{?_vespa_openssl_excludes}%{?_vespa_re2_excludes})\\.so\\.[0-9.]*\\([A-Za-z._0-9]*\\)\\(64bit\\)|pkgconfig\\(.*)$
+
+Summary:        opentelemetry-cpp for C++ runtime
+Name:           vespa-opentelemetry-cpp
+Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
+Release:        %{ver_release}%{?dist}
+License:        Apache-2.0
+URL:            https://github.com/open-telemetry/opentelemetry-cpp
+Source0:        vespa-opentelemetry-cpp-%{version}.tar.gz
+Patch0:         patches.includes.diff
+
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
+%global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
+BuildRequires: vespa-toolset-15-meta
+%endif
+
+%if 0%{?amzn2023}
+BuildRequires: gcc14-c++
+BuildRequires: vespa-gcc14-annobin-plugin
+%global _cmake_extra_options -DCMAKE_C_COMPILER=gcc14-gcc -DCMAKE_CXX_COMPILER=gcc14-g++
+%endif
+
+%if 0%{?fedora} && ! 0%{?amzn2023}
+BuildRequires: gcc-c++
+%endif
+
+BuildRequires: make
+BuildRequires: git
+
+%if 0%{?_use_vespa_abseil_cpp}
+BuildRequires: vespa-abseil-cpp-devel%{?_isa} = %{_vespa_abseil_cpp_version}
+%else
+BuildRequires: abseil-cpp-devel%{?_isa}
+%endif
+
+%if 0%{?_use_vespa_openssl}
+BuildRequires: vespa-openssl-devel%{?_isa} = %{_vespa_openssl_version}
+%else
+BuildRequires: openssl-devel%{?_isa}
+%if 0%{?fedora} > 40 && 0%{?fedora} < 45 && ! 0%{?amzn2023} && ! 0%{?amzn2027}
+BuildRequires: openssl-devel-engine
+%endif
+%endif
+
+BuildRequires: cmake
+
+BuildRequires: which
+BuildRequires: zlib-devel
+
+%if 0%{?_use_vespa_gtest}
+BuildRequires: vespa-gtest-devel%{?_isa} = %{_vespa_gtest_version}
+BuildRequires: vespa-gmock-devel%{?_isa} = %{_vespa_gtest_version}
+%else
+BuildRequires: gtest-devel
+BuildRequires: gmock-devel
+%endif
+
+BuildRequires: vespa-grpc-devel%{?_isa} = %{_vespa_grpc_version}
+BuildRequires: vespa-protobuf-devel%{?_isa} = %{_vespa_protobuf_version}
+Requires: zlib
+Requires: vespa-grpc%{?_isa} = %{_vespa_grpc_version}
+Requires: vespa-protobuf%{?_isa} = %{_vespa_protobuf_version}
+
+%if 0%{?_use_vespa_abseil_cpp}
+Requires: vespa-abseil-cpp%{?_isa} = %{_vespa_abseil_cpp_version}
+%else
+Requires: abseil-cpp%{?_isa}
+%endif
+
+%if 0%{?_use_vespa_openssl}
+Requires: vespa-openssl%{?_isa} = %{_vespa_openssl_version}
+%else
+Requires: openssl%{?_isa}
+%endif
+
+%if 0%{?_use_vespa_re2}
+Requires: vespa-re2%{?_isa} = %{_vespa_re2_version}
+BuildRequires: vespa-re2-devel%{?_isa} = %{_vespa_re2_version}
+%else
+Requires: re2%{?_isa}
+BuildRequires: re2-devel
+%endif
+
+BuildRequires: vespa-gbenchmark-devel = %{_vespa_gbenchmark_version}
+
+%global _vespa_3rdparty_deps_packaging_notice \
+See https://github.com/vespa-engine/vespa-3rdparty-deps for details \
+about packaging.
+
+%description
+This package contains opentelemetry-cpp runtime libraries for C++.
+%{_vespa_3rdparty_deps_packaging_notice}
+%package devel
+Summary:        opentelemtry-cpp for C++ development
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+%if 0%{?_use_vespa_abseil_cpp}
+Requires:       vespa-abseil-cpp-devel%{?_isa} = %{_vespa_abseil_cpp_version}
+%else
+Requires:       abseil-cpp-devel%{?_isa}
+%endif
+
+Requires: vespa-protobuf-devel%{?_isa} = %{_vespa_protobuf_version}
+
+%description devel
+This package contains opentelemetry-cpp for C++ and C++ headers and libraries.
+%{_vespa_3rdparty_deps_packaging_notice}
+
+%prep
+%setup -q
+%patch -P 0 -p1
+
+%build
+PATH=%{_prefix}/bin:$PATH
+
+%ifarch x86_64
+%define _arch_cmake_options -march=haswell
+%endif
+
+%ifarch aarch64
+%define _arch_cmake_options -march=armv8.2-a+dotprod+crypto -mtune=neoverse-n1
+%endif
+
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+
+# use ccache if available
+if [ -f %{_prefix}/bin/ccache ] || [ -f /usr/bin/ccache ]; then
+	wcc="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+else
+	wcc=""
+fi
+
+mkdir build
+cmake \
+   $wcc \
+   -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+   -DCMAKE_INSTALL_RPATH=%{_libdir} \
+   -DCMAKE_PREFIX_PATH=%{_prefix} \
+   -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
+   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+   -DBUILD_SHARED_LIBS=ON \
+   -DCMAKE_CXX_STANDARD=20 \
+   -DCMAKE_C_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -DNDEBUG" \
+   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -DNDEBUG" \
+   -DOTELCPP_BUILD_TESTING=ON \
+   -DOTELCPP_VERSIONED_LIBS=ON \
+   -DOTELCPP_WITH_ABI_VERSION_1=OFF \
+   -DOTELCPP_WITH_ABI_VERSION_2=ON \
+   -DOTELCPP_WITH_BENCHMARK=ON \
+   -DOTELCPP_WITH_OTLP_GRPC=ON \
+   -DOTELCPP_WITH_OTLP_HTTP=OFF \
+   -DOTELCPP_WITH_OTLP_HTTP_COMPRESSION=OFF \
+   -DOTELCPP_WITH_OTLP_UTF8_VALIDITY=ON \
+   -DOTELCPP_WITH_STL=ON \
+    %{?_cmake_extra_options} \
+   -S . \
+   -B build
+cmake --build build %{?_smp_mflags}
+
+%check
+PATH=%{_prefix}/bin:$PATH
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+ctest --test-dir build %{?_smp_mflags} -E 'exporter\.otlp\.\*/OtlpGrpcExporterRetry'
+
+%install
+PATH=%{_prefix}/bin:$PATH
+%if 0%{?_devtoolset_enable:1}
+source %{_devtoolset_enable} || true
+%endif
+env DESTDIR=%{buildroot} cmake --install build
+
+%files
+%{_libdir}/*.so.*
+%exclude %{_libdir}/*.so
+%license LICENSE
+
+%files devel
+%{_includedir}
+%{_libdir}/cmake
+%{_libdir}/pkgconfig
+%{_libdir}/*.so
+%license LICENSE
+
+%changelog
+* Tue Sep 29 2026 Tor Egge <tegge@vespa.ai> - 1.29.0
+- Initial version of opentelemetry-cpp Vespa C++ RPM

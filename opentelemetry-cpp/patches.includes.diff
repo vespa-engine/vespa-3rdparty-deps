@@ -1,0 +1,18 @@
+commit e359afec88f614b061285bcf8b85ac7b60ac23c8
+Author: Tor Egge <Tor.Egge@online.no>
+Date:   Tue Sep 29 14:21:03 2026 +0200
+
+    Patches for opentelemetry-cpp.
+
+diff --git a/sdk/include/opentelemetry/sdk/metrics/view/meter_selector.h b/sdk/include/opentelemetry/sdk/metrics/view/meter_selector.h
+index 65dba7d7..4751eb5f 100644
+--- a/sdk/include/opentelemetry/sdk/metrics/view/meter_selector.h
++++ b/sdk/include/opentelemetry/sdk/metrics/view/meter_selector.h
+@@ -3,6 +3,7 @@
+ 
+ #pragma once
+ 
++#include <cstdint>
+ #include <memory>
+ #include <string>
+ 
