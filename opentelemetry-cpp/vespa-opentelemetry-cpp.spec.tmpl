@@ -30,7 +30,7 @@
 %global _vespa_abseil_cpp_version 20260107.1.1
 %global _vespa_grpc_version 1.84.0
 %global _vespa_gtest_version 1.16.0
-%global _vespa_openssl_version 3.5.7
+%global _vespa_openssl_version 3.5.9
 %global _vespa_protobuf_version 6.34.1
 %global _vespa_gbenchmark_version 1.9.4
 %global _vespa_re2_version 20251105
@@ -155,7 +155,7 @@ about packaging.
 This package contains opentelemetry-cpp runtime libraries for C++.
 %{_vespa_3rdparty_deps_packaging_notice}
 %package devel
-Summary:        opentelemtry-cpp for C++ development
+Summary:        opentelemetry-cpp for C++ development
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 %if 0%{?_use_vespa_abseil_cpp}
 Requires:       vespa-abseil-cpp-devel%{?_isa} = %{_vespa_abseil_cpp_version}
@@ -227,6 +227,8 @@ PATH=%{_prefix}/bin:$PATH
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
+# Exclude unstable test that mostly fails with abseil mutex lock order
+# reversal warnings, deadlock warnings, abort or segmentation fault.
 ctest --test-dir build %{?_smp_mflags} -E 'exporter\.otlp\.\*/OtlpGrpcExporterRetry'
 
 %install
