@@ -205,8 +205,8 @@ cmake \
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
    -DBUILD_SHARED_LIBS=ON \
    -DCMAKE_CXX_STANDARD=20 \
-   -DCMAKE_C_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -DNDEBUG" \
-   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -DNDEBUG" \
+   -DCMAKE_C_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3" \
+   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3" \
    -DOTELCPP_BUILD_TESTING=ON \
    -DOTELCPP_VERSIONED_LIBS=ON \
    -DOTELCPP_WITH_ABI_VERSION_1=OFF \
@@ -227,9 +227,7 @@ PATH=%{_prefix}/bin:$PATH
 %if 0%{?_devtoolset_enable:1}
 source %{_devtoolset_enable} || true
 %endif
-# Exclude unstable test that mostly fails with abseil mutex lock order
-# reversal warnings, deadlock warnings, abort or segmentation fault.
-ctest --test-dir build %{?_smp_mflags} -E 'exporter\.otlp\.\*/OtlpGrpcExporterRetry'
+ctest --test-dir build %{?_smp_mflags}
 
 %install
 PATH=%{_prefix}/bin:$PATH
