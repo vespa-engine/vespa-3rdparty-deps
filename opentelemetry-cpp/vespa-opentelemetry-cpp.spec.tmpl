@@ -41,13 +41,11 @@
 %global _use_vespa_abseil_cpp 1
 %global _vespa_abseil_excludes |absl_[a-z_0-9]*
 %endif
-%if 0%{?el8}
-%global _use_vespa_openssl 1
-%global _vespa_openssl_excludes |crypto|ssl
-%endif
 %if 0%{?el8} || 0%{?el9} || 0%{?el10}
 %global _use_vespa_re2 1
 %global _vespa_re2_excludes |re2
+%global _use_vespa_openssl 1
+%global _vespa_openssl_excludes |crypto|ssl
 %endif
 %global _vespa_protobuf_excludes |protobuf|protoc|utf8_validity|utf8_range
 %global _vespa_grpc_excludes1 address_sorting|gpr
@@ -249,5 +247,8 @@ env DESTDIR=%{buildroot} cmake --install build
 %license LICENSE
 
 %changelog
+* Thu Oct  1 2026 Arne Juul <arnej@vespa.ai> - 1.29.0-2
+- Use vespa-openssl on platforms: el8/el9/el10
+
 * Tue Sep 29 2026 Tor Egge <tegge@vespa.ai> - 1.29.0
 - Initial version of opentelemetry-cpp Vespa C++ RPM
