@@ -93,7 +93,7 @@ Requires: glibc-langpack-en
 Requires: llvm-devel
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
-Requires: vespa-openssl-devel >= 3.5.4
+Requires: vespa-openssl-devel >= 3.5.9
 Requires: vespa-gmock-devel = %{_vespa_gtest_version}
 Requires: vespa-gtest-devel = %{_vespa_gtest_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
@@ -114,7 +114,7 @@ Requires: vespa-gmock-devel = %{_vespa_gtest_version}
 Requires: vespa-gtest-devel = %{_vespa_gtest_version}
 Requires: llvm-devel
 Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
-Requires: openssl-devel
+Requires: vespa-openssl-devel >= 3.5.9
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
@@ -136,7 +136,7 @@ Requires: vespa-gmock-devel = %{_vespa_gtest_version}
 Requires: vespa-gtest-devel = %{_vespa_gtest_version}
 Requires: llvm-devel
 Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
-Requires: openssl-devel
+Requires: vespa-openssl-devel >= 3.5.9
 Requires: vespa-libzstd-devel >= %{_vespa_libzstd_version}
 Requires: vespa-lz4-devel >= %{_vespa_lz4_version}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
@@ -198,6 +198,9 @@ Vespa - The open big data serving engine - build dependencies
 %files
 
 %changelog
+* Thu Oct  1 2026 Arne Juul <arnej@vespa.ai> - 1.20.0
+- Use vespa-openssl on platforms: el8/el9/el10
+
 * Thu Jun 4 2026 Tor Brede Vekterli <vekterli@vespa.ai> 1.15.0
 - Upgrade vespa-mimalloc to 3.3.2
 - Upgrade vespa-highway to 1.4.0

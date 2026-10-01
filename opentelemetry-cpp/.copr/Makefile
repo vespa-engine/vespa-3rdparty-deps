@@ -6,7 +6,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=1
 MINOR=29
 PATCH=0
-RELEASE=1
+RELEASE=2
 
 # The actual name for the generated (base) package
 PKGNAME=vespa-opentelemetry-cpp
@@ -34,7 +34,6 @@ srpm:
 	rpm -q rpmdevtools || dnf install -y rpmdevtools
 	rpm -q git || dnf install -y git
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
-	rm -rf $(SRCTMPBASE)
 	mkdir -p $(SRCTMPBASE)
 	cd $(SRCTMPBASE) && (cd opentelemetry-cpp && git fetch -p) || git clone https://github.com/open-telemetry/opentelemetry-cpp.git opentelemetry-cpp
 	cd $(SRCTMP_VENDOR) && git checkout v$(VERSION) && git clean -fxd
@@ -49,7 +48,6 @@ endif
 	cd $(SRCTMP_VENDOR) && git archive --format=tar HEAD | tar -C $(SRCTMP) -xf -
 	set -e; cd $(SRCTMP_VENDOR) && git submodule status --recursive | cut -d ' ' -f 3 | while read sm_path; do mkdir -p $(SRCTMP)/$$sm_path; ( cd $$sm_path && git archive --format=tar HEAD | tar -C $(SRCTMP)/$$sm_path -xf -); done
 	tar -C $(SRCTMPBASE) -czf $(SOURCEDIR)/$(PKGNV).tar.gz $(PKGNV)
-	rm -rf $(SRCTMPBASE)
 	cat $(PKGNAME).spec.tmpl | sed "$(SEDCMD)" > $(SPECFILE)
 	cp -a *.diff $(SOURCEDIR)
 	rpmbuild -bs --define "_topdir $(RPMTOPDIR)" $(SPECFILE)
