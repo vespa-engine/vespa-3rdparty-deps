@@ -137,7 +137,15 @@ mkdir build
 
 # Highway tests are very heavy to build, so default parallelism may
 # crash GCC with OOMs. The core library itself is mostly header-only.
-make -C build -j2
+
+numcpus=2
+h=$(hostname || echo none)
+case $h in
+    *.vespa.ai) numcpus=10 ;;
+    *.devcloud) numcpus=11 ;;
+    3rdparty-*) numcpus=12 ;;
+esac
+make -C build -j${numcpus}
 
 %check
 # PATH to vespa-cmake etc
