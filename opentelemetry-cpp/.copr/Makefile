@@ -13,7 +13,7 @@ PKGNAME=vespa-opentelemetry-cpp
 
 # Note:
 #
-# Version above must be kept in sync with _vespa_opentelemetry-cpp_version in
+# Version above must be kept in sync with _vespa_opentelemetry_cpp_version in
 # rpm spec files for vespa-build-dependencies and vespa.
 
 RPMTOPDIR=$(TOP)/rpmbuild
