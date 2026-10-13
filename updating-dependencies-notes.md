@@ -39,9 +39,13 @@ RELEASE=1
 We also define a version macro in the specs file for each relevant package:
 
     $ git grep '%global .*_gtest_version'
-    abseil-cpp/vespa-abseil-cpp.spec.tmpl:%global _vespa_gtest_version 1.16.0
-    build-dependencies/vespa-build-dependencies.spec.tmpl:%global _vespa_gtest_version 1.16.0
-    protobuf/vespa-protobuf.spec.tmpl:%global _vespa_gtest_version 1.16.0
+    abseil-cpp/vespa-abseil-cpp.spec.tmpl:%global _vespa_gtest_version 1.18.0
+    build-dependencies/vespa-build-dependencies.spec.tmpl:%global _vespa_gtest_version 1.18.0
+    gbenchmark/vespa-gbenchmark.spec.tmpl:%global _vespa_gtest_version 1.18.0
+    grpc/vespa-grpc.spec.tmpl:%global _vespa_gtest_version 1.18.0
+    highway/vespa-highway.spec.tmpl:%global _vespa_gtest_version 1.18.0
+    opentelemetry-cpp/vespa-opentelemetry-cpp.spec.tmpl:%global _vespa_gtest_version 1.18.0
+    protobuf/vespa-protobuf.spec.tmpl:%global _vespa_gtest_version 1.18.0
 
 A specific version macros should be defined to the same value in all spec files and be in sync with the values in the corresponding <code>.copr/Makefile</code>.
 

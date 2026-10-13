@@ -7,6 +7,11 @@ MINOR=3
 PATCH=0
 RELEASE=2
 
+# Note:
+#
+# Version above must be kept in sync with _vespa_icu_version in rpm
+# spec files for vespa-re2, vespa-build-dependencies and vespa.
+
 # The actual name for the generated (base) package
 PKGNAME=vespa-icu
 

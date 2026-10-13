@@ -14,7 +14,7 @@
 
 %if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
 %global _use_vespa_gtest 1
-%global _vespa_gtest_version 1.16.0
+%global _vespa_gtest_version 1.18.0
 %endif
 %if 0%{?amzn2023}
 %global _cmake_extra_options -DCMAKE_C_COMPILER=gcc14-gcc -DCMAKE_CXX_COMPILER=gcc14-g++
@@ -33,7 +33,7 @@ Release:        %{ver_release}%{?dist}
 License:        Apache License, Version 2.0
 URL:            https://github.com/abseil/abseil-cpp
 Source0:        https://github.com/abseil/abseil-cpp/releases/download/%{ver_major}.%{ver_minor}/abseil-cpp-%{ver_major}.%{ver_minor}.tar.gz
-Patch0:         avoid-odr-violation.diff
+Patch0:         use-hw-accel.diff
 Patch1:         skip-2-stack-frames.diff
 
 %global _cmake_prog cmake
@@ -135,7 +135,7 @@ mkdir build
     -DCMAKE_PREFIX_PATH=%{_prefix} \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3" \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -DNDEBUG" \
     -DBUILD_SHARED_LIBS=ON \
     -DABSL_BUILD_TESTING=ON \
     -DABSL_ENABLE_INSTALL=ON \
@@ -211,6 +211,10 @@ patchelf --set-rpath '$ORIGIN' %{buildroot}/%{_libdir}/*.so.*
 %license LICENSE
 
 %changelog
+* Tue Oct 13 2026 Arne Juul <arnej@vespa.ai> - 20260817.0.1-1
+- Upgrade abseil-cpp to 20260817.0
+- Upgrade gtest to 1.18.0
+
 * Thu Sep 10 2026 Arne Juul
 - use ccache if present
 

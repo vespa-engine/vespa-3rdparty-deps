@@ -1,0 +1,10 @@
+--- abseil-cpp-20260817.0/absl/base/options.h.orig	2026-10-13 12:23:01.188779426 +0000
++++ abseil-cpp-20260817.0/absl/base/options.h	2026-10-13 12:23:01.190418837 +0000
+@@ -207,6 +207,6 @@
+ // built with inconsistent flags.
+ //
+ // User code should not inspect this macro.
+-#define ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY 0
++#define ABSL_OPTION_INLINE_HW_ACCEL_STRATEGY 1
+ 
+ #endif  // ABSL_BASE_OPTIONS_H_

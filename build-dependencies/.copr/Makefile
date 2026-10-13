@@ -3,7 +3,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=1
-MINOR=21
+MINOR=22
 PATCH=0
 RELEASE=1
 PKGNAME=vespa-build-dependencies
