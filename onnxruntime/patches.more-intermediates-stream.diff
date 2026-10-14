@@ -1,5 +1,114 @@
+commit e770c2f8d8b8b66ae300d386acd39c38bbb6c9b8
+Author: Arne Juul <arnej@vespa.ai>
+Date:   Thu Sep 3 13:21:56 2026 +0000
+
+    Allocate CUDA EP intermediates on their stream
+    
+    Einsum was the call site observed corrupting concurrent requests, but it was
+    not the only one built the same way. Every Tensor::Create(type, shape,
+    allocator) for a per-run intermediate reaches allocator->Alloc() with no
+    stream, so the arena cannot associate the chunk with the stream that writes
+    it, and is free to hand the memory to another stream the moment the tensor
+    is released - possibly before queued work has completed.
+    
+    Sweep the CUDA EP and its contrib ops for that pattern and pass the stream
+    that is already in scope at 22 remaining sites:
+    
+      Softmax transpose scratch and intermediate output
+      Expand, Reshape output buffers
+      Beam search TopK values and indices
+      NCCL all-gather and sharding buffers, distributed Slice output
+      Memcpy across devices for a tensor sequence (cuda_execution_provider.cc)
+      IdentityOp and the four SequenceConstruct/Erase/Insert element copies
+    
+    The first sixteen are the hazard Einsum showed: scratch that goes out of
+    scope inside Compute() while the copy or kernel writing it is still queued,
+    so the chunk is back in the arena and reusable by another stream before the
+    work that fills it has run.
+    
+    The last six are different and are fixed for consistency rather than to
+    close a race. Their tensors are moved into the output TensorSeq, so they are
+    not released mid-Compute and the end of run synchronization covers them.
+    Tagging is still correct - a sequence output can outlive the run and be
+    released by the caller at an arbitrary point - but the window Einsum hit is
+    not open there.
+    
+    Conv and ConvTranspose PrePack are deliberately left alone: they run at
+    session initialization on the default stream, and the transposed weights
+    live as long as the kernel rather than going back to the arena between runs.
+    
+    Not covered here: generation_device_helper.cc allocates eight more per-run
+    device buffers through Tensor::InitOrtValue(type, shape, allocator,
+    ort_value) - the beam search past cache, input_ids, attention mask, cache
+    indirection and ExpandBuffer's output - and each is written by an async
+    memcpy or kernel on ort_stream, which is in scope at every one. They are the
+    same hazard as the first group and churn harder, being reallocated every
+    decode step, but there is no InitOrtValue overload that takes a stream.
+    Adding one is a separate change.
+    
+    Four call sites in this sweep (softmax.cc x2, expand.cc, reshape.cc) tagged
+    their Tensor::Create allocations with GetComputeStream() instead of
+    GetAllocationStream(). Under BUILD_CUDA_EP_AS_PLUGIN, GetComputeStream()
+    returns void* while Tensor::Create's stream-aware overload requires a
+    Stream*, so these broke that build; they now use GetAllocationStream() to
+    match einsum.cc and reduction_ops.cc. Also renamed ReduceComputeCore's
+    compute_stream parameter to alloc_stream (it's only ever used for allocation
+    tagging, never launch) so a future caller can't confuse it with the launch
+    stream, and corrected GetAllocationStream's doc comment in cuda_kernel.h,
+    which described the plugin adapter's null-return behavior rather than this
+    implementation's.
+    
+    Add tests covering the intermediates a session can reach. The Einsum device
+    helpers take their allocator and stream as arguments, so
+    einsum_stream_allocation_test.cc calls them directly. The kernels swept here
+    take theirs from OpKernelContext, so most of them can only be driven through
+    a real Run(); add the two harnesses that reach them, and the header the
+    Einsum test's recorder now lives in.
+    
+    cuda_kernel_stream_allocation_test.cc registers a cudaMalloc backed
+    recording allocator as the environment's shared CUDA allocator, points a
+    session at it with session.use_env_allocators, and records only the Run()
+    window. There is no arena underneath, so every request is a distinct call
+    and the counts are exactly the tensors the run allocated. Two cases:
+    
+      Softmax, measured differentially. The same model with the axis already
+      innermost is the baseline; the transposed run has to add exactly two
+      stream tagged allocations, the transpose scratch and the intermediate
+      output.
+    
+      A SequenceConstruct/Insert/Erase/At chain, run with and without an
+      Identity over the sequence so the difference isolates IdentityOp's element
+      copies. That loop only runs when the kernel's output is not aliased onto
+      its input, and being a graph output is what stops the planner applying the
+      alias: AllocationPlanner tests for a graph output before it consults the
+      alias map, so the output is planned kAllocateOutput and ExecutionFrame
+      hands the kernel a fresh TensorSeq. Keeping SequenceAt as a second
+      consumer of the same value is what stops EliminateIdentity rewiring the
+      node away. A zero delta would mean the alias was applied after all and the
+      case covered nothing, so it is an equality rather than a floor.
+    
+    Both cases also assert that no device allocation made during Run() came in
+    through the untagged Alloc(). That is the assertion that catches any of
+    these call sites reverting, and it reports the sizes it saw when it fails.
+    
+    beam_search_topk_stream_allocation_test.cc covers
+    GenerationCudaDeviceHelper::TopK directly, since that one does take the
+    allocator and the stream as arguments. Its two outputs are re-created every
+    decode step, so the previous pair returns to the arena while TopKImpl may
+    still be writing it.
+    
+    Left uncovered: the twelve NCCL, sharding and distributed Slice/Expand/Reshape
+    sites, which need a multi-GPU NCCL build - FuncExpand and FuncReshape are only
+    called from distributed_expand.cc and distributed_reshape.cc - and the
+    TensorSeq branch of Memcpy in cuda_execution_provider.cc.
+    
+    All of these need onnxruntime_ENABLE_CUDA_EP_INTERNAL_TESTS=ON, and skip when
+    no CUDA device is present.
+    
+    Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+
 diff --git a/onnxruntime/contrib_ops/cuda/collective/distributed_slice.cc b/onnxruntime/contrib_ops/cuda/collective/distributed_slice.cc
-index 5768dba79..92aa6f193 100644
+index 5768dba791..92aa6f1932 100644
 --- a/onnxruntime/contrib_ops/cuda/collective/distributed_slice.cc
 +++ b/onnxruntime/contrib_ops/cuda/collective/distributed_slice.cc
 @@ -95,7 +95,8 @@ Status DistributedSlice<T, Tind>::ComputeInternal(OpKernelContext* context) cons
@@ -23,10 +132,10 @@ index 5768dba79..92aa6f193 100644
                                      context,
                                      tensor_shard_data,
 diff --git a/onnxruntime/contrib_ops/cuda/collective/nccl_kernels.cc b/onnxruntime/contrib_ops/cuda/collective/nccl_kernels.cc
-index 770a0f699..ba563e0c2 100644
+index 828f31c6de..01cf2fd8bd 100644
 --- a/onnxruntime/contrib_ops/cuda/collective/nccl_kernels.cc
 +++ b/onnxruntime/contrib_ops/cuda/collective/nccl_kernels.cc
-@@ -305,7 +305,8 @@ Status AllGather::ComputeInternal(OpKernelContext* context) const {
+@@ -313,7 +313,8 @@ Status AllGather::ComputeInternal(OpKernelContext* context) const {
      }
  
      // Allocate a temporary tensor to hold transposed input
@@ -36,17 +145,17 @@ index 770a0f699..ba563e0c2 100644
  
      // Perform the transpose
      ORT_RETURN_IF_ERROR(onnxruntime::cuda::Transpose::DoTranspose(cuda_ep_->GetDeviceProp(),
-@@ -315,7 +316,8 @@ Status AllGather::ComputeInternal(OpKernelContext* context) const {
+@@ -323,7 +324,8 @@ Status AllGather::ComputeInternal(OpKernelContext* context) const {
      // Allocate a tempoarary buffer for all gather
      TensorShape all_gather_out_shape(transposed_input_dims);
-     all_gather_out_shape[0] = group_size_ * all_gather_out_shape[0];
+     all_gather_out_shape[0] = output_axis_size;
 -    auto all_gather_output = Tensor::Create(temp_input->DataType(), all_gather_out_shape, alloc);
 +    auto all_gather_output = Tensor::Create(temp_input->DataType(), all_gather_out_shape, alloc,
 +                                            GetComputeStream(context));
      ncclDataType_t dtype = GetNcclDataType(temp_input->DataType());
      NCCL_RETURN_IF_ERROR(ncclAllGather(temp_input->DataRaw(),
                                         all_gather_output->MutableDataRaw(),
-@@ -523,7 +525,8 @@ void FuncAllGather(
+@@ -531,7 +533,8 @@ void FuncAllGather(
      transposed_shape[0] = source_shape[axis];
      transposed_shape[axis] = source_shape[0];
  
@@ -56,7 +165,7 @@ index 770a0f699..ba563e0c2 100644
  
      // swap axis 0 and axis axis
      std::vector<size_t> perm = CalculatePermToSwapAxes(0, axis, source_shape.NumDimensions());
-@@ -535,7 +538,8 @@ void FuncAllGather(
+@@ -543,7 +546,8 @@ void FuncAllGather(
  
      TensorShape gathered_shape(transposed_shape);
      gathered_shape[0] = group_size * transposed_shape[0];
@@ -66,7 +175,7 @@ index 770a0f699..ba563e0c2 100644
  
      ncclAllGather(
          transposed_buffer->DataRaw(),
-@@ -565,7 +569,7 @@ std::unique_ptr<Tensor> FuncAllGather(
+@@ -573,7 +577,7 @@ std::unique_ptr<Tensor> FuncAllGather(
    ORT_ENFORCE(ctx->GetTempSpaceAllocator(&alloc) == Status::OK());
    TensorShape output_shape(input->Shape());
    output_shape[axis] = group_size * output_shape[axis];
@@ -76,7 +185,7 @@ index 770a0f699..ba563e0c2 100644
    return output;
  }
 diff --git a/onnxruntime/contrib_ops/cuda/collective/sharding.cc b/onnxruntime/contrib_ops/cuda/collective/sharding.cc
-index 1b4cc4502..d5f05e894 100644
+index 1b4cc4502c..d5f05e894e 100644
 --- a/onnxruntime/contrib_ops/cuda/collective/sharding.cc
 +++ b/onnxruntime/contrib_ops/cuda/collective/sharding.cc
 @@ -57,7 +57,7 @@ std::unique_ptr<Tensor> GatherTensor(
@@ -107,7 +216,7 @@ index 1b4cc4502..d5f05e894 100644
        nccl_kernel,
        ctx,
 diff --git a/onnxruntime/contrib_ops/cuda/transformers/generation_device_helper.cc b/onnxruntime/contrib_ops/cuda/transformers/generation_device_helper.cc
-index dd5958e1d..caf6caf54 100644
+index 06873b7b04..3442f95865 100644
 --- a/onnxruntime/contrib_ops/cuda/transformers/generation_device_helper.cc
 +++ b/onnxruntime/contrib_ops/cuda/transformers/generation_device_helper.cc
 @@ -135,8 +135,9 @@ Status TopK(const Tensor* input, const int axis, const unsigned k, bool largest,
@@ -123,10 +232,10 @@ index dd5958e1d..caf6caf54 100644
    Status result;
    auto cuda_stream = stream ? static_cast<cudaStream_t>(stream->GetHandle()) : nullptr;
 diff --git a/onnxruntime/core/providers/cuda/cuda_execution_provider.cc b/onnxruntime/core/providers/cuda/cuda_execution_provider.cc
-index 6ee39bfd6..b28e61f7c 100755
+index 873cb34cd0..c1d9fc20f3 100755
 --- a/onnxruntime/core/providers/cuda/cuda_execution_provider.cc
 +++ b/onnxruntime/core/providers/cuda/cuda_execution_provider.cc
-@@ -114,7 +114,8 @@ class Memcpy final : public OpKernel {
+@@ -121,7 +121,8 @@ class Memcpy final : public OpKernel {
          Y->Reserve(X_size);
          for (size_t i = 0; i < X_size; ++i) {
            const Tensor& source_tensor = X->Get(i);
@@ -137,7 +246,7 @@ index 6ee39bfd6..b28e61f7c 100755
                                                                                      target_tensor->Location().device);
            ORT_RETURN_IF_ERROR(gpu_data_transfer->CopyTensorAsync(source_tensor, *target_tensor, *ctx->GetComputeStream()));
 diff --git a/onnxruntime/core/providers/cuda/cuda_kernel.h b/onnxruntime/core/providers/cuda/cuda_kernel.h
-index 9776f1395..a771e0235 100644
+index 6e0f72459a..cd1025c184 100644
 --- a/onnxruntime/core/providers/cuda/cuda_kernel.h
 +++ b/onnxruntime/core/providers/cuda/cuda_kernel.h
 @@ -138,8 +138,9 @@ class CudaKernel : public OpKernel {
@@ -153,7 +262,7 @@ index 9776f1395..a771e0235 100644
      return GetComputeStream(ctx);
    }
 diff --git a/onnxruntime/core/providers/cuda/math/softmax.cc b/onnxruntime/core/providers/cuda/math/softmax.cc
-index 609f17891..f57bf0c3f 100644
+index 609f17891f..f57bf0c3f8 100644
 --- a/onnxruntime/core/providers/cuda/math/softmax.cc
 +++ b/onnxruntime/core/providers/cuda/math/softmax.cc
 @@ -149,7 +149,8 @@ Status Softmax<T>::ComputeInternal(OpKernelContext* ctx) const {
@@ -177,7 +286,7 @@ index 609f17891..f57bf0c3f 100644
  
    const T* X_data = nullptr;
 diff --git a/onnxruntime/core/providers/cuda/nn/conv.cc b/onnxruntime/core/providers/cuda/nn/conv.cc
-index bf3aeb44f..86b4d1638 100644
+index 0d2692ca97..4bfd191383 100644
 --- a/onnxruntime/core/providers/cuda/nn/conv.cc
 +++ b/onnxruntime/core/providers/cuda/nn/conv.cc
 @@ -81,6 +81,9 @@ Status Conv<T, NHWC>::PrePack(const Tensor& tensor, int input_idx, AllocatorPtr
@@ -191,7 +300,7 @@ index bf3aeb44f..86b4d1638 100644
  
        auto status = cuda::Transpose::DoTranspose(GetDeviceProp(),
 diff --git a/onnxruntime/core/providers/cuda/nn/conv_transpose.cc b/onnxruntime/core/providers/cuda/nn/conv_transpose.cc
-index f1e7e5c41..83168e65a 100644
+index debc80cd32..402e07618e 100644
 --- a/onnxruntime/core/providers/cuda/nn/conv_transpose.cc
 +++ b/onnxruntime/core/providers/cuda/nn/conv_transpose.cc
 @@ -70,6 +70,9 @@ Status ConvTranspose<T, NHWC>::PrePack(const Tensor& tensor, int input_idx, Allo
@@ -205,7 +314,7 @@ index f1e7e5c41..83168e65a 100644
  
        auto status = cuda::Transpose::DoTranspose(GetDeviceProp(),
 diff --git a/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc b/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc
-index 89cd2452d..9a787f459 100644
+index 89cd2452d9..9a787f4591 100644
 --- a/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc
 +++ b/onnxruntime/core/providers/cuda/reduction/reduction_ops.cc
 @@ -357,12 +357,12 @@ Status PrepareForReduce(const Tensor* X,
@@ -380,7 +489,7 @@ index 89cd2452d..9a787f459 100644
                                                       calculate_log, calculate_sqt, log_sum_exp, fast_reduction,
                                                       stream ? static_cast<cudaStream_t>(stream->GetHandle()) : nullptr,
 diff --git a/onnxruntime/core/providers/cuda/reduction/reduction_ops.h b/onnxruntime/core/providers/cuda/reduction/reduction_ops.h
-index 745cdb84f..6b59407ed 100644
+index 745cdb84f2..6b59407eda 100644
 --- a/onnxruntime/core/providers/cuda/reduction/reduction_ops.h
 +++ b/onnxruntime/core/providers/cuda/reduction/reduction_ops.h
 @@ -244,7 +244,7 @@ Status ReduceComputeCore(const AllocatorPtr& allocator, const CudaKernel* kernel
@@ -393,7 +502,7 @@ index 745cdb84f..6b59407ed 100644
  
  // CUDA's reduction descriptor cudnnReduceTensorDescriptor_t is a pointer so
 diff --git a/onnxruntime/core/providers/cuda/tensor/expand.cc b/onnxruntime/core/providers/cuda/tensor/expand.cc
-index 60e219e6d..ff4eb067f 100644
+index 60e219e6d0..ff4eb067ff 100644
 --- a/onnxruntime/core/providers/cuda/tensor/expand.cc
 +++ b/onnxruntime/core/providers/cuda/tensor/expand.cc
 @@ -211,7 +211,8 @@ std::unique_ptr<Tensor> FuncExpand(
@@ -407,7 +516,7 @@ index 60e219e6d..ff4eb067f 100644
    // Only assign output values when output tensor is non-empty
    // because empty tensor doesn't own any data.
 diff --git a/onnxruntime/core/providers/cuda/tensor/identity_op.h b/onnxruntime/core/providers/cuda/tensor/identity_op.h
-index de338f611..ed1946e58 100644
+index de338f6112..ed1946e582 100644
 --- a/onnxruntime/core/providers/cuda/tensor/identity_op.h
 +++ b/onnxruntime/core/providers/cuda/tensor/identity_op.h
 @@ -75,7 +75,8 @@ class IdentityOp final : public CudaKernel {
@@ -421,7 +530,7 @@ index de338f611..ed1946e58 100644
                                               source_tensor.DataRaw(),
                                               source_tensor.SizeInBytes(),
 diff --git a/onnxruntime/core/providers/cuda/tensor/reshape.cc b/onnxruntime/core/providers/cuda/tensor/reshape.cc
-index 7bf3da419..5798fa918 100644
+index 7bf3da4197..5798fa9185 100644
 --- a/onnxruntime/core/providers/cuda/tensor/reshape.cc
 +++ b/onnxruntime/core/providers/cuda/tensor/reshape.cc
 @@ -79,7 +79,7 @@ std::unique_ptr<Tensor> FuncReshape(
@@ -434,7 +543,7 @@ index 7bf3da419..5798fa918 100644
    // Do reshape. It's equivalent to memcpy.
    ORT_ENFORCE(FuncReshape(cuda_kernel, ctx, X, shape, allow_zero, Y.get()).IsOK());
 diff --git a/onnxruntime/core/providers/cuda/tensor/sequence_op.h b/onnxruntime/core/providers/cuda/tensor/sequence_op.h
-index acec26195..a85c2ed4c 100644
+index acec261959..a85c2ed4c7 100644
 --- a/onnxruntime/core/providers/cuda/tensor/sequence_op.h
 +++ b/onnxruntime/core/providers/cuda/tensor/sequence_op.h
 @@ -68,7 +68,8 @@ class SequenceConstruct final : public CudaKernel {
@@ -479,7 +588,7 @@ index acec26195..a85c2ed4c 100644
                                             source_tensor.SizeInBytes(),
 diff --git a/onnxruntime/test/providers/cuda/test_cases/beam_search_topk_stream_allocation_test.cc b/onnxruntime/test/providers/cuda/test_cases/beam_search_topk_stream_allocation_test.cc
 new file mode 100644
-index 000000000..8b2e9ec76
+index 0000000000..8b2e9ec76c
 --- /dev/null
 +++ b/onnxruntime/test/providers/cuda/test_cases/beam_search_topk_stream_allocation_test.cc
 @@ -0,0 +1,111 @@
@@ -596,7 +705,7 @@ index 000000000..8b2e9ec76
 +#endif  // DISABLE_CONTRIB_OPS
 diff --git a/onnxruntime/test/providers/cuda/test_cases/cuda_kernel_stream_allocation_test.cc b/onnxruntime/test/providers/cuda/test_cases/cuda_kernel_stream_allocation_test.cc
 new file mode 100644
-index 000000000..04af27e5d
+index 0000000000..04af27e5df
 --- /dev/null
 +++ b/onnxruntime/test/providers/cuda/test_cases/cuda_kernel_stream_allocation_test.cc
 @@ -0,0 +1,405 @@
@@ -1006,7 +1115,7 @@ index 000000000..04af27e5d
 +}  // namespace test
 +}  // namespace onnxruntime
 diff --git a/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc b/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc
-index 2b04e05c8..1396ed35e 100644
+index 2b04e05c8c..1396ed35e8 100644
 --- a/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc
 +++ b/onnxruntime/test/providers/cuda/test_cases/einsum_stream_allocation_test.cc
 @@ -7,9 +7,9 @@
@@ -1069,7 +1178,7 @@ index 2b04e05c8..1396ed35e 100644
    void SetUp() override {
 diff --git a/onnxruntime/test/providers/cuda/test_cases/stream_recording_allocator.h b/onnxruntime/test/providers/cuda/test_cases/stream_recording_allocator.h
 new file mode 100644
-index 000000000..ff2352c9c
+index 0000000000..ff2352c9c3
 --- /dev/null
 +++ b/onnxruntime/test/providers/cuda/test_cases/stream_recording_allocator.h
 @@ -0,0 +1,56 @@

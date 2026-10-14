@@ -1,5 +1,29 @@
+commit 8318eadbe913c33099f5d111ecff7f69b9a5c74c
+Author: Arne Juul <arnej@vespa.ai>
+Date:   Sun Aug 23 08:24:32 2026 +0000
+
+    Fix Softsign for large inputs on x86 builds with AVX/FMA enabled
+    
+    Softsign was computed as (1 + |x|).inverse() * x. With EIGEN_FAST_MATH
+    and FMA available, Eigen's packet inverse() is rcp_ps() plus one
+    Newton-Raphson step. rcp_ps() never returns subnormals, so for
+    x = FLT_MAX the reciprocal (~2.94e-39) became 0 and Softsign(FLT_MAX)
+    returned 0 instead of 1 for elements in the vectorized body. This hit
+    builds targeting FMA (-march=haswell, x86-64-v3 distro defaults) and
+    broke ActivationOpNoInfTest.Softsign; plain SSE2 builds use pdiv() and
+    were unaffected.
+    
+    Compute x / (1 + |x|) directly, matching the ONNX spec. This uses an
+    IEEE-correct division in both vector and scalar paths and yields
+    exactly +/-1 for +/-FLT_MAX. Add a comment so the reciprocal form is
+    not reintroduced.
+    
+    Also drop the ARM32 test workaround for +/-FLT_MAX: it existed because
+    inverse() flushed the same reciprocal to zero on NEON, while Eigen's
+    NEON pdiv() rescales its operands to avoid that underflow.
+
 diff --git a/onnxruntime/core/providers/cpu/activation/activations.h b/onnxruntime/core/providers/cpu/activation/activations.h
-index f387b333a..1487d76c1 100644
+index f387b333ab..1487d76c19 100644
 --- a/onnxruntime/core/providers/cpu/activation/activations.h
 +++ b/onnxruntime/core/providers/cpu/activation/activations.h
 @@ -170,7 +170,14 @@ struct Softsign : public ElementWiseRangedTransform<T> {
@@ -19,10 +43,10 @@ index f387b333a..1487d76c1 100644
  };
  
 diff --git a/onnxruntime/test/providers/cpu/activation/activation_op_test.cc b/onnxruntime/test/providers/cpu/activation/activation_op_test.cc
-index f635f50f7..b541d8a0d 100644
+index c438cb00b4..c4ffc438c9 100644
 --- a/onnxruntime/test/providers/cpu/activation/activation_op_test.cc
 +++ b/onnxruntime/test/providers/cpu/activation/activation_op_test.cc
-@@ -800,32 +800,7 @@ TEST_F(ActivationOpNoInfTest, Softsign) {
+@@ -741,32 +741,7 @@ TEST_F(ActivationOpNoInfTest, Softsign) {
    TestActivationOp<float>(
        "Softsign",
        input_values,

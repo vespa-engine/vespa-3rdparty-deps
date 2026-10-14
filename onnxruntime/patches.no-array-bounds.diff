@@ -1,8 +1,8 @@
 diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
-index a4bdacdad4..6b9d6f69be 100644
+index 3a3bda1dded..9972ad5866a 100644
 --- a/cmake/CMakeLists.txt
 +++ b/cmake/CMakeLists.txt
-@@ -690,6 +690,17 @@ else()
+@@ -787,6 +787,17 @@ else()
    check_cxx_compiler_flag(-Wshorten-64-to-32 HAS_SHORTEN_64_TO_32)
    check_cxx_compiler_flag(-Wstrict-aliasing HAS_STRICT_ALIASING)
    check_cxx_compiler_flag(-Wstringop-overflow HAS_STRINGOP_OVERFLOW)
