@@ -4,13 +4,14 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 # Version
 MAJOR=1
 MINOR=9
-PATCH=4
-RELEASE=9
+PATCH=5
+RELEASE=1
 
 # Note:
 #
 # Version above must be kept in sync with _vespa_gbenchmark_version in
-# rpm spec files for vespa-build-dependencies and vespa.
+# rpm spec files for vespa-grpc, vespa-opentelemetry-cpp,
+# vespa-build-dependencies and vespa.
 
 # The actual name for the generated (base) package
 PKGNAME=vespa-gbenchmark

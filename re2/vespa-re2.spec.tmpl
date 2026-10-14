@@ -9,6 +9,9 @@
 # Only strip debug info
 %global _find_debuginfo_opts -g
 
+%global _vespa_abseil_cpp_version 20260817.0.1
+%global _vespa_icu_version 78.3.0
+
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so\\.[0-9]*\\(\\)\\(64bit\\)|pkgconfig\\(.*)$
 
@@ -30,9 +33,12 @@ Source0:        https://github.com/google/re2/archive/%{ver_major_long}.tar.gz
 %if 0%{?el8} || 0%{?el9} || 0%{?el10}
 %define _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: vespa-toolset-15-meta
-BuildRequires: vespa-icu-devel
+BuildRequires: vespa-icu-devel = %{_vespa_icu_version}
 BuildRequires: vespa-cmake
-BuildRequires: vespa-abseil-cpp-devel
+BuildRequires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
+
+Requires: vespa-icu = %{_vespa_icu_version}
+Requires: vespa-abseil-cpp = %{_vespa_abseil_cpp_version}
 %else
 BuildRequires: icu-devel
 BuildRequires: gcc
@@ -90,7 +96,7 @@ cmake $wcc -S . -B build \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=true \
     -DCMAKE_CXX_STANDARD=20 \
     -DBUILD_SHARED_LIBS=ON \
-    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3" \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -DNDEBUG" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
 VERBOSE=1 cmake --build build %{?_smp_mflags}
@@ -114,6 +120,9 @@ DESTDIR="%{buildroot}" cmake --install build
 %{_libdir}/*.so
 
 %changelog
+* Tue Oct 13 2026 Arne Juul <arnej@vespa.ai> - 20251105-4
+- Upgrade abseil-cpp to 20260817.0
+
 * Thu Sep 10 2026 Arne Juul
 - use ccache if present
 

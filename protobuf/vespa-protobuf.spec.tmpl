@@ -31,9 +31,9 @@
 
 %if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
 %global _use_vespa_gtest 1
-%global _vespa_gtest_version 1.16.0
+%global _vespa_gtest_version 1.18.0
 %global _use_vespa_abseil_cpp 1
-%global _vespa_abseil_cpp_version 20260107.1.1
+%global _vespa_abseil_cpp_version 20260817.0.1
 %endif
 %if 0%{?amzn2023}
 %global _cmake_extra_options -DCMAKE_C_COMPILER=gcc14-gcc -DCMAKE_CXX_COMPILER=gcc14-g++
@@ -174,7 +174,7 @@ mkdir build
    -DCMAKE_PREFIX_PATH=%{_prefix} \
    -DCMAKE_BUILD_WITH_INSTALL_RPATH=false \
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -Wno-deprecated-declarations" \
+   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -DNDEBUG -Wno-deprecated-declarations" \
    -DBUILD_SHARED_LIBS=ON \
    -DCMAKE_CXX_STANDARD=23 \
    -Dprotobuf_LOCAL_DEPENDENCIES_ONLY=ON \
@@ -234,6 +234,11 @@ DESTDIR="%{buildroot}" %{_cmake_prog} --install build
 %license LICENSE
 
 %changelog
+* Tue Oct 13 2026 Arne Juul <arnej@vespa.ai> - 7.36.2-1
+- Upgrade protobuf to 7.36.2
+- Upgrade abseil-cpp to 20260817.0
+- Upgrade gtest to 1.18.0
+
 * Thu Sep 10 2026 Arne Juul
 - use ccache if present
 

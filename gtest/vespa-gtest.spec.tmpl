@@ -100,7 +100,7 @@ mkdir build
 %{?_cmake_prog}%{!?_cmake_prog:cmake} $wcc \
    -DBUILD_SHARED_LIBS=ON \
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3" \
+   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-g -O3 -DNDEBUG" \
    -DCMAKE_CXX_STANDARD=23 \
    -Dgtest_build_tests=ON \
    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
@@ -150,6 +150,9 @@ cd build
 %{_libdir}/libgmock*.so
 
 %changelog
+* Tue Oct 13 2026 Arne Juul <arnej@vespa.ai> - 1.18.0-1
+- Upgrade gtest to 1.18.0
+
 * Thu Sep 10 2026 Arne Juul
 - use ccache if present
 

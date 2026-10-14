@@ -2,16 +2,16 @@
 TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
-MAJOR=20260107
-MINOR=1
+MAJOR=20260817
+MINOR=0
 PATCH=1
-RELEASE=4
+RELEASE=1
 
 # Note:
 #
 # Version above must be kept in sync with _vespa_abseil_cpp_version in
-# rpm spec files for vespa-protobuf, vespa-build-dependencies and
-# vespa.
+# rpm spec files for vespa-protobuf, vespa-re2, vespa-grpc,
+# vespa-opentelemetry-cpp, vespa-build-dependencies and vespa.
 
 PKGNAME=vespa-abseil-cpp
 RPMTOPDIR=$(TOP)/rpmbuild

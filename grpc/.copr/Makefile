@@ -6,15 +6,16 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=1
 MINOR=84
 PATCH=0
-RELEASE=3
+RELEASE=4
 
 # The actual name for the generated (base) package
 PKGNAME=vespa-grpc
 
 # Note:
 #
-# Version above must be kept in sync with _vespa_grpc_version in
-# rpm spec files for vespa-build-dependencies and vespa.
+# Version above must be kept in sync with _vespa_grpc_version in rpm
+# spec files for vespa-opentelemetry-cpp, vespa-build-dependencies and
+# vespa.
 
 RPMTOPDIR=$(TOP)/rpmbuild
 SOURCEDIR=$(RPMTOPDIR)/SOURCES

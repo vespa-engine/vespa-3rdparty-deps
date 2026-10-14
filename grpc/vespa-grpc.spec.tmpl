@@ -27,11 +27,11 @@
 
 %global _vespa_abseil_excludes |absl_[a-z_0-9]*
 
-%global _vespa_abseil_cpp_version 20260107.1.1
-%global _vespa_gtest_version 1.16.0
+%global _vespa_abseil_cpp_version 20260817.0.1
+%global _vespa_gtest_version 1.18.0
 %global _vespa_openssl_version 3.5.9
-%global _vespa_protobuf_version 6.34.1
-%global _vespa_gbenchmark_version 1.9.4
+%global _vespa_protobuf_version 7.36.2
+%global _vespa_gbenchmark_version 1.9.5
 %global _vespa_re2_version 20251105
 
 %if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
@@ -72,6 +72,9 @@ Patch0:         patches.openssl.diff
 %if 0%{?el8} || 0%{?el9} || 0%{?el10}
 %global _devtoolset_enable /opt/rh/gcc-toolset-15/enable
 BuildRequires: vespa-toolset-15-meta
+BuildRequires: vespa-cmake
+%else
+BuildRequires: cmake
 %endif
 
 %if 0%{?amzn2023}
@@ -100,8 +103,6 @@ BuildRequires: openssl-devel%{?_isa}
 BuildRequires: openssl-devel-engine
 %endif
 %endif
-
-BuildRequires: cmake
 
 BuildRequires: which
 BuildRequires: zlib-devel
@@ -209,8 +210,8 @@ cmake \
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
    -DBUILD_SHARED_LIBS=ON \
    -DCMAKE_CXX_STANDARD=20 \
-   -DCMAKE_C_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -Wno-stringop-overflow" \
-   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -Wno-deprecated-declarations" \
+   -DCMAKE_C_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -DNDEBUG -Wno-stringop-overflow" \
+   -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="%{_arch_cmake_options} -g -O3 -DNDEBUG -Wno-deprecated-declarations" \
    -DgRPC_INSTALL=ON \
    -DgRPC_INSTALL_LIBDIR=lib64 \
    -DgRPC_INSTALL_CMAKEDIR=lib64/cmake/grpc \
@@ -261,6 +262,12 @@ env DESTDIR=%{buildroot} cmake --install build
 %license LICENSE
 
 %changelog
+* Tue Oct 13 2026 Arne Juul <arnej@vespa.ai> - 1.84.0-4
+- Upgrade abseil-cpp to 20260817.0
+- Upgrade gbenchmark to 1.9.5
+- Upgrade gtest to 1.18.0
+- Upgrade protobuf to 7.36.2
+
 * Thu Oct  1 2026 Arne Juul <arnej@vespa.ai> - 1.84.0-3
 - Use vespa-openssl on platforms: el8/el9/el10
 

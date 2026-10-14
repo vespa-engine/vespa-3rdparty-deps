@@ -3,8 +3,14 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR_LONG=2025-11-05
-RELEASE=3
+RELEASE=4
 MAJOR = $(subst -,,$(MAJOR_LONG))
+
+# Note:
+#
+# Version above must be kept in sync with _vespa_re2_version in rpm
+# spec files for vespa-grpc, vespa-opentelemetry-cpp,
+# vespa-build-dependencies and vespa.
 
 PKGNAME=vespa-re2
 RPMTOPDIR=$(TOP)/rpmbuild

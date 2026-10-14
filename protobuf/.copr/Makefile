@@ -2,15 +2,16 @@
 TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
-MAJOR=6
-MINOR=34
-PATCH=1
-RELEASE=12
+MAJOR=7
+MINOR=36
+PATCH=2
+RELEASE=1
 
 # Note:
 #
-# Version above must be kept in sync with _vespa_protobuf_version in
-# rpm spec files for vespa-build-dependencies and vespa.
+# Version above must be kept in sync with _vespa_protobuf_version in rpm
+# spec files for vespa-grpc, vespa-opentelemetry-cpp,
+# vespa-build-dependencies and vespa.
 
 # The actual name for the generated (base) package
 PKGNAME=vespa-protobuf
