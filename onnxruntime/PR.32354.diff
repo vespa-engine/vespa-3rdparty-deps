@@ -144,7 +144,7 @@ index eefd7825eca5b..44a23cda9323d 100644
                 ptrdiff_t offset, gsl::span<const int64_t> strides)
      : alloc_info_(deleter->Info()) {
 diff --git a/onnxruntime/core/providers/cuda/cuda_kernel.h b/onnxruntime/core/providers/cuda/cuda_kernel.h
-index b9d48e4925334..9776f139521d9 100644
+index e71d65679d8a1..6e0f72459acbd 100644
 --- a/onnxruntime/core/providers/cuda/cuda_kernel.h
 +++ b/onnxruntime/core/providers/cuda/cuda_kernel.h
 @@ -135,6 +135,15 @@ class CudaKernel : public OpKernel {
@@ -308,10 +308,10 @@ index 18f91a954a1bf..be55449af2c63 100644
  Status ZeroBuffer(Tensor& input, void* einsum_cuda_assets);
  
 diff --git a/onnxruntime/core/providers/cuda/plugin/cuda_kernel_adapter.h b/onnxruntime/core/providers/cuda/plugin/cuda_kernel_adapter.h
-index 6781eddab35b3..03dd6a51c14e0 100644
+index 7ea0a4d427955..ce2e84ef1e126 100644
 --- a/onnxruntime/core/providers/cuda/plugin/cuda_kernel_adapter.h
 +++ b/onnxruntime/core/providers/cuda/plugin/cuda_kernel_adapter.h
-@@ -1053,6 +1053,20 @@ class CudaKernel : public OpKernel {
+@@ -1057,6 +1057,20 @@ class CudaKernel : public OpKernel {
      return onnxruntime::OrtStreamAdapter(cuda_stream, framework_stream);
    }
  
@@ -415,13 +415,13 @@ index 5c8fd1c2711cc..745cdb84f24ca 100644
  
  }  // namespace ReductionOps
 diff --git a/onnxruntime/core/providers/shared_library/provider_interfaces.h b/onnxruntime/core/providers/shared_library/provider_interfaces.h
-index 1faaba653fc51..dc3f7c5102209 100644
+index 356adcf0edcba..06ef284c96496 100644
 --- a/onnxruntime/core/providers/shared_library/provider_interfaces.h
 +++ b/onnxruntime/core/providers/shared_library/provider_interfaces.h
-@@ -1422,6 +1422,9 @@ struct ProviderHost {
-   virtual const Float8E8M0* Tensor__Data_Float8E8M0(const Tensor* p) = 0;
-   virtual bool Tensor__IsDataType_Float8E8M0(const Tensor* p) noexcept = 0;
- #endif
+@@ -1456,6 +1456,9 @@ struct ProviderHost {
+ 
+   // Kernel pilot support — appended at end to preserve vtable ABI compatibility.
+   virtual KernelPilot* OpKernelContext__GetKernelPilot(const OpKernelContext* p) = 0;
 +
 +  // Stream aware Tensor allocation - appended at end to preserve vtable ABI compatibility
 +  virtual std::unique_ptr<Tensor> Tensor__construct(MLDataType p_type, const TensorShape& shape, std::shared_ptr<IAllocator> allocator, Stream* stream) = 0;
@@ -429,10 +429,10 @@ index 1faaba653fc51..dc3f7c5102209 100644
  
  #if defined(_MSC_VER) && !defined(__clang__)
 diff --git a/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h b/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h
-index 2a4ba995f7dd8..3284463e13d9a 100644
+index 2213d9faf0e28..0f2671934690c 100644
 --- a/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h
 +++ b/onnxruntime/core/providers/shared_library/provider_wrappedtypes.h
-@@ -1459,6 +1459,7 @@ class SessionState {
+@@ -1498,6 +1498,7 @@ class SessionState {
  struct Tensor final {
    static std::unique_ptr<Tensor> CreateDefault() { return g_host->Tensor__construct_default(); }
    static std::unique_ptr<Tensor> Create(MLDataType p_type, const TensorShape& shape, std::shared_ptr<IAllocator> allocator) { return g_host->Tensor__construct(p_type, shape, std::move(allocator)); }
@@ -441,10 +441,10 @@ index 2a4ba995f7dd8..3284463e13d9a 100644
  
    static void operator delete(void* p) noexcept { g_host->Tensor__operator_delete(reinterpret_cast<Tensor*>(p)); }
 diff --git a/onnxruntime/core/session/provider_bridge_ort.cc b/onnxruntime/core/session/provider_bridge_ort.cc
-index c45d21639c008..a0f90e7ff60cd 100644
+index 88d15124e09a1..22b397bd3b6d0 100644
 --- a/onnxruntime/core/session/provider_bridge_ort.cc
 +++ b/onnxruntime/core/session/provider_bridge_ort.cc
-@@ -1649,6 +1649,10 @@ struct ProviderHostImpl : ProviderHost {
+@@ -1696,6 +1696,10 @@ struct ProviderHostImpl : ProviderHost {
      return std::make_unique<Tensor>(p_type, shape, std::move(allocator));
    }
  

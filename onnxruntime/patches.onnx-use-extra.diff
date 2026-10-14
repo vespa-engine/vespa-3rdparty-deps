@@ -1,11 +1,11 @@
 diff --git a/cmake/patches/onnx/onnx.patch b/cmake/patches/onnx/onnx.patch
-index acd5505beaf..3943c05236b 100644
+index 3f3f0aad774..b7f060408c9 100644
 --- a/cmake/patches/onnx/onnx.patch
 +++ b/cmake/patches/onnx/onnx.patch
-@@ -46,3 +46,15 @@ index 3887169..8432613 100644
-          .SetDoc(GroupNormalization_ver18_doc)
-          .Attr("epsilon", "The epsilon value to use to avoid division by zero.", AttributeProto::FLOAT, 1e-5f)
-          .Attr(
+@@ -189,3 +189,15 @@ diff --git a/onnx/common/scoped_resource.h b/onnx/common/scoped_resource.h
+  template <typename F>
+  class ScopeExit {
+      F fn_;
 +diff --git a/cmake/Utils.cmake b/cmake/Utils.cmake
 +--- a/cmake/Utils.cmake	2026-08-18 12:27:38.614572535 +0000
 ++++ b/cmake/Utils.cmake	2026-08-18 12:27:18.440067020 +0000
