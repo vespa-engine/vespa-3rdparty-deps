@@ -123,13 +123,13 @@ BuildRequires: bzip2
 
 %if 0%{?_enable_cuda:1}
 %global _cuda_version_major 13
-%global _cuda_version_minor 3
-%global _cuda_version_micro 29
+%global _cuda_version_minor 4
+%global _cuda_version_micro 92
 %global _cuda_version_pkg_name %{_cuda_version_major}-%{_cuda_version_minor}
 %global _cuda_version_norm_num %{_cuda_version_major}.%{_cuda_version_minor}
 %global _cuda_version_full_num %{_cuda_version_major}.%{_cuda_version_minor}.%{_cuda_version_micro}
 
-%global _cudnn_version 9.25.1.1
+%global _cudnn_version 9.27.0.42
 
 BuildRequires: cuda-toolkit-%{_cuda_version_major}-config-common = %{_cuda_version_full_num}
 BuildRequires: cuda-toolkit-config-common = %{_cuda_version_full_num}
@@ -138,7 +138,6 @@ BuildRequires: cuda-compiler-%{_cuda_version_pkg_name}
 BuildRequires: cuda-cudart-devel-%{_cuda_version_pkg_name}
 BuildRequires: cuda-command-line-tools-%{_cuda_version_pkg_name}
 BuildRequires: libcudnn9-devel-cuda-%{_cuda_version_major} = %{_cudnn_version}
-BuildRequires: vespa-cuda-fix >= %{_cuda_version_major}.%{_cuda_version_minor}.0
 %endif
 
 %description
