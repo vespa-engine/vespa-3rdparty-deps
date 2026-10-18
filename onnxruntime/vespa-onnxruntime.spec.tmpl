@@ -243,16 +243,10 @@ source %{_devtoolset_enable}
 PATH=%{_prefix}/bin:$PATH
 make -C build/Linux/RelWithDebInfo DESTDIR=%{buildroot} install
 
+patchelf --set-rpath '$ORIGIN' build/Linux/RelWithDebInfo/lib*jni*.so*
 cp -p build/Linux/RelWithDebInfo/lib*jni*.so* %{buildroot}%{_prefix}/lib64/.
 mkdir -p %{buildroot}%{_prefix}/lib
 cp -p build/Linux/RelWithDebInfo/java/build/libs/* %{buildroot}%{_prefix}/lib/.
-
-find %{buildroot}%{_prefix} -type f -size +100 ! -name '*.o' | while read f; do
-    case $(file $f) in
-        *"ELF 64-bit"*"shared"*) patchelf --set-rpath '$ORIGIN' $f ;;
-        *"ELF 64-bit"*"executable"*) patchelf --set-rpath '$ORIGIN/../lib64' $f ;;
-    esac
-done
 
 %files
 %{_prefix}/lib64/
