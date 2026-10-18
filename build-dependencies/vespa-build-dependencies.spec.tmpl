@@ -66,11 +66,10 @@ Requires: zlib-devel
 
 %if 0%{?el8} || 0%{?el9} || 0%{?el10}
 Requires: vespa-icu-devel = %{_vespa_icu_version}
-Requires: vespa-re2-devel = %{_vespa_re2_version}
 %else
 Requires: libicu-devel
-Requires: re2-devel
 %endif
+Requires: vespa-re2-devel = %{_vespa_re2_version}
 
 # Common 3rdparty deps that do not exist as RPMs elsewhere:
 Requires: vespa-onnxruntime-devel = %{_vespa_onnxruntime_version}
@@ -161,22 +160,13 @@ Requires: gcc14-c++
 Requires: gcc-c++
 %endif
 Requires: glibc-langpack-en
-%if 0%{?amzn2023}
 Requires: vespa-gmock-devel = %{_vespa_gtest_version}
 Requires: vespa-gtest-devel = %{_vespa_gtest_version}
-%else
-Requires: gmock-devel
-Requires: gtest-devel
-%endif
 Requires: libatomic
 Requires: llvm-devel
 Requires: vespa-openblas-devel >= %{_vespa_openblas_version}
 Requires: openssl-devel
-%if 0%{?amzn2023}
 Requires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
-%else
-Requires: abseil-cpp-devel
-%endif
 Requires: vespa-protobuf-devel = %{_vespa_protobuf_version}
 Requires: vespa-opentelemetry-cpp-devel >= %{_vespa_opentelemetry_cpp_version}
 Requires: vespa-grpc-devel >= %{_vespa_grpc_version}

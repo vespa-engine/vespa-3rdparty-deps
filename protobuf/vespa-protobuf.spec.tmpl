@@ -29,12 +29,11 @@
 # Libraries use shared libraries in /opt/vespa-deps/lib64
 %global __brp_check_rpaths %{nil}
 
-%if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
 %global _use_vespa_gtest 1
 %global _vespa_gtest_version 1.18.0
 %global _use_vespa_abseil_cpp 1
 %global _vespa_abseil_cpp_version 20260817.0.1
-%endif
+
 %if 0%{?amzn2023}
 %global _cmake_extra_options -DCMAKE_C_COMPILER=gcc14-gcc -DCMAKE_CXX_COMPILER=gcc14-g++
 %endif
