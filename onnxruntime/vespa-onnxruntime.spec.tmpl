@@ -120,7 +120,6 @@ BuildRequires: libcurl-devel
 BuildRequires: libunwind
 %endif
 BuildRequires: bzip2
-BuildRequires: patchelf
 
 %if 0%{?_enable_cuda:1}
 %global _cuda_version_major 13
@@ -243,8 +242,7 @@ source %{_devtoolset_enable}
 PATH=%{_prefix}/bin:$PATH
 make -C build/Linux/RelWithDebInfo DESTDIR=%{buildroot} install
 
-patchelf --set-rpath '$ORIGIN' build/Linux/RelWithDebInfo/lib*jni*.so*
-cp -p build/Linux/RelWithDebInfo/lib*jni*.so* %{buildroot}%{_prefix}/lib64/.
+cp -p build/Linux/RelWithDebInfo/lib*jni.so* %{buildroot}%{_prefix}/lib64/.
 mkdir -p %{buildroot}%{_prefix}/lib
 cp -p build/Linux/RelWithDebInfo/java/build/libs/* %{buildroot}%{_prefix}/lib/.
 
