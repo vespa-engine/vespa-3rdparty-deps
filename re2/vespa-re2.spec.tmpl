@@ -12,10 +12,13 @@
 %global _vespa_abseil_cpp_version 20260817.0.1
 %global _vespa_icu_version 78.3.0
 
+%global _use_vespa_abseil_cpp 1
+%global _vespa_abseil_excludes |absl_[a-z_0-9]*
+
 # Don't provide shared library or pkgconfig
 %global __provides_exclude ^(lib.*\\.so\\.[0-9]*\\(\\)\\(64bit\\)|pkgconfig\\(.*)$
 
-%global __requires_exclude ^lib(re2|absl_.*)\\.so\\.[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)|pkgconfig\\(absl_.*)$
+%global __requires_exclude ^lib(re2%{?_vespa_abseil_excludes})\\.so\\.[0-9.]*\\([A-Z._0-9]*\\)\\(64bit\\)|pkgconfig\\(absl_.*)$
 
 # Version
 %define ver_major _TMPL_VER_MAJOR
@@ -35,15 +38,18 @@ Source0:        https://github.com/google/re2/archive/%{ver_major_long}.tar.gz
 BuildRequires: vespa-toolset-15-meta
 BuildRequires: vespa-icu-devel = %{_vespa_icu_version}
 BuildRequires: vespa-cmake
-BuildRequires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
 
 Requires: vespa-icu = %{_vespa_icu_version}
-Requires: vespa-abseil-cpp = %{_vespa_abseil_cpp_version}
 %else
-BuildRequires: icu-devel
+BuildRequires: libicu-devel
 BuildRequires: gcc
 BuildRequires: gcc-c++
 BuildRequires: cmake
+%endif
+%if 0%{?_use_vespa_abseil_cpp}
+BuildRequires: vespa-abseil-cpp-devel = %{_vespa_abseil_cpp_version}
+Requires: vespa-abseil-cpp = %{_vespa_abseil_cpp_version}
+%else
 BuildRequires: abseil-cpp-devel
 %endif
 

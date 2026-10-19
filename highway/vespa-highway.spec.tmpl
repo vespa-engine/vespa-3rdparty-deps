@@ -17,10 +17,8 @@
 # Only strip debug info
 %global _find_debuginfo_opts -g
 
-%if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
 %global _use_vespa_gtest 1
 %global _vespa_gtest_version 1.18.0
-%endif
 
 # Ideally we'd build and run all Highway unit tests across all platforms.
 # Unfortunately, the test suite is an absolute beast to compile and ends

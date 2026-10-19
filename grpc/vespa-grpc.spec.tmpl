@@ -34,15 +34,14 @@
 %global _vespa_gbenchmark_version 1.9.5
 %global _vespa_re2_version 20251105
 
-%if 0%{?el8} || 0%{?el9} || 0%{?el10} || 0%{?amzn2023}
 %global _use_vespa_gtest 1
 %global _vespa_gtest_excludes |(gtest|gmock)(_main)?
 %global _use_vespa_abseil_cpp 1
 %global _vespa_abseil_excludes |absl_[a-z_0-9]*
-%endif
-%if 0%{?el8} || 0%{?el9} || 0%{?el10}
 %global _use_vespa_re2 1
 %global _vespa_re2_excludes |re2
+
+%if 0%{?el8} || 0%{?el9} || 0%{?el10}
 %global _use_vespa_openssl 1
 %global _vespa_openssl_excludes |crypto|ssl
 %endif
