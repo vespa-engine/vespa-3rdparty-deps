@@ -4,9 +4,9 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=1
-MINOR=29
+MINOR=30
 PATCH=0
-RELEASE=4
+RELEASE=1
 
 # The actual name for the generated (base) package
 PKGNAME=vespa-opentelemetry-cpp
