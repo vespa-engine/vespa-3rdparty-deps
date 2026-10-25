@@ -5,8 +5,8 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 # Version
 MAJOR=1
 MINOR=84
-PATCH=0
-RELEASE=5
+PATCH=1
+RELEASE=1
 
 # The actual name for the generated (base) package
 PKGNAME=vespa-grpc
