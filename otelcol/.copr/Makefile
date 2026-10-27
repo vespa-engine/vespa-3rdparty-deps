@@ -4,10 +4,10 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=0
-MINOR=98
+MINOR=163
 PATCH=0
 VERSION=$(MAJOR).$(MINOR)
-RELEASE=4
+RELEASE=1
 
 SNAM=otelcol
 VNAM=vespa-$(SNAM)
