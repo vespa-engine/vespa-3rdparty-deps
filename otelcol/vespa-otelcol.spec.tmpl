@@ -12,6 +12,8 @@
 %define ver_patch _TMPL_VER_PATCH
 %define ver_release _TMPL_VER_RELEASE
 
+%global go_version 1.27.3
+
 Summary:        Open Telemetry Collector
 Name:           vespa-otelcol
 Version:        %{ver_major}.%{ver_minor}.%{ver_patch}
@@ -37,11 +39,11 @@ about packaging.
 %build
 
 PATH=$HOME/go/bin:$PATH
-go install golang.org/dl/go1.24.2@latest
-go1.24.2 download
+go install golang.org/dl/go%{go_version}@latest
+go%{go_version} download
 
-go1.24.2 install go.opentelemetry.io/collector/cmd/builder@v%{version}
-sed 's=VERSION=%{version}=g' < %{SOURCE1} > builder-config.yaml
+go%{go_version} install go.opentelemetry.io/collector/cmd/builder@v%{version}
+sed -e 's=GOVERSION=%{go_version}=g' -e 's=VERSION=%{version}=g' %{SOURCE1} > builder-config.yaml
 $HOME/go/bin/builder --verbose --config=builder-config.yaml
 
 %install
@@ -53,3 +55,5 @@ cp -p %{name}/%{name} %{buildroot}%{_bindir}
 %license LICENSE
 
 %changelog
+* Tue Oct 27 2026 Tor Egge <tegge@vespa.ai> - 0.163.0
+- Bump version to 0.163.0
