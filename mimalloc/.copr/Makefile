@@ -3,9 +3,9 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=3
-MINOR=3
-PATCH=2
-RELEASE=5
+MINOR=6
+PATCH=1
+RELEASE=1
 
 # Note:
 #
