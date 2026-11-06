@@ -16,7 +16,7 @@
 %global _vespa_openblas_version 0.3.27
 %global _vespa_jllama_version 4.7.10
 %global _vespa_datasketches_version 5.2.0
-%global _vespa_mimalloc_version 3.3.2
+%global _vespa_mimalloc_version 3.6.1
 %global _vespa_highway_version 1.4.0
 %global _vespa_gbenchmark_version 1.9.5
 %global _vespa_icu_version 78.3.0
@@ -200,6 +200,9 @@ Vespa - The open big data serving engine - build dependencies
 %files
 
 %changelog
+* Fri Nov 6 2026 Harald Musum <musum@vespa.ai> - 1.23.2
+- Upgrade vespa-mimalloc to 3.6.1
+
 * Tue Oct 13 2026 Arne Juul <arnej@vespa.ai> - 1.22.0
 - Upgrade abseil-cpp to 20260817.0
 - Upgrade gbenchmark to 1.9.5
