@@ -7,7 +7,7 @@ MAJOR=0
 MINOR=163
 PATCH=0
 VERSION=$(MAJOR).$(MINOR)
-RELEASE=1
+RELEASE=2
 # Version of the opentelemetry-collector-contrib modules. Usually equal to
 # $(MAJOR).$(MINOR).$(PATCH), but contrib may have its own patch releases.
 CONTRIB_VERSION=0.163.0
