@@ -3,23 +3,23 @@ dist:
   description: Basic OTel Collector distribution for Vespa
   output_path: ./vespa-otelcol
   otelcol_version: "VERSION"
-  version: "1.0.3"
+  version: "1.0.4"
   go: "goGOVERSION"
 
 exporters:
-  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter vVERSION"
-  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter vVERSION"
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter vCONTRIB_VERSION"
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter vCONTRIB_VERSION"
   - gomod: "go.opentelemetry.io/collector/exporter/otlpexporter vVERSION"
   - gomod: "go.opentelemetry.io/collector/exporter/otlphttpexporter vVERSION"
 
 receivers:
-  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver vVERSION"
-  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/simpleprometheusreceiver vVERSION"
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver vCONTRIB_VERSION"
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/simpleprometheusreceiver vCONTRIB_VERSION"
   - gomod: "go.opentelemetry.io/collector/receiver/otlpreceiver vVERSION"
 
 processors:
   - gomod: "go.opentelemetry.io/collector/processor/batchprocessor vVERSION"
-  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor vVERSION"
-  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor vVERSION"
-  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor vVERSION"
-  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor vVERSION"
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor vCONTRIB_VERSION"
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor vCONTRIB_VERSION"
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor vCONTRIB_VERSION"
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor vCONTRIB_VERSION"

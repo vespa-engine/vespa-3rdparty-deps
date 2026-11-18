@@ -4,10 +4,13 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=0
-MINOR=163
+MINOR=165
 PATCH=0
 VERSION=$(MAJOR).$(MINOR)
 RELEASE=1
+# Version of the opentelemetry-collector-contrib modules. Usually equal to
+# $(MAJOR).$(MINOR).$(PATCH), but contrib may have its own patch releases.
+CONTRIB_VERSION=0.165.1
 
 SNAM=otelcol
 VNAM=vespa-$(SNAM)
@@ -23,7 +26,8 @@ SUB1=s/_TMPL_VER_MAJOR/$(MAJOR)/
 SUB2=s/_TMPL_VER_MINOR/$(MINOR)/
 SUB3=s/_TMPL_VER_PATCH/$(PATCH)/
 SUB4=s/_TMPL_VER_RELEASE/$(RELEASE)/
-SEDSUBS=$(SUB1);$(SUB2);$(SUB3);$(SUB4)
+SUB5=s/_TMPL_CONTRIB_VERSION/$(CONTRIB_VERSION)/
+SEDSUBS=$(SUB1);$(SUB2);$(SUB3);$(SUB4);$(SUB5)
 
 srpm:
 	rpm -q rpmdevtools || dnf install -y rpmdevtools
