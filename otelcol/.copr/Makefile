@@ -4,13 +4,13 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Version
 MAJOR=0
-MINOR=163
+MINOR=165
 PATCH=0
 VERSION=$(MAJOR).$(MINOR)
-RELEASE=2
+RELEASE=1
 # Version of the opentelemetry-collector-contrib modules. Usually equal to
 # $(MAJOR).$(MINOR).$(PATCH), but contrib may have its own patch releases.
-CONTRIB_VERSION=0.163.0
+CONTRIB_VERSION=0.165.1
 
 SNAM=otelcol
 VNAM=vespa-$(SNAM)
