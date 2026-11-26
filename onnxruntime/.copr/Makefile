@@ -5,7 +5,7 @@ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 MAJOR=1
 MINOR=31
 PATCH=0
-RELEASE=4
+RELEASE=5
 
 PKGNAME=vespa-onnxruntime
 
@@ -28,7 +28,7 @@ srpm:
 	rpm -q git || dnf install -y git
 	mkdir -p $(SPECDIR) $(SOURCEDIR)
 	mkdir -p $(SRCTMPBASE)
-	cd $(SRCTMPBASE) && (cd onnxruntime && git fetch -p) || git clone https://github.com/microsoft/onnxruntime.git onnxruntime
+	cd $(SRCTMPBASE) && (cd onnxruntime && git fetch -p) || git clone https://github.com/arnej27959/microsoft-onnxruntime.git onnxruntime
 	cd $(SRCTMP_VENDOR) && git checkout v$(VERSION) && git clean -fxd
 ifdef SUBMODULE_CHECKOUT_SCRIPT
 	cd $(SRCTMP_VENDOR) && $(SUBMODULE_CHECKOUT_SCRIPT)
